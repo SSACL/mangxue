@@ -21,6 +21,7 @@
   --manga:#D9822B; --manga-ink:#8A4A12; --manga-soft:#FDEBD8;
   --good:#1E7A4C; --good-soft:#E1F2E8; --bad:#B3261E; --bad-soft:#FBE3E1;
   --chip:#E8EAEE; --chip-ink:#3D4653;
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--s8:#e34948;
   --font-body:'Noto Sans JP',system-ui,-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;
   --font-display:'Zen Kaku Gothic New','Noto Sans JP',system-ui,sans-serif;
 }
@@ -29,13 +30,13 @@
   --accent:#5B8FEA; --accent-ink:#A9C4F5; --accent-soft:#1E2F4D;
   --manga:#E3964A; --manga-ink:#F2C08F; --manga-soft:#3A2A1A;
   --good:#5FC48E; --good-soft:#173527; --bad:#F08A82; --bad-soft:#3C2120;
-  --chip:#252E3A; --chip-ink:#C9D1DC; color-scheme:dark}}
+  --chip:#252E3A; --chip-ink:#C9D1DC; --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#11161D; --surface:#1A212B; --line:#2A3441; --ink:#E8ECF1; --muted:#9AA5B4;
   --accent:#5B8FEA; --accent-ink:#A9C4F5; --accent-soft:#1E2F4D;
   --manga:#E3964A; --manga-ink:#F2C08F; --manga-soft:#3A2A1A;
   --good:#5FC48E; --good-soft:#173527; --bad:#F08A82; --bad-soft:#3C2120;
-  --chip:#252E3A; --chip-ink:#C9D1DC; color-scheme:dark}
+  --chip:#252E3A; --chip-ink:#C9D1DC; --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{padding-top:env(safe-area-inset-top,0px)}
@@ -176,15 +177,63 @@ details.set[open]{padding-bottom:14px;display:flex;flex-direction:column;gap:10p
 .ci{display:flex;flex-direction:column;gap:8px;padding:12px 0;border-top:1px solid var(--line)}
 .ci.first{border-top:none;padding-top:0}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+/* home on one screen */
+.topslot{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.topslot .hdate{font-family:var(--font-display);font-size:19px;line-height:1.2;white-space:nowrap}
+.topslot .cd{display:flex;flex-direction:column;align-items:flex-end;font-size:11px;color:var(--muted);line-height:1.35}
+.topslot .cd b{font-size:13px!important}
+.wrap.v-home{gap:8px}
+.clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rcard .rh{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.hhead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.hdate{font-family:var(--font-display);font-size:20px;line-height:1.3}
+h2.sec{font-size:14px;color:var(--muted);font-weight:700}
+.cirow{display:grid;gap:6px}
+.cib{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none;line-height:1.2}
+.cib b{font-size:15px}.cib span{font-size:11px;color:var(--muted)}
+.cib.due{background:var(--accent);border-color:var(--accent);color:#fff}.cib.due span{color:#fff;opacity:.9}
+.cib.done{background:var(--chip);border-color:transparent;color:var(--muted)}
+.rstrip{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;padding:2px 2px 6px;margin:0 -2px;scrollbar-width:thin}
+.rcard{flex:0 0 138px;scroll-snap-align:start;display:flex;flex-direction:column;gap:3px;padding:8px 9px;border-radius:14px;background:var(--surface);border:1px solid var(--line);color:var(--ink);text-align:left;font:inherit}
+.rcard .re{font-size:18px;line-height:1.2}
+.rcard .rn{font-size:13px;font-weight:500;line-height:1.3;min-height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rcard .rtm{font-size:11px;color:var(--muted)}
+.rcard .rbs{margin-top:2px;gap:6px}.rcard .rb{flex:1;width:auto;height:36px;font-size:18px}
+.rcard.ok{border-color:var(--good);background:var(--good-soft)}.rcard.ng{border-color:var(--bad);background:var(--bad-soft)}
+.rcard.sleep{cursor:pointer;border-style:dashed;border-color:var(--accent)}.rcard.sleep .rn{color:var(--accent-ink);font-weight:700}
+.qrow{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.qrow .chip{flex:none}
+.chip.sm{min-height:36px;padding:0 10px;font-size:13px}
+.card.tasks{padding:2px 14px}
+.card.tasks .task{padding:8px 0;gap:10px;align-items:center}
+.card.tasks .task .m{font-size:15px;line-height:1.4}
+.clamp{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.card.mini{padding:10px 12px;gap:4px;text-decoration:none;color:inherit}
+.card.mini .bar{height:6px}
+.navbtn{width:56px;height:56px;border-radius:16px;border:1px solid var(--line);background:var(--surface);display:flex;align-items:center;justify-content:center;color:var(--ink);cursor:pointer;padding:0}
+.navbtn svg{width:26px;height:26px;fill:currentColor}
+.calhead{grid-template-columns:56px 1fr 56px}
+dialog.sheet{margin:auto auto 0;width:100%;max-width:560px;border:none;border-radius:20px 20px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px));background:var(--surface);color:var(--ink)}
+dialog.sheet[open]{display:flex;flex-direction:column;gap:12px}
+dialog.sheet::backdrop{background:rgba(10,14,20,.45)}
+.donut{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.donut svg{flex:none}
+.dc1{font-size:20px;font-weight:700;fill:var(--ink);font-family:var(--font-body)}
+.dc2{font-size:11px;fill:var(--muted);font-family:var(--font-body)}
+.dleg{display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px}
+.dl{display:grid;grid-template-columns:12px 1fr auto 3.2em;gap:8px;align-items:center;font-size:13px}
+.dl i{width:12px;height:12px;border-radius:3px}
+.dl span:nth-child(4){text-align:right}
 @media (prefers-reduced-motion: no-preference){.btn,.chip,.seg button,.choice{transition:background .15s,border-color .15s}}
 </style>
 </head>
 <body>
 <header class="topbar">
   <button type="button" class="iconbtn" id="menuBtn" aria-label="メニューを開く" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-  <span class="topname">芒学</span>
+  <div class="topslot" id="topslot"><span class="topname">芒学</span></div>
 </header>
 <dialog id="menu" class="menu" aria-label="メニュー"></dialog>
+<dialog id="sheet" class="sheet" aria-label="入力"></dialog>
 <div class="wrap" id="main" aria-live="polite">
   <div class="card"><h1 class="brand"><ruby>芒<rt>まん</rt>学<rt>しゅぇ</rt></ruby><span class="py">mángxué</span></h1><p class="muted">読み込み中です。少しお待ちください。</p></div>
 </div>
@@ -305,8 +354,9 @@ function statusInfo(){
   if(dirty.size) return ['wait','同期待ち '+dirty.size+'件'];
   return ['ok',lastSync?'同期済み（'+hm(lastSync)+'）':'同期済み'];
 }
-function updateStatus(){const n=document.getElementById('status');if(!n) return;const [c,t]=statusInfo();n.className='status'+(c==='ok'?'':' '+c);n.textContent=t;}
-function statusNode(){const [c,t]=statusInfo();return el('span',{id:'status',class:'status'+(c==='ok'?'':' '+c)},t);}
+function statusShort(c){if(!SYNC) return '同期なし（この端末だけ）';if(c==='ok') return '同期済み'+(lastSync?' '+hm(lastSync):'');if(syncErr) return '同期できません';return (!navigator.onLine||netDown)?'電波待ち':'同期待ち';}
+function updateStatus(){const n=document.getElementById('status');if(!n) return;const [c,t]=statusInfo();n.className='status'+(c==='ok'?'':' '+c);n.textContent=n.dataset.short?statusShort(c):t;}
+function statusNode(short){const [c,t]=statusInfo();return el('span',{id:'status',class:'status'+(c==='ok'?'':' '+c),'data-short':short?'1':null},short?statusShort(c):t);}
 
 function mergeState(id,remote){
   const loc=S.state[id]||{s:{}}; const r=(remote&&remote.s)||{}; let push=false;
@@ -544,10 +594,13 @@ function weekRate(){
 /* ---------- life: routines and daily records (the center of the app) ---------- */
 const ALLDAYS=[0,1,2,3,4,5,6], WEEKDAYS=[1,2,3,4,5], DN='日月火水木金土';
 const PALETTE=['#E5484D','#F76B15','#E2A336','#46A758','#12A594','#0090FF','#8E4EC6','#D6409F'];
+const MIN_CHOICES=[15,30,45,60,90,120,180,240,300,360];
 const TYPES={sleep:'睡眠（寝た時刻と起きた時刻）',span:'時間（内訳を選ぶ・重なってもOK）',memo:'メモ',check:'チェック（やった・やらない）',count:'回数'};
-const LIFE_DEFAULT={t:0,dayStart:'04:00',sleepTarget:420,
+const LIFE_PRESET={v:2,dayStart:'04:00',sleepTarget:420,
   items:[
     {id:'sleep',name:'睡眠',emoji:'😴',color:'',type:'sleep'},
+    {id:'work',name:'仕事',emoji:'💼',color:'',type:'span',subs:[{id:'office',name:'出社'},{id:'remote',name:'在宅'},{id:'over',name:'残業'}]},
+    {id:'chores',name:'家事',emoji:'🧺',color:'',type:'span',subs:[{id:'cook',name:'料理'},{id:'laundry',name:'洗濯'},{id:'clean',name:'掃除'},{id:'shop',name:'買い物'}]},
     {id:'hobby',name:'趣味の時間',emoji:'🎮',color:'',type:'span',subs:[{id:'oshi',name:'推し活'},{id:'game',name:'ゲーム'},{id:'stream',name:'配信を見る'}]},
     {id:'move',name:'運動',emoji:'🏃',color:'',type:'span',subs:[{id:'walk',name:'散歩'},{id:'muscle',name:'筋トレ'},{id:'stretch',name:'ストレッチ'}]},
     {id:'note',name:'その日のひと言',emoji:'💬',color:'',type:'memo'}],
@@ -559,11 +612,27 @@ const LIFE_DEFAULT={t:0,dayStart:'04:00',sleepTarget:420,
   checkins:[
     {id:'m',name:'朝',time:'07:00',on:true,items:['sleep'],routines:[]},
     {id:'d',name:'昼',time:'12:30',on:false,items:[],routines:[]},
-    {id:'n',name:'夜',time:'23:00',on:true,items:['hobby','move','note'],routines:['out','train','dinner']}]};
-function life(){if(!S.meta.life) S.meta.life=clone(LIFE_DEFAULT);return S.meta.life;}
+    {id:'n',name:'夜',time:'23:00',on:true,items:['work','chores','hobby','move'],routines:['out','train','dinner']},
+    {id:'z',name:'〆',time:'00:15',on:true,items:['note'],routines:[]}],
+  quick:[{id:'q1',item:'move',sub:'walk',m:60}]};
+const TRACKS_DEFAULT={study:'time',manga:'time',studyGoal:0};
+// settings saved by an older version get the new presets added (deterministic, so every device agrees without saving)
+function migrateLife(L){
+  if((L.v||1)>=2) return L;
+  for(const it of LIFE_PRESET.items) if(!L.items.some(x=>x.id===it.id)){const i=L.items.findIndex(x=>x.id==='hobby');L.items.splice(i<0?L.items.length:i,0,clone(it));}
+  for(const c of LIFE_PRESET.checkins) if(!L.checkins.some(x=>x.id===c.id)) L.checkins.push(clone(c));
+  if(!L.routines.some(r=>r.kind==='sleep')) L.routines.push(Object.assign(clone(LIFE_PRESET.routines[3]),{off:true}));
+  if(!L.quick) L.quick=clone(LIFE_PRESET.quick);
+  L.v=2; return L;
+}
+function life(){if(!S.meta.life) S.meta.life=Object.assign({t:0},clone(LIFE_PRESET));migrateLife(S.meta.life);if(!S.meta.life.tracks) S.meta.life.tracks=clone(TRACKS_DEFAULT);return S.meta.life;}
 function setLife(fn){const x=clone(life());fn(x);x.t=Date.now();S.meta.life=x;save('meta/life');}
+function items(){return life().items.filter(i=>!i.off);}
+function routines(){return life().routines.filter(r=>!r.off);}
+function sleepRoutine(){return life().routines.find(r=>r.kind==='sleep')||null;}
 function toMin(hm){if(!hm) return null;const a=String(hm).split(':').map(Number);return a[0]*60+(a[1]||0);}
 function fmtMin(n){n=Math.round(n||0);const h=Math.floor(n/60),m=n%60;return h?(h+'時間'+(m?m+'分':'')):(m+'分');}
+function fmtH(n){const h=(n||0)/60;return (h>=100?Math.round(h):Math.round(h*10)/10)+'時間';}
 function dayStartMin(){const l=typeof S!=='undefined'&&S.meta&&S.meta.life;return toMin((l&&l.dayStart)||'04:00')||0;}
 function sinceStart(minOfDay){return (minOfDay-dayStartMin()+1440)%1440;}
 function nowSinceStart(){const d=new Date();return sinceStart(d.getHours()*60+d.getMinutes());}
@@ -582,11 +651,11 @@ function itemDone(ds,it){
 }
 function routineApplies(ds,r){return (r.days||ALLDAYS).includes(parseYmd(ds).getDay());}
 function routineState(ds,r){
-  if(r.kind==='sleep'){const m=sleepMin(dayRec(ds).rec.sleep);return m==null?null:(m>=(r.min||life().sleepTarget)?1:0);}
+  if(r.kind==='sleep'){const m=sleepMin(dayRec(ds).rec.sleep);return m==null?null:(m>=life().sleepTarget?1:0);}
   const v=dayRec(ds).r[r.id];return v===1||v===0?v:null;
 }
 function dayRate(ds){
-  const rs=life().routines.filter(r=>routineApplies(ds,r));if(!rs.length) return null;
+  const rs=routines().filter(r=>routineApplies(ds,r));if(!rs.length) return null;
   let ans=0,ok=0;for(const r of rs){const s=routineState(ds,r);if(s!=null){ans++;if(s) ok++;}}
   return ans?{ok,ans,all:rs.length}:null;
 }
@@ -595,9 +664,56 @@ function streak(){let n=0,ds=today();if(!hasActivity(ds)) ds=addDays(ds,-1);whil
 function lastActiveBefore(t){return Object.keys(daysStore().d).filter(k=>k<t&&hasActivity(k)).sort().pop()||null;}
 function badgeNode(it){return it.emoji?el('span',{'aria-hidden':'true'},it.emoji):el('span',{class:'dot',style:'background:'+(it.color||PALETTE[5]),'aria-hidden':'true'});}
 function gcalUrl(ds,month){const d=parseYmd(ds);return 'https://calendar.google.com/calendar/r/'+(month?'month':'day')+'/'+d.getFullYear()+'/'+(d.getMonth()+1)+'/'+(month?1:d.getDate());}
-function dueCheckins(){
-  const L=life(), done=dayRec(today()).ci||{}, now=nowSinceStart();
-  return L.checkins.filter(c=>c.on&&(c.items.length||c.routines.length)&&now>=sinceStart(toMin(c.time))&&!done[c.id]);
+function ciState(c){if((dayRec(today()).ci||{})[c.id]) return 'done';return nowSinceStart()>=sinceStart(toMin(c.time))?'due':'later';}
+function subName(it,id){return ((it.subs||[]).find(s=>s.id===id)||{}).name||it.name;}
+function quickLabel(q){const it=life().items.find(i=>i.id===q.item);return it?(it.emoji||'')+subName(it,q.sub)+' '+fmtMin(q.m):'';}
+function addQuick(q,ds){const it=life().items.find(i=>i.id===q.item);if(!it||it.off){toast('この項目は使わない設定になっています');return;}
+  setDay(ds,d=>{d.rec[it.id]=(Array.isArray(d.rec[it.id])?d.rec[it.id]:[]).concat([{s:q.sub,m:q.m}]);});toast(subName(it,q.sub)+' '+fmtMin(q.m)+'を記録しました');render();}
+
+/* study / creative time: recorded together with the task when the track is set to "時間も記録する" */
+function tracks(){return life().tracks||TRACKS_DEFAULT;}
+function trackOf(kind){return kind==='study'?'study':kind==='manga'?'manga':null;}
+function trackName(k){return k==='study'?P_().study.name:P_().create.name;}
+function plannedMin(timeText){
+  const s=String(timeText||''), r=s.match(/(\d{1,2}):(\d{2})\s*〜\s*(\d{1,2}):(\d{2})/);
+  if(r) return ((+r[3]*60+ +r[4])-(+r[1]*60+ +r[2])+1440)%1440;
+  let m=0;const h=s.match(/(\d+)時間(半)?/);if(h) m+=(+h[1])*60+(h[2]?30:0);const mm=s.match(/(\d+)分/);if(mm) m+=+mm[1];
+  return m||30;
+}
+function trackEntries(ds,k){const v=dayRec(ds).rec['@'+k];return Array.isArray(v)?v:[];}
+function trackTotal(k,from,to){let n=0;for(const [ds,d] of Object.entries(daysStore().d)){if((from&&ds<from)||(to&&ds>to)) continue;const v=d.rec&&d.rec['@'+k];if(Array.isArray(v)) n+=v.reduce((a,x)=>a+spanMin(x),0);}return n;}
+
+/* sheet: a small dialog for quick input */
+function openSheet(title,...kids){
+  const s=document.getElementById('sheet');
+  s.replaceChildren(...[el('div',{class:'between'},el('h2',{},title),el('button',{type:'button',class:'iconbtn','aria-label':'閉じる',onclick:()=>s.close()},'×')),...kids].flat());
+  if(!s.open) s.showModal();return s;
+}
+function sleepSheet(ds){
+  const v=dayRec(ds).rec.sleep||{}, st={bed:v.bed||'',wake:v.wake||''};
+  const s=openSheet('睡眠を記録',
+    el('div',{class:'grid2'},
+      el('label',{class:'field',for:'sh-bed'},'寝た時刻',el('input',{type:'time',id:'sh-bed',value:st.bed,onchange:e=>{st.bed=e.target.value;}})),
+      el('label',{class:'field',for:'sh-wake'},'起きた時刻',el('input',{type:'time',id:'sh-wake',value:st.wake,onchange:e=>{st.wake=e.target.value;}}))),
+    el('button',{type:'button',class:'btn',onclick:()=>{if(!st.bed||!st.wake){toast('寝た時刻と起きた時刻を入れてください');return;}setDay(ds,d=>{d.rec.sleep={bed:st.bed,wake:st.wake};});s.close();toast('睡眠 '+fmtMin(sleepMin(st))+' を記録しました');render();}},'記録する'));
+}
+function minutePicker(def,onPick,extra){
+  const st={m:def};
+  const chips=el('div',{class:'chips'},[...new Set([def,...MIN_CHOICES])].sort((a,b)=>a-b).map(n=>el('button',{type:'button',class:'chip sm','aria-pressed':String(n===def),onclick:e=>{st.m=n;[...e.target.parentNode.children].forEach(b=>b.setAttribute('aria-pressed',String(b===e.target)));}},fmtMin(n))));
+  return [chips,el('div',{class:'grid2'},el('button',{type:'button',class:'btn sm',onclick:()=>onPick(st.m)},'この時間で記録'),extra||null)];
+}
+function taskSheet(ds,k){
+  const tk=trackOf(k.kind);
+  openSheet(k.title,el('p',{class:'small muted'},trackName(tk)+'に使った時間を記録します（予定 '+fmtMin(plannedMin(k.time))+'）。'),
+    minutePicker(plannedMin(k.time),m=>{setChecked(ds,k.id,true);setDay(ds,d=>{d.rec['@'+tk]=(Array.isArray(d.rec['@'+tk])?d.rec['@'+tk]:[]).filter(x=>x.s!==k.id).concat([{s:k.id,m,title:k.title}]);});document.getElementById('sheet').close();toast(fmtMin(m)+'を記録しました');render();},
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>{setChecked(ds,k.id,true);document.getElementById('sheet').close();render();}},'時間は記録しない')));
+}
+function toggleTask(ds,k,on){
+  const tk=trackOf(k.kind);
+  if(on&&tk&&tracks()[tk]==='time'){taskSheet(ds,k);return;}
+  setChecked(ds,k.id,on);
+  if(!on&&tk) setDay(ds,d=>{d.rec['@'+tk]=(Array.isArray(d.rec['@'+tk])?d.rec['@'+tk]:[]).filter(x=>x.s!==k.id);});
+  render();
 }
 
 /* one record item, editable (used on the day page and in check-ins) */
@@ -613,31 +729,7 @@ function itemEditor(ds,it){
         el('label',{class:'field',for:'wake-'+uid},'起きた時刻',el('input',{type:'time',id:'wake-'+uid,value:(v&&v.wake)||'',onchange:e=>set('wake',e.target.value)}))),
       el('p',{class:'xs muted'},'目標は'+fmtMin(life().sleepTarget)+'。目標以上眠れた日にバッジが付きます。'));
   }
-  if(it.type==='span'){
-    const list=Array.isArray(v)?v:[], subs=it.subs||[];
-    const st={sub:subs[0]?subs[0].id:'',mode:'min',a:'',b:'',m:30};
-    const subName=id=>(subs.find(s=>s.id===id)||{}).name||it.name;
-    const total=list.reduce((a,x)=>a+spanMin(x),0);
-    const subChips=el('div',{class:'chips'},subs.map(s=>el('button',{type:'button',class:'chip','aria-pressed':String(st.sub===s.id),onclick:e=>{st.sub=s.id;[...e.target.parentNode.children].forEach(b=>b.setAttribute('aria-pressed',String(b===e.target)));}},s.name)));
-    const timeBox=el('div',{class:'grid2',hidden:true},
-      el('label',{class:'field',for:'a-'+uid},'はじめ',el('input',{type:'time',id:'a-'+uid,onchange:e=>{st.a=e.target.value;}})),
-      el('label',{class:'field',for:'b-'+uid},'おわり',el('input',{type:'time',id:'b-'+uid,onchange:e=>{st.b=e.target.value;}})));
-    const minBox=el('div',{class:'chips'},[15,30,45,60,90,120].map(n=>el('button',{type:'button',class:'chip','aria-pressed':String(st.m===n),onclick:e=>{st.m=n;[...e.target.parentNode.children].forEach(b=>b.setAttribute('aria-pressed',String(b===e.target)));}},fmtMin(n))));
-    const modeSeg=el('div',{class:'seg',style:'grid-template-columns:1fr 1fr'},
-      el('button',{type:'button','aria-pressed':'true',onclick:e=>{st.mode='min';minBox.hidden=false;timeBox.hidden=true;e.target.setAttribute('aria-pressed','true');e.target.nextSibling.setAttribute('aria-pressed','false');}},'分で入れる'),
-      el('button',{type:'button','aria-pressed':'false',onclick:e=>{st.mode='time';minBox.hidden=true;timeBox.hidden=false;e.target.setAttribute('aria-pressed','true');e.target.previousSibling.setAttribute('aria-pressed','false');}},'時刻で入れる'));
-    const add=()=>{
-      let ent;
-      if(st.mode==='time'){if(!st.a||!st.b){toast('はじめとおわりの時刻を入れてください');return;}ent={s:st.sub,a:st.a,b:st.b};}
-      else ent={s:st.sub,m:st.m};
-      setDay(ds,d=>{d.rec[it.id]=(Array.isArray(d.rec[it.id])?d.rec[it.id]:[]).concat([ent]);});toast(subName(st.sub)+'を記録しました');render();
-    };
-    return el('div',{class:'card'},head(total?el('span',{class:'small muted num'},'合計 '+fmtMin(total)):null),
-      list.map((x,i)=>el('div',{class:'entry'},el('span',{},subName(x.s)),el('span',{class:'small muted num'},x.a?x.a+'〜'+x.b+'（'+fmtMin(spanMin(x))+'）':fmtMin(x.m)),
-        el('button',{type:'button',class:'x','aria-label':subName(x.s)+'の記録を消す',onclick:()=>{setDay(ds,d=>{d.rec[it.id]=(d.rec[it.id]||[]).filter((_,j)=>j!==i);});render();}},'×'))),
-      el('div',{class:'addrow'},subs.length?subChips:null,modeSeg,minBox,timeBox,el('button',{type:'button',class:'btn sub sm',onclick:add},'記録する')),
-      el('p',{class:'xs muted'},'時刻が重なっていても大丈夫です（ながら作業もそのまま記録できます）。'));
-  }
+  if(it.type==='span') return spanEditor(ds,it.id,it.name,badgeNode(it),it.subs||[],Array.isArray(v)?v:[]);
   if(it.type==='memo'){
     let timer=null;
     return el('div',{class:'card'},head(),el('textarea',{rows:2,'aria-label':it.name,value:v||'',placeholder:'ひと言どうぞ',oninput:e=>{const val=e.target.value;clearTimeout(timer);timer=setTimeout(()=>setDay(ds,d=>{d.rec[it.id]=val;}),500);}}));
@@ -648,51 +740,113 @@ function itemEditor(ds,it){
   }
   return el('div',{class:'card'},el('label',{class:'row',for:'chk-'+uid},el('input',{type:'checkbox',id:'chk-'+uid,checked:!!v,onchange:e=>{setDay(ds,d=>{d.rec[it.id]=e.target.checked?1:0;});}}),badgeNode(it),el('b',{},it.name)));
 }
+function spanEditor(ds,key,name,badge,subs,list){
+  const uid=key.replace('@','_')+'-'+ds, st={sub:subs[0]?subs[0].id:'',mode:'min',a:'',b:'',m:30};
+  const nm=id=>(subs.find(s=>s.id===id)||{}).name||'';
+  const total=list.reduce((a,x)=>a+spanMin(x),0);
+  const pick=(attr)=>e=>{st[attr[0]]=attr[1];[...e.target.parentNode.children].forEach(b=>b.setAttribute('aria-pressed',String(b===e.target)));};
+  const subChips=el('div',{class:'chips'},subs.map(s=>el('button',{type:'button',class:'chip','aria-pressed':String(st.sub===s.id),onclick:pick(['sub',s.id])},s.name)));
+  const timeBox=el('div',{class:'grid2',hidden:true},
+    el('label',{class:'field',for:'a-'+uid},'はじめ',el('input',{type:'time',id:'a-'+uid,onchange:e=>{st.a=e.target.value;}})),
+    el('label',{class:'field',for:'b-'+uid},'おわり',el('input',{type:'time',id:'b-'+uid,onchange:e=>{st.b=e.target.value;}})));
+  const minBox=el('div',{class:'chips'},MIN_CHOICES.map(n=>el('button',{type:'button',class:'chip sm','aria-pressed':String(st.m===n),onclick:pick(['m',n])},fmtMin(n))));
+  const modeSeg=el('div',{class:'seg',style:'grid-template-columns:1fr 1fr'},
+    el('button',{type:'button','aria-pressed':'true',onclick:e=>{st.mode='min';minBox.hidden=false;timeBox.hidden=true;e.target.setAttribute('aria-pressed','true');e.target.nextSibling.setAttribute('aria-pressed','false');}},'分で入れる'),
+    el('button',{type:'button','aria-pressed':'false',onclick:e=>{st.mode='time';minBox.hidden=true;timeBox.hidden=false;e.target.setAttribute('aria-pressed','true');e.target.previousSibling.setAttribute('aria-pressed','false');}},'時刻で入れる'));
+  const add=()=>{
+    let ent;
+    if(st.mode==='time'){if(!st.a||!st.b){toast('はじめとおわりの時刻を入れてください');return;}ent={s:st.sub,a:st.a,b:st.b};}
+    else ent={s:st.sub,m:st.m};
+    setDay(ds,d=>{d.rec[key]=(Array.isArray(d.rec[key])?d.rec[key]:[]).concat([ent]);});toast((nm(st.sub)||name)+'を記録しました');render();
+  };
+  return el('div',{class:'card'},el('div',{class:'between'},el('h2',{class:'row',style:'gap:6px'},badge,name),total?el('span',{class:'small muted num'},'合計 '+fmtMin(total)):null),
+    list.map((x,i)=>el('div',{class:'entry'},el('span',{},x.title||nm(x.s)||name),el('span',{class:'small muted num'},x.a?x.a+'〜'+x.b+'（'+fmtMin(spanMin(x))+'）':fmtMin(x.m)),
+      el('button',{type:'button',class:'x','aria-label':(x.title||nm(x.s)||name)+'の記録を消す',onclick:()=>{setDay(ds,d=>{d.rec[key]=(d.rec[key]||[]).filter((_,j)=>j!==i);});render();}},'×'))),
+    el('div',{class:'addrow'},subs.length?subChips:null,modeSeg,minBox,timeBox,el('button',{type:'button',class:'btn sub sm',onclick:add},'記録する')));
+}
 function routineRow(ds,r,first){
   const s=routineState(ds,r);
   const label=el('div',{style:'display:flex;flex-direction:column;flex:1;min-width:0'},
     el('span',{class:'m'},(r.emoji?r.emoji+' ':'')+r.name),
     el('span',{class:'xs muted num'},r.kind==='sleep'?'睡眠の記録から自動で判定':(r.by?r.by+' まで':'時刻の期限なし')));
   if(r.kind==='sleep') return el('div',{class:'rt'+(first?' first':'')},label,el('span',{class:'auto '+(s===1?'ok':s===0?'ng':'na')},s===1?'できた':s===0?'できなかった':'記録なし'));
-  const btn=(val,mark,text,cls)=>el('button',{type:'button',class:'rb '+cls,'aria-pressed':String(s===val),'aria-label':r.name+'：'+text,title:text,onclick:()=>{setDay(ds,d=>{if(d.r[r.id]===val) delete d.r[r.id]; else d.r[r.id]=val;});render();}},mark);
-  return el('div',{class:'rt'+(first?' first':'')},label,el('div',{class:'rbs'},btn(1,'○','できた','ok'),btn(0,'×','できなかった','ng')));
+  return el('div',{class:'rt'+(first?' first':'')},label,el('div',{class:'rbs'},rbtn(ds,r,1),rbtn(ds,r,0)));
 }
-function routinesCard(ds){
-  const rs=life().routines.filter(r=>routineApplies(ds,r)), d=dayRec(ds), rate=dayRate(ds);
-  return el('div',{class:'card'},
-    el('div',{class:'between'},el('h2',{},'今日のルーティン'),el('span',{class:'small muted num'},d.off?'お休みの日':(rate?'できた '+rate.ok+' / '+rate.all:''))),
-    d.off?el('p',{class:'small muted'},'今日はお休みの日です。ゆっくり休んでください。')
-      :(rs.length?rs.map((r,i)=>routineRow(ds,r,i===0)):el('p',{class:'small muted'},'今日のルーティンはありません。')),
-    el('div',{class:'chips'},life().items.map(it=>el('a',{href:'#day/'+ds,class:'badge'+(itemDone(ds,it)?' on':'')},badgeNode(it),it.name))),
-    el('div',{class:'grid2'},el('a',{href:'#day/'+ds,class:'btn sub sm'},'今日の記録'),el('a',{href:'#cal',class:'btn sub sm'},'カレンダーを見る')));
+function rbtn(ds,r,val){
+  const s=routineState(ds,r), text=val?'できた':'できなかった';
+  return el('button',{type:'button',class:'rb '+(val?'ok':'ng'),'aria-pressed':String(s===val),'aria-label':r.name+'：'+text,title:text,onclick:()=>{setDay(ds,d=>{if(d.r[r.id]===val) delete d.r[r.id]; else d.r[r.id]=val;});render();}},val?'○':'×');
 }
 function comebackCard(t){
   const la=lastActiveBefore(t);if(!la) return null;
   const gap=diffDays(la,t)-1;if(gap<2) return null;
-  return el('div',{class:'card',style:'background:var(--accent-soft)'},
-    el('h2',{},'おかえりなさい'),
-    el('p',{class:'small'},gap+'日ぶりの記録です。空いた日はそのままで大丈夫。今日のぶんから、また始めましょう。'),
+  return el('div',{class:'card',style:'background:var(--accent-soft);gap:8px'},
+    el('p',{class:'small'},el('b',{},'おかえりなさい。'),gap+'日ぶりの記録です。空いた日はそのままで大丈夫です。'),
     el('button',{type:'button',class:'btn sub sm',onclick:()=>{for(let i=1;i<=gap;i++){const ds=addDays(la,i);if(!hasActivity(ds)) setDay(ds,d=>{d.off=1;});}toast('空いた日をお休みの日にしました');render();}},'空いた'+gap+'日をお休みの日にする'));
+}
+
+/* 24 hours as 100%: what the day was spent on */
+const SLOT_OF={sleep:1,work:2,chores:3,'@study':4,'@manga':5,hobby:6,move:7};
+function dayUse(ds){
+  const d=dayRec(ds), out=[];
+  const sl=sleepMin(d.rec.sleep); if(sl) out.push({key:'sleep',name:'睡眠',m:sl});
+  const order=Object.keys(SLOT_OF);
+  const spans=items().filter(it=>it.type==='span').map(it=>({key:it.id,name:it.name,m:(Array.isArray(d.rec[it.id])?d.rec[it.id]:[]).reduce((a,x)=>a+spanMin(x),0)}));
+  for(const k of ['study','manga']){const m=trackEntries(ds,k).reduce((a,x)=>a+spanMin(x),0);spans.push({key:'@'+k,name:trackName(k),m});}
+  spans.sort((a,b)=>(order.indexOf(a.key)<0?99:order.indexOf(a.key))-(order.indexOf(b.key)<0?99:order.indexOf(b.key)));
+  let other=0;for(const s of spans){if(!s.m) continue;if(SLOT_OF[s.key]) out.push(s); else other+=s.m;}
+  if(other) out.push({key:'other',name:'そのほか',m:other});
+  out.sort((a,b)=>(SLOT_OF[a.key]||8)-(SLOT_OF[b.key]||8));
+  return out;
+}
+function donut(ds){
+  const segs=dayUse(ds), sum=segs.reduce((a,s)=>a+s.m,0), over=sum>1440, base=over?sum:1440;
+  const R=70, C=2*Math.PI*R, GAP=2;
+  const svgNS='http://www.w3.org/2000/svg', mk=(tag,attrs)=>{const e=document.createElementNS(svgNS,tag);for(const [k,v] of Object.entries(attrs)) e.setAttribute(k,v);return e;};
+  const svg=mk('svg',{viewBox:'0 0 200 200',width:'180',height:'180',role:'img','aria-label':'24時間の使い方の円グラフ'});
+  svg.append(mk('circle',{cx:100,cy:100,r:R,fill:'none',stroke:'var(--line)','stroke-width':28}));
+  let off=0;
+  for(const s of segs){
+    const len=C*s.m/base, seg=mk('circle',{cx:100,cy:100,r:R,fill:'none',stroke:'var(--s'+(SLOT_OF[s.key]||8)+')','stroke-width':28,'stroke-dasharray':Math.max(0,len-GAP)+' '+(C-Math.max(0,len-GAP)),'stroke-dashoffset':String(-off),transform:'rotate(-90 100 100)',tabindex:'0',style:'cursor:pointer'});
+    const tt=mk('title',{});tt.textContent=s.name+' '+fmtMin(s.m);seg.append(tt);
+    const show=()=>{c1.textContent=fmtMin(s.m);c2.textContent=s.name+'（'+Math.round(s.m/1440*100)+'%）';};
+    seg.addEventListener('click',show);seg.addEventListener('focus',show);
+    svg.append(seg);off+=len;
+  }
+  const c1=mk('text',{x:100,y:98,'text-anchor':'middle',class:'dc1'});c1.textContent=fmtH(sum);
+  const c2=mk('text',{x:100,y:120,'text-anchor':'middle',class:'dc2'});c2.textContent='24時間のうち';
+  svg.append(c1,c2);
+  const legend=el('div',{class:'dleg'},segs.map(s=>el('div',{class:'dl'},el('i',{style:'background:var(--s'+(SLOT_OF[s.key]||8)+')'}),el('span',{},s.name),el('span',{class:'num'},fmtMin(s.m)),el('span',{class:'num muted'},Math.round(s.m/1440*100)+'%'))),
+    sum<1440?el('div',{class:'dl'},el('i',{style:'background:var(--line)'}),el('span',{},'記録なし'),el('span',{class:'num'},fmtMin(1440-sum)),el('span',{class:'num muted'},Math.round((1440-sum)/1440*100)+'%')):null);
+  return el('div',{class:'card'},el('h2',{},'24時間の使い方'),
+    sum?el('div',{class:'donut'},svg,legend):el('p',{class:'small muted'},'睡眠や時間の記録を入れると、ここに24時間の円グラフが出ます。'),
+    over?el('p',{class:'xs muted'},'ながら時間があるため、記録の合計が24時間を超えています。円は記録の合計を100%として描いています。'):null);
+}
+function navBtn(href,label,dir,onclick){
+  const svg='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+(dir<0?'M16 4 L6 12 L16 20 Z':'M8 4 L18 12 L8 20 Z')+'"/></svg>';
+  const b=el(href?'a':'button',href?{href,class:'navbtn','aria-label':label}:{type:'button',class:'navbtn','aria-label':label,onclick});b.insertAdjacentHTML('beforeend',svg);return b;
 }
 
 /* day page */
 function viewDay(arg){
   const t=today(), ds=/^\d{4}-\d{2}-\d{2}$/.test(arg||'')?arg:t, L=life(), d=dayRec(ds);
-  const rs=L.routines.filter(r=>routineApplies(ds,r));
+  const rs=routines().filter(r=>routineApplies(ds,r));
   const ms=(P_().milestones||[]).filter(m=>m[0]===ds), tasks=PLAN?tasksFor(ds):[], ev=d.g||[];
+  const tr=tracks();
   return [
-    el('div',{class:'calhead'},
-      el('a',{href:'#day/'+addDays(ds,-1),class:'iconbtn','aria-label':'前の日'},'‹'),
+    el('div',{class:'calhead'},navBtn('#day/'+addDays(ds,-1),'前の日',-1),
       el('div',{style:'text-align:center'},el('span',{class:'small muted'},ds===t?'今日':(ds<t?diffDays(ds,t)+'日前':diffDays(t,ds)+'日後')),el('h1',{},jpDate(ds))),
-      el('a',{href:'#day/'+addDays(ds,1),class:'iconbtn','aria-label':'次の日'},'›')),
+      navBtn('#day/'+addDays(ds,1),'次の日',1)),
     statusNode(),
+    donut(ds),
+    L.quick&&L.quick.length?el('div',{class:'chips'},L.quick.map(q=>el('button',{type:'button',class:'chip',onclick:()=>addQuick(q,ds)},'＋'+quickLabel(q)))):null,
     el('label',{class:'card row',for:'off-'+ds,style:'flex-direction:row'},el('input',{type:'checkbox',id:'off-'+ds,checked:!!d.off,onchange:e=>{setDay(ds,x=>{x.off=e.target.checked?1:0;});render();}}),el('span',{},'この日はお休み',el('br'),el('span',{class:'xs muted'},'ルーティンを休んでも、連続記録は途切れません'))),
     rs.length&&!d.off?el('div',{class:'card'},el('h2',{},'ルーティン'),rs.map((r,i)=>routineRow(ds,r,i===0))):null,
-    L.items.map(it=>itemEditor(ds,it)),
+    items().map(it=>itemEditor(ds,it)),
+    PLAN?['study','manga'].filter(k=>tr[k]==='time'||trackEntries(ds,k).length).map(k=>spanEditor(ds,'@'+k,trackName(k)+'の時間',el('span',{'aria-hidden':'true'},k==='study'?P_().study.icon||'📖':P_().create.icon||'✏️'),[],trackEntries(ds,k))):null,
     (ms.length||ev.length||tasks.length)?el('div',{class:'card'},el('h2',{},'この日の予定'),
       ms.map(m=>el('p',{class:'small'},'◆ '+m[1])),
       ev.map(g=>el('p',{class:'small'},'🗓 '+g)),
-      tasks.map(k=>el('p',{class:'small'},el('span',{class:'muted num'},k.time+'　'),k.title))):null,
+      tasks.map(k=>el('p',{class:'small'},el('span',{class:'muted num'},k.time+'　'),k.title,isChecked(ds,k.id)?el('span',{style:'color:var(--good)'},' ✓'):null))):null,
     el('a',{href:gcalUrl(ds),target:'_blank',rel:'noopener',class:'btn sub sm'},'Google カレンダーでこの日を開く')
   ];
 }
@@ -701,7 +855,7 @@ function viewDay(arg){
 function viewCheckin(id){
   const L=life(), c=L.checkins.find(x=>x.id===id), ds=today();
   if(!c) return [el('h1',{},'チェックイン'),el('p',{class:'small muted'},'見つかりませんでした。'),el('a',{href:'#home',class:'btn sub sm'},'ホームへ')];
-  const its=L.items.filter(it=>c.items.includes(it.id)), rs=L.routines.filter(r=>c.routines.includes(r.id)&&routineApplies(ds,r));
+  const its=items().filter(it=>c.items.includes(it.id)), rs=routines().filter(r=>c.routines.includes(r.id)&&routineApplies(ds,r));
   const again=(dayRec(ds).ci||{})[id];
   return [
     el('div',{},el('span',{class:'small muted'},jpDate(ds)+(again?'・'+hm(again)+'に記録済み（答え直せます）':'')),el('h1',{},c.name+'のチェックイン')),
@@ -716,10 +870,11 @@ function viewCheckin(id){
 const CAL={ym:'',f:'all'};
 function viewCal(){
   const t=today();if(!CAL.ym) CAL.ym=t.slice(0,7);
-  const [y,m]=CAL.ym.split('-').map(Number), first=new Date(y,m-1,1), n=new Date(y,m,0).getDate(), L=life();
+  const [y,m]=CAL.ym.split('-').map(Number), first=new Date(y,m-1,1), n=new Date(y,m,0).getDate();
+  const RS=routines(), IT=items();
   const ms={};for(const x of (P_().milestones||[])) (ms[x[0]]=ms[x[0]]||[]).push(x[1]);
   const shift=k=>{CAL.ym=ymd(new Date(y,m-1+k,1)).slice(0,7);render();};
-  const fr=CAL.f.startsWith('r:')?L.routines.find(r=>'r:'+r.id===CAL.f):null, fi=CAL.f.startsWith('i:')?L.items.find(i=>'i:'+i.id===CAL.f):null;
+  const fr=CAL.f.startsWith('r:')?RS.find(r=>'r:'+r.id===CAL.f):null, fi=CAL.f.startsWith('i:')?IT.find(i=>'i:'+i.id===CAL.f):null;
   const cells=[...DN].map((w,i)=>el('div',{class:'wd',style:i===0?'color:var(--bad)':''},w));
   for(let i=0;i<first.getDay();i++) cells.push(el('div',{class:'cc pad','aria-hidden':'true'}));
   for(let i=1;i<=n;i++){
@@ -727,22 +882,21 @@ function viewCal(){
     let style='', mark=null, label=jpDate(ds);
     if(fr){if(routineApplies(ds,fr)&&!d.off){const s=routineState(ds,fr);if(s===1){mark=el('b',{class:'ok'},'○');label+=' できた';}else if(s===0){mark=el('b',{class:'ng'},'×');label+=' できなかった';}}}
     else if(!fi&&!d.off){const r=dayRate(ds);if(r){const a=r.ok/r.all;style='background:color-mix(in srgb,var(--good) '+Math.round(10+a*45)+'%,var(--surface))';label+=' ルーティン '+r.ok+'/'+r.all;}}
-    const bs=(fi?[fi]:L.items).filter(it=>itemDone(ds,it));
+    const bs=(fi?[fi]:IT).filter(it=>itemDone(ds,it));
     if(bs.length) label+=' '+bs.map(it=>it.name).join('・');
     if(ms[ds]) label+=' 節目：'+ms[ds].join('、');
     cells.push(el('a',{href:'#day/'+ds,class:'cc'+(ds===t?' today':'')+(ds>t?' fut':''),style,'aria-label':label},
       el('span',{class:'dn'},String(i)),d.off?el('span',{class:'off'},'お休み'):mark,el('span',{class:'bs'},bs.map(badgeNode)),ms[ds]?el('i',{class:'ms'}):null));
   }
-  // month summary
   const days=[];for(let i=1;i<=n;i++){const ds=CAL.ym+'-'+String(i).padStart(2,'0');if(ds<=t) days.push(ds);}
-  const rows=L.routines.map(r=>{let ok=0,ans=0,app=0;for(const ds of days){if(!routineApplies(ds,r)||dayRec(ds).off) continue;app++;const s=routineState(ds,r);if(s!=null){ans++;if(s) ok++;}}return {r,ok,ans,app};});
+  const rows=RS.map(r=>{let ok=0,ans=0,app=0;for(const ds of days){if(!routineApplies(ds,r)||dayRec(ds).off) continue;app++;const s=routineState(ds,r);if(s!=null){ans++;if(s) ok++;}}return {r,ok,ans,app};});
   const recDays=days.filter(hasActivity).length;
-  const fchips=[['all','全体']].concat(L.routines.map(r=>['r:'+r.id,(r.emoji||'')+' '+r.name]),L.items.map(i=>['i:'+i.id,(i.emoji||'●')+' '+i.name]));
+  const fchips=[['all','全体']].concat(RS.map(r=>['r:'+r.id,(r.emoji||'')+' '+r.name]),IT.map(i=>['i:'+i.id,(i.emoji||'●')+' '+i.name]));
   return [
-    el('div',{class:'calhead'},el('button',{type:'button',class:'iconbtn','aria-label':'前の月',onclick:()=>shift(-1)},'‹'),el('h1',{style:'text-align:center'},y+'年'+m+'月'),el('button',{type:'button',class:'iconbtn','aria-label':'次の月',onclick:()=>shift(1)},'›')),
+    el('div',{class:'calhead'},navBtn('','前の月',-1,()=>shift(-1)),el('h1',{style:'text-align:center'},y+'年'+m+'月'),navBtn('','次の月',1,()=>shift(1))),
     el('div',{class:'chips',style:'flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px'},fchips.map(([k,l])=>el('button',{type:'button',class:'chip','aria-pressed':String(CAL.f===k),style:'flex:none',onclick:()=>{CAL.f=k;render();}},l))),
     el('div',{class:'calgrid'},cells),
-    el('div',{class:'legend'},fr?[el('span',{},'○ できた'),el('span',{},'× できなかった'),el('span',{},'空白 記録なし')]:fi?[el('span',{},'バッジ：その日に記録した日')]:[el('span',{},'緑の濃さ：ルーティンの達成率'),el('span',{},'バッジ：記録した項目'),el('span',{style:'display:inline-flex;align-items:center;gap:4px'},el('i',{class:'dot',style:'background:var(--manga)'}),'節目')]),
+    el('div',{class:'legend'},fr?[el('span',{},'○ できた'),el('span',{},'× できなかった'),el('span',{},'空白 記録なし')]:fi?[el('span',{},'バッジ：記録した日')]:[el('span',{},'緑の濃さ：ルーティンの達成率'),el('span',{},'バッジ：記録した項目'),el('span',{style:'display:inline-flex;align-items:center;gap:4px'},el('i',{class:'dot',style:'background:var(--manga)'}),'節目')]),
     el('div',{class:'card'},el('div',{class:'between'},el('h2',{},m+'月のふり返り'),el('span',{class:'small muted num'},'記録した日 '+recDays+' / '+days.length+'日')),
       el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'ルーティン'),el('th',{},'できた'),el('th',{},'記録した日'))),
         el('tbody',{},rows.map(x=>el('tr',{},el('td',{},(x.r.emoji||'')+' '+x.r.name),el('td',{class:'num'},x.ans?x.ok+'日（'+Math.round(x.ok/x.ans*100)+'%）':'—'),el('td',{class:'num muted'},x.ans+' / '+x.app+'日'))))))),
@@ -758,19 +912,40 @@ function viewRoutines(){
   const L=life();
   const det=(key,summary,...kids)=>el('details',{class:'set',open:OPEN.has(key),ontoggle:e=>{if(e.target.open) OPEN.add(key); else OPEN.delete(key);}},el('summary',{},summary),...kids);
   const txt=(id,label,val,onset)=>el('label',{class:'field',for:id},label,el('input',{type:'text',id,value:val||'',onchange:e=>onset(e.target.value.trim())}));
-  const twoStep=(label,act)=>{let armed=false;return el('button',{type:'button',class:'btn sub sm',style:'color:var(--bad)',onclick:e=>{if(!armed){armed=true;e.target.textContent='もう一度押すと消えます';setTimeout(()=>{armed=false;if(e.target.isConnected) e.target.textContent=label;},4000);return;}act();}},label);};
+  const twoStep=(label,act,danger)=>{let armed=false;return el('button',{type:'button',class:'btn sub sm',style:danger===false?'':'color:var(--bad)',onclick:e=>{if(!armed){armed=true;e.target.textContent='もう一度押すと実行します';setTimeout(()=>{armed=false;if(e.target.isConnected) e.target.textContent=label;},4000);return;}act();}},label);};
   const daysLabel=ds=>ds.length===7?'毎日':(ds.join()===WEEKDAYS.join()?'平日':ds.map(i=>DN[i]).join(''));
   const updR=(id,fn)=>{setLife(x=>{fn(x.routines.find(r=>r.id===id));});render();};
   const updI=(id,fn)=>{setLife(x=>{fn(x.items.find(i=>i.id===id));});render();};
+  const useBox=(id,label,on,fn)=>el('label',{class:'row',for:id,style:'min-height:44px'},el('input',{type:'checkbox',id,checked:on,onchange:e=>fn(e.target.checked)}),el('span',{},label));
+  const daysPick=(r)=>el('div',{class:'field'},'曜日',el('div',{class:'wds'},ALLDAYS.map(i=>el('button',{type:'button','aria-pressed':String((r.days||ALLDAYS).includes(i)),'aria-label':DN[i]+'曜日',onclick:()=>updR(r.id,x=>{const s=new Set(x.days||ALLDAYS);if(s.has(i)) s.delete(i); else s.add(i);x.days=[...s].sort();})},DN[i]))));
+  const offPill=off=>off?el('span',{class:'pill gray',style:'padding:2px 8px;font-size:11px'},'使わない'):null;
+  const sr=sleepRoutine();
 
+  const help=el('details',{class:'set'},el('summary',{},'？ 使い方'),
+    el('div',{class:'small',style:'display:flex;flex-direction:column;gap:8px'},
+      el('p',{},el('b',{},'ルーティン：'),'時刻までにやりたいことです。ホームで ○（できた）か ×（できなかった）を付けます。答えなかった日は「記録なし」になり、責められることはありません。'),
+      el('p',{},el('b',{},'チェックイン：'),'アプリを開くよう促す時刻と、そのときに聞く項目です（最大4回）。同じ項目を何回聞いてもよく、答え直すと上書きされます。'),
+      el('p',{},el('b',{},'毎日の記録項目：'),'睡眠・仕事・家事・趣味・運動など、一日の過ごし方です。「時間」の項目は内訳を選んで、分か時刻で入れます。ながら作業で時刻が重なっても大丈夫です。'),
+      el('p',{},el('b',{},'ワンタップ記録：'),'よく使う「内訳と時間」の組み合わせを、ボタン1つで記録できます（4つまで）。'),
+      el('p',{},el('b',{},'使わない：'),'消さずに一時的に止めておけます。チェックを入れ直せば元に戻ります。'),
+      el('p',{},el('b',{},'お休みの日：'),'記録画面でオンにすると、その日はルーティンを休んでも連続記録が途切れません。'),
+      el('p',{},el('b',{},'プリセットに戻す：'),'この画面の設定だけを最初の状態に戻します。これまでの記録は消えません。')));
+
+  const sleepDet=sr?det('r:'+sr.id,[el('span',{},sr.emoji||'・'),el('span',{style:'flex:1;min-width:0'},'睡眠のルーティン：'+sr.name),offPill(sr.off)],
+    useBox('sl-on','睡眠の目標をルーティンとして使う',!sr.off,v=>updR(sr.id,x=>{x.off=!v;})),
+    el('div',{class:'grid2'},txt('sln','ルーティンの名前',sr.name,v=>{if(v) updR(sr.id,x=>{x.name=v;x.auto=false;});}),txt('sle','絵文字',sr.emoji,v=>updR(sr.id,x=>{x.emoji=v;}))),
+    daysPick(sr),
+    el('p',{class:'xs muted'},'睡眠の記録から、目標以上眠れたかを自動で判定します。睡眠を記録するまで、ホームには「睡眠を記録」ボタンが出ます。')):null;
   const general=el('div',{class:'card'},el('h2',{},'一日の区切りと睡眠'),
     el('div',{class:'grid2'},
       el('label',{class:'field',for:'g-ds'},'一日の始まり',el('input',{type:'time',id:'g-ds',value:L.dayStart,onchange:e=>{if(e.target.value){setLife(x=>{x.dayStart=e.target.value;});render();}}})),
       el('label',{class:'field',for:'g-sl'},'睡眠の目標',el('select',{id:'g-sl',onchange:e=>{const v=Number(e.target.value);setLife(x=>{x.sleepTarget=v;x.routines.forEach(r=>{if(r.kind==='sleep'){r.min=v;if(r.auto) r.name=fmtMin(v)+'寝る';}});});render();}},
         [300,330,360,390,420,450,480,510,540].map(v=>el('option',{value:v,selected:v===L.sleepTarget},fmtMin(v)))))),
-    el('p',{class:'xs muted'},'一日の始まりより前の記録は、前の日の分になります（例：4:00なら、0:30の記録は前の日）。'));
+    el('p',{class:'xs muted'},'一日の始まりより前の記録は、前の日の分になります（4:00なら、0:30の記録は前の日）。'),
+    sleepDet);
 
-  const ciCards=el('div',{class:'card'},el('h2',{},'チェックイン'),el('p',{class:'xs muted'},'アプリを開くよう促す時刻と、その時に聞く項目です。同じ項目を何回聞いてもかまいません。時刻を過ぎるとホームに表示されます（通知は次の段階で届くようになります）。'),
+  const RS=L.routines.filter(r=>r.kind!=='sleep'), IT=L.items;
+  const ciCards=el('div',{class:'card'},el('h2',{},'チェックイン（最大4回）'),el('p',{class:'xs muted'},'時刻を過ぎるとホームのボタンが青くなります（通知は次の段階で届くようになります）。'),
     L.checkins.map((c,ci)=>{
       const tog=(key,id)=>{setLife(x=>{const cc=x.checkins.find(y=>y.id===c.id);const s=new Set(cc[key]);if(s.has(id)) s.delete(id); else s.add(id);cc[key]=[...s];});render();};
       return el('div',{class:'ci'+(ci===0?' first':'')},
@@ -778,40 +953,79 @@ function viewRoutines(){
           el('label',{class:'row',for:'ci-'+c.id},el('input',{type:'checkbox',id:'ci-'+c.id,checked:c.on,onchange:e=>{setLife(x=>{x.checkins.find(y=>y.id===c.id).on=e.target.checked;});render();}}),el('b',{},c.name+'のチェックイン')),
           el('input',{type:'time',value:c.time,'aria-label':c.name+'のチェックインの時刻',style:'max-width:140px',onchange:e=>{if(e.target.value) setLife(x=>{x.checkins.find(y=>y.id===c.id).time=e.target.value;});}})),
         c.on?el('div',{class:'chips'},
-          L.routines.map(r=>el('button',{type:'button',class:'chip','aria-pressed':String(c.routines.includes(r.id)),onclick:()=>tog('routines',r.id)},(r.emoji||'')+' '+r.name)),
-          L.items.map(it=>el('button',{type:'button',class:'chip','aria-pressed':String(c.items.includes(it.id)),onclick:()=>tog('items',it.id)},(it.emoji||'●')+' '+it.name))):null);
+          routines().filter(r=>r.kind!=='sleep').map(r=>el('button',{type:'button',class:'chip sm','aria-pressed':String(c.routines.includes(r.id)),onclick:()=>tog('routines',r.id)},(r.emoji||'')+' '+r.name)),
+          items().map(it=>el('button',{type:'button',class:'chip sm','aria-pressed':String(c.items.includes(it.id)),onclick:()=>tog('items',it.id)},(it.emoji||'●')+' '+it.name))):null);
     }));
 
-  const rEdit=r=>det('r:'+r.id,[el('span',{},r.emoji||'・'),el('span',{style:'flex:1;min-width:0'},(r.by?r.by+' までに':'')+r.name),el('span',{class:'xs muted'},daysLabel(r.days||ALLDAYS))],
-    el('div',{class:'grid2'},txt('rn-'+r.id,'名前',r.name,v=>{if(v) updR(r.id,x=>{x.name=v;x.auto=false;});}),txt('re-'+r.id,'絵文字',r.emoji,v=>updR(r.id,x=>{x.emoji=v;}))),
-    r.kind==='sleep'?el('p',{class:'xs muted'},'睡眠の記録から自動で判定します（目標 '+fmtMin(r.min||L.sleepTarget)+'。目標は上の「睡眠の目標」で変えられます）。')
-      :el('label',{class:'field',for:'rb-'+r.id},'期限の時刻（なくてもOK）',el('input',{type:'time',id:'rb-'+r.id,value:r.by||'',onchange:e=>updR(r.id,x=>{x.by=e.target.value;})})),
-    el('div',{class:'field'},'曜日',el('div',{class:'wds'},ALLDAYS.map(i=>el('button',{type:'button','aria-pressed':String((r.days||ALLDAYS).includes(i)),'aria-label':DN[i]+'曜日',onclick:()=>updR(r.id,x=>{const s=new Set(x.days||ALLDAYS);if(s.has(i)) s.delete(i); else s.add(i);x.days=[...s].sort();})},DN[i])))),
-    r.kind==='sleep'?null:el('div',{class:'grid2'},
+  const rEdit=r=>det('r:'+r.id,[el('span',{},r.emoji||'・'),el('span',{style:'flex:1;min-width:0'},(r.by?r.by+' までに':'')+r.name),offPill(r.off)||el('span',{class:'xs muted'},daysLabel(r.days||ALLDAYS))],
+    useBox('ru-'+r.id,'このルーティンを使う',!r.off,v=>updR(r.id,x=>{x.off=!v;})),
+    el('div',{class:'grid2'},txt('rn-'+r.id,'名前',r.name,v=>{if(v) updR(r.id,x=>{x.name=v;});}),txt('re-'+r.id,'絵文字',r.emoji,v=>updR(r.id,x=>{x.emoji=v;}))),
+    el('label',{class:'field',for:'rb-'+r.id},'期限の時刻（なくてもOK）',el('input',{type:'time',id:'rb-'+r.id,value:r.by||'',onchange:e=>updR(r.id,x=>{x.by=e.target.value;})})),
+    daysPick(r),
+    el('div',{class:'grid2'},
       el('label',{class:'field',for:'rv-'+r.id},'前もって知らせる',el('select',{id:'rv-'+r.id,onchange:e=>updR(r.id,x=>{x.before=e.target.value===''?null:Number(e.target.value);})},
         [['','知らせない'],[5,'5分前'],[10,'10分前'],[15,'15分前'],[30,'30分前'],[60,'1時間前']].map(([v,l])=>el('option',{value:v,selected:String(r.before==null?'':r.before)===String(v)},l)))),
       el('label',{class:'row',for:'ra-'+r.id,style:'align-self:end;min-height:44px'},el('input',{type:'checkbox',id:'ra-'+r.id,checked:r.at!==false,onchange:e=>updR(r.id,x=>{x.at=e.target.checked;})}),el('span',{class:'small'},'時刻にも知らせる'))),
     twoStep('このルーティンを消す',()=>{setLife(x=>{x.routines=x.routines.filter(y=>y.id!==r.id);x.checkins.forEach(c=>{c.routines=c.routines.filter(y=>y!==r.id);});});toast('消しました');render();}));
 
-  const iEdit=it=>det('i:'+it.id,[badgeNode(it),el('span',{style:'flex:1;min-width:0'},it.name),el('span',{class:'xs muted'},(TYPES[it.type]||'').replace(/（.*/,''))],
+  const iEdit=it=>det('i:'+it.id,[badgeNode(it),el('span',{style:'flex:1;min-width:0'},it.name),offPill(it.off)||el('span',{class:'xs muted'},(TYPES[it.type]||'').replace(/（.*/,''))],
+    it.type==='sleep'?null:useBox('iu-'+it.id,'この項目を使う',!it.off,v=>updI(it.id,x=>{x.off=!v;})),
     el('div',{class:'grid2'},txt('in-'+it.id,'名前',it.name,v=>{if(v) updI(it.id,x=>{x.name=v;});}),txt('ie-'+it.id,'絵文字（なしなら色の点）',it.emoji,v=>updI(it.id,x=>{x.emoji=v;}))),
     it.emoji?null:el('div',{class:'field'},'点の色',el('div',{class:'pal'},PALETTE.map(c=>el('button',{type:'button','aria-label':'色 '+c,'aria-pressed':String((it.color||PALETTE[5])===c),style:'background:'+c,onclick:()=>updI(it.id,x=>{x.color=c;})})))),
-    el('label',{class:'field',for:'it-'+it.id},'記録のしかた',el('select',{id:'it-'+it.id,onchange:e=>updI(it.id,x=>{x.type=e.target.value;if(x.type==='span'&&!x.subs) x.subs=[];})},Object.entries(TYPES).map(([k,l])=>el('option',{value:k,selected:it.type===k},l)))),
+    it.type==='sleep'?el('p',{class:'xs muted'},'睡眠の目標は上の「一日の区切りと睡眠」で設定します。'):el('label',{class:'field',for:'it-'+it.id},'記録のしかた',el('select',{id:'it-'+it.id,onchange:e=>updI(it.id,x=>{x.type=e.target.value;if(x.type==='span'&&!x.subs) x.subs=[];})},Object.entries(TYPES).filter(([k])=>k!=='sleep').map(([k,l])=>el('option',{value:k,selected:it.type===k},l)))),
     it.type==='span'?el('div',{class:'field'},'内訳',
-      el('div',{class:'chips'},(it.subs||[]).map(s=>el('button',{type:'button',class:'chip','aria-label':s.name+'を内訳から外す',onclick:()=>updI(it.id,x=>{x.subs=x.subs.filter(y=>y.id!==s.id);})},s.name+' ×'))),
+      el('div',{class:'chips'},(it.subs||[]).map(s=>el('button',{type:'button',class:'chip sm','aria-label':s.name+'を内訳から外す',onclick:()=>updI(it.id,x=>{x.subs=x.subs.filter(y=>y.id!==s.id);})},s.name+' ×'))),
       (()=>{let v='';return el('div',{class:'row'},el('input',{type:'text',placeholder:'内訳を足す（例：絵の練習）','aria-label':'足す内訳の名前',oninput:e=>{v=e.target.value.trim();}}),el('button',{type:'button',class:'btn sub sm',style:'flex:none',onclick:()=>{if(v) updI(it.id,x=>{x.subs=(x.subs||[]).concat([{id:'s'+Date.now().toString(36),name:v}]);});}},'足す'));})()):null,
-    twoStep('この項目を消す',()=>{setLife(x=>{x.items=x.items.filter(y=>y.id!==it.id);x.checkins.forEach(c=>{c.items=c.items.filter(y=>y!==it.id);});});toast('消しました（記録した中身は残っています）');render();}));
+    it.type==='sleep'?null:twoStep('この項目を消す',()=>{setLife(x=>{x.items=x.items.filter(y=>y.id!==it.id);x.checkins.forEach(c=>{c.items=c.items.filter(y=>y!==it.id);});x.quick=(x.quick||[]).filter(q=>q.item!==it.id);});toast('消しました（記録した中身は残っています）');render();}));
+
+  const spanItems=L.items.filter(i=>i.type==='span');
+  const qEdit=(q,qi)=>{
+    const it=spanItems.find(i=>i.id===q.item)||spanItems[0];
+    const upd=fn=>{setLife(x=>{fn(x.quick.find(y=>y.id===q.id));});render();};
+    return el('div',{class:'ci'+(qi===0?' first':'')},
+      el('div',{class:'between'},el('b',{},'＋'+quickLabel(q)),el('button',{type:'button',class:'x iconbtn','aria-label':'このボタンを消す',onclick:()=>{setLife(x=>{x.quick=x.quick.filter(y=>y.id!==q.id);});render();}},'×')),
+      el('div',{class:'grid2',style:'grid-template-columns:1fr 1fr 1fr'},
+        el('select',{'aria-label':'項目',onchange:e=>upd(x=>{x.item=e.target.value;const ni=spanItems.find(i=>i.id===x.item);x.sub=ni&&ni.subs&&ni.subs[0]?ni.subs[0].id:'';})},spanItems.map(i=>el('option',{value:i.id,selected:i.id===q.item},i.name))),
+        el('select',{'aria-label':'内訳',onchange:e=>upd(x=>{x.sub=e.target.value;})},((it&&it.subs)||[]).map(s=>el('option',{value:s.id,selected:s.id===q.sub},s.name))),
+        el('select',{'aria-label':'時間',onchange:e=>upd(x=>{x.m=Number(e.target.value);})},MIN_CHOICES.map(n=>el('option',{value:n,selected:n===q.m},fmtMin(n))))));
+  };
+  const quickCard=el('div',{class:'card'},el('h2',{},'ワンタップ記録（4つまで）'),el('p',{class:'xs muted'},'ホームと記録画面に出るボタンです。押すと、その内訳と時間が今日の記録に入ります。'),
+    (L.quick||[]).map(qEdit),
+    (L.quick||[]).length<4&&spanItems.length?el('button',{type:'button',class:'btn sub sm',onclick:()=>{const it=spanItems[0];setLife(x=>{x.quick=(x.quick||[]).concat([{id:'q'+Date.now().toString(36),item:it.id,sub:it.subs&&it.subs[0]?it.subs[0].id:'',m:30}]);});render();}},'＋ ボタンを足す'):null);
 
   return [
-    el('h1',{},'ルーティン設定'),statusNode(),
-    general,ciCards,
+    el('h1',{},'ルーティン設定'),statusNode(),help,
+    general,ciCards,quickCard,
     el('h2',{},'ルーティン'),
     el('p',{class:'xs muted'},'通知（何分前・時刻ちょうど）は次の段階で届くようになります。設定は今のうちに入れておけます。'),
-    L.routines.map(rEdit),
+    RS.map(rEdit),
     el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id='r'+Date.now().toString(36);setLife(x=>{x.routines.push({id,name:'新しいルーティン',emoji:'✅',kind:'manual',by:'',days:ALLDAYS.slice(),before:10,at:true});});OPEN.add('r:'+id);render();}},'＋ ルーティンを足す'),
     el('h2',{},'毎日の記録項目'),
-    L.items.map(iEdit),
-    el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id='i'+Date.now().toString(36);setLife(x=>{x.items.push({id,name:'新しい項目',emoji:'⭐',color:'',type:'check'});});OPEN.add('i:'+id);render();}},'＋ 記録項目を足す')
+    IT.map(iEdit),
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id='i'+Date.now().toString(36);setLife(x=>{x.items.push({id,name:'新しい項目',emoji:'⭐',color:'',type:'span',subs:[]});});OPEN.add('i:'+id);render();}},'＋ 記録項目を足す'),
+    el('div',{class:'card',style:'margin-top:8px'},el('h2',{},'プリセットに戻す'),el('p',{class:'xs muted'},'この画面の設定を最初の状態に戻します。これまでの記録は消えません。'),
+      twoStep('プリセットに戻す',()=>{setLife(x=>{const keep=x.tracks;Object.assign(x,clone(LIFE_PRESET));x.tracks=keep;});OPEN.clear();toast('プリセットに戻しました');render();}))
+  ];
+}
+
+/* how study and creative time are recorded (separate from routines) */
+function viewTracks(){
+  const T=tracks();
+  const setT=fn=>{setLife(x=>{x.tracks=Object.assign({},TRACKS_DEFAULT,x.tracks);fn(x.tracks);});render();};
+  const seg=k=>el('div',{class:'seg',style:'grid-template-columns:1fr 1fr'},
+    el('button',{type:'button','aria-pressed':String(T[k]==='time'),onclick:()=>setT(x=>{x[k]='time';})},'時間も記録する'),
+    el('button',{type:'button','aria-pressed':String(T[k]!=='time'),onclick:()=>setT(x=>{x[k]='done';})},'やったかだけ記録'));
+  const est=PLAN?works().reduce((a,w)=>a+workPct(w,manga()[w.id]).total,0)*60:0;
+  const st=trackTotal('study'), mg=trackTotal('manga');
+  return [
+    el('h1',{},'学習と制作の記録方法'),statusNode(),
+    el('p',{class:'small muted'},'「今日やること」にチェックを入れたときに、使った時間も一緒に記録するかを選びます。時間を記録すると、これまでの合計時間や、制作が見積もりのどのあたりまで来ているかがわかります。'),
+    el('div',{class:'card'},el('h2',{},(P_().study.icon||'📖')+' '+P_().study.name),seg('study'),
+      el('p',{class:'small num'},'これまで '+fmtH(st)+(T.studyGoal?' ／ 目標 '+T.studyGoal+'時間（'+Math.round(st/60/T.studyGoal*100)+'%）':'')),
+      el('label',{class:'field',for:'tg'},'学習時間の目標（任意・時間）',el('input',{type:'number',id:'tg',min:0,inputmode:'numeric',value:T.studyGoal||'',placeholder:'例：900',onchange:e=>setT(x=>{x.studyGoal=Math.max(0,parseInt(e.target.value,10)||0);})}))),
+    el('div',{class:'card'},el('h2',{},(P_().create.icon||'✏️')+' '+P_().create.name),seg('manga'),
+      el('p',{class:'small num'},'これまで '+fmtH(mg)+(est?' ／ 見積もり '+fmtH(est)+'（'+Math.round(mg/est*100)+'%）':''))),
+    el('p',{class:'xs muted'},'「時間も記録する」にすると、チェックを入れたときに時間を選ぶ画面が出ます（予定の時間が最初から選ばれています）。記録画面から、あとで足したり消したりもできます。')
   ];
 }
 
@@ -837,9 +1051,9 @@ function openMenu(){
   m.replaceChildren(...[
     el('div',{class:'between',style:'padding:0 4px 4px 12px'},brandNode(),el('button',{type:'button',class:'iconbtn','aria-label':'メニューを閉じる',onclick:()=>m.close()},'×')),
     el('h3',{},'毎日'),a('home','ホーム'),a('day/'+today(),'今日の記録'),a('cal','カレンダー'),
-    life().checkins.filter(c=>c.on).map(c=>a('checkin/'+c.id,c.name+'のチェックイン')),
+    life().checkins.filter(c=>c.on).map(c=>a('checkin/'+c.id,c.name+'のチェックイン（'+c.time+'）')),
     el('h3',{},'勉強と原稿'),a('practice','演習'),a('progress','進捗'),a('share','Xへのシェア'),a('plan','計画'),
-    el('h3',{},'設定と管理'),a('routines','ルーティン設定'),a('import','問題の取り込み・同期・バックアップ')].flat());
+    el('h3',{},'設定と管理'),a('routines','ルーティン設定'),a('tracks','学習と制作の記録方法'),a('import','問題の取り込み・同期・バックアップ')].flat());
   if(!m.open) m.showModal();
 }
 
@@ -849,14 +1063,16 @@ const P={step:'setup',subject:null,book:'all',mode:'cont',count:10,queue:[],i:0,
 function go(v){if(location.hash!=='#'+v) location.hash=v; else render();}
 // views that are only being looked at can be redrawn when a sync brings news; pages being typed into are left alone
 function softRender(){updateStatus();if(VIEW==='home'||VIEW==='progress'||VIEW==='cal'||(VIEW==='practice'&&P.step==='setup')) render();}
-const VIEWS={home:viewHome,day:viewDay,checkin:viewCheckin,cal:viewCal,routines:viewRoutines,plan:viewPlan,practice:viewPractice,progress:viewProgress,share:viewShare,import:viewImport};
+const VIEWS={home:viewHome,day:viewDay,checkin:viewCheckin,cal:viewCal,routines:viewRoutines,tracks:viewTracks,plan:viewPlan,practice:viewPractice,progress:viewProgress,share:viewShare,import:viewImport};
 const TAB_OF={share:'progress',day:'cal',checkin:'home'};
 function render(){
   const h=(location.hash||'#home').slice(1), i=h.indexOf('/'), name=i<0?h:h.slice(0,i), arg=i<0?'':h.slice(i+1);
   VIEW=VIEWS[name]?name:'home';
   const tab=TAB_OF[VIEW]||VIEW;
   document.querySelectorAll('nav.tabs a').forEach(a=>{if(a.dataset.v===tab) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');});
-  const main=document.getElementById('main'); main.replaceChildren();
+  const slot=document.getElementById('topslot');
+  slot.replaceChildren(...(VIEW==='home'?[el('b',{class:'hdate'},jpDate(today())),PLAN?el('div',{class:'cd num'},countdowns(today())):null].filter(Boolean):[el('span',{class:'topname'},'芒学')]));
+  const main=document.getElementById('main'); main.replaceChildren(); main.className='wrap v-'+VIEW;
   main.append(...[].concat(VIEWS[VIEW](arg)).flat(9).filter(x=>x!=null&&x!==false));
 }
 window.addEventListener('hashchange',()=>{window.scrollTo(0,0);render();});
@@ -871,32 +1087,52 @@ function progressCard(label,pct,plan,cls){
     el('div',{class:'bar'+(cls?' '+cls:'')},el('i',{style:'width:'+pct+'%'}),el('b',{style:'left:'+Math.min(plan,100)+'%'})));
 }
 function viewHome(){
-  const t=today();
-  const due=dueCheckins().map(c=>el('a',{href:'#checkin/'+c.id,class:'btn'},c.name+'のチェックイン（'+c.time+'）'));
+  const t=today(), L=life(), d=dayRec(t);
+  const head=statusNode(true);
+  // check-ins: one row
+  const cis=L.checkins.filter(c=>c.on);
+  const ciRow=cis.length?el('div',{class:'cirow',style:'grid-template-columns:repeat('+cis.length+',minmax(0,1fr))'},cis.map(c=>{const s=ciState(c);
+    return el('a',{href:'#checkin/'+c.id,class:'cib '+s,'aria-label':c.name+'のチェックイン'+(s==='done'?'（済み）':s==='due'?'（いまできます）':'（'+c.time+'から）')},el('b',{},c.name),el('span',{class:'num'},s==='done'?'済み ✓':c.time));})):null;
+  // routines: a horizontal strip of small cards; the sleep goal shows a record button until sleep is recorded
+  const rs=routines().filter(r=>routineApplies(t,r)), rate=dayRate(t);
+  const cards=[];
+  rs.sort((a,b)=>(a.kind==='sleep'?-1:0)-(b.kind==='sleep'?-1:0)||sinceStart(toMin(a.by)||0)-sinceStart(toMin(b.by)||0));
+  for(const r of rs){
+    if(r.kind==='sleep'){if(sleepMin(d.rec.sleep)==null) cards.push(el('button',{type:'button',class:'rcard sleep',role:'listitem',onclick:()=>sleepSheet(t)},el('span',{class:'rh'},el('span',{class:'re'},(L.items.find(i=>i.id==='sleep')||{}).emoji||'😴'),el('span',{class:'rtm'},'目標 '+fmtMin(L.sleepTarget))),el('span',{class:'rn'},'睡眠を記録する'),el('span',{class:'xs',style:'color:var(--accent-ink);margin-top:auto'},'寝た・起きた時刻 ›')));continue;}
+    const s=routineState(t,r);
+    cards.push(el('div',{class:'rcard'+(s===1?' ok':s===0?' ng':''),role:'listitem'},el('span',{class:'rh'},el('span',{class:'re'},r.emoji||'・'),el('span',{class:'rtm num'},r.by?r.by+' まで':'いつでも')),el('span',{class:'rn'},r.name),el('div',{class:'rbs'},rbtn(t,r,1),rbtn(t,r,0))));
+  }
+  const routineSec=d.off?el('p',{class:'small muted'},'今日はお休みの日です。ゆっくり休んでください。')
+    :(cards.length?el('div',{class:'rstrip',role:'list','aria-label':'今日のルーティン'},cards):null);
+  const quick=el('div',{class:'qrow'},(L.quick||[]).slice(0,4).map(q=>el('button',{type:'button',class:'chip sm',onclick:()=>addQuick(q,t)},'＋'+quickLabel(q))),el('a',{href:'#day/'+t,class:'chip sm',style:'text-decoration:none;display:inline-flex;align-items:center'},'記録 ›'));
   const sk=streak();
-  const top=[
-    el('div',{class:'between',style:'align-items:flex-end'},
-      el('div',{style:'display:flex;flex-direction:column;gap:2px'},el('span',{class:'small muted'},jpDate(t)),el('h1',{},'今日')),
-      el('div',{class:'xs muted num',style:'text-align:right;display:flex;flex-direction:column'},PLAN?countdowns(t):null)),
-    statusNode(), due, comebackCard(t), routinesCard(t),
-    sk>=2?el('p',{class:'small muted',style:'text-align:center'},'記録が続いて '+sk+' 日目'):null];
-  if(!PLAN) return [top,el('div',{class:'between'},el('h2',{},'今日やること'),el('a',{href:'#plan',class:'small'},'計画を見る')),noPlan(),brandNode()];
-  const st=studyStats(), mg=mangaStats();
-  const tasks=tasksFor(t);
+  const top=[head,comebackCard(t),ciRow,
+    el('div',{class:'between'},el('h2',{class:'sec'},'ルーティン'),el('span',{class:'xs muted num'},d.off?'':(rate?'できた '+rate.ok+' / '+rate.all:'')+(sk>=2?'　記録 '+sk+'日目':''))),
+    routineSec,quick];
+  if(!PLAN) return [top,el('h2',{class:'sec'},'今日やること'),noPlan(),brandNode()];
+
+  const st=studyStats(), mg=mangaStats(), tasks=tasksFor(t), T=tracks();
   const next=(P_().milestones||[]).find(m=>m[0]>=t);
-  const list=el('div',{class:'card',style:'padding:4px 16px'},
-    tasks.map(k=>{const done=isChecked(t,k.id), id='task-'+k.id;
+  const list=el('div',{class:'card tasks'},
+    tasks.length?tasks.map(k=>{const done=isChecked(t,k.id), id='task-'+k.id, tk=trackOf(k.kind);
+      const rec=tk?trackEntries(t,tk).find(x=>x.s===k.id):null;
       return el('div',{class:'task'+(k.kind==='manga'?' manga':'')+(done?' done':'')},
-        el('input',{type:'checkbox',id,checked:done,onchange:e=>{setChecked(t,k.id,e.target.checked);e.target.closest('.task').classList.toggle('done',e.target.checked);}}),
-        el('label',{for:id},el('span',{class:'t'},k.time),el('span',{class:'m'},k.title),k.sub?el('span',{class:'small muted'},k.sub):null));}));
+        el('input',{type:'checkbox',id,checked:done,onchange:e=>toggleTask(t,k,e.target.checked)}),
+        el('label',{for:id},el('span',{class:'t'},k.time+(rec?'・記録 '+fmtMin(rec.m):'')),el('span',{class:'m clamp2'},k.title)));})
+      :el('p',{class:'small muted'},'今日の予定はありません。'));
+  const mini=(label,pct,plan,cls,extra)=>el('a',{href:'#progress',class:'card mini'},
+    el('div',{class:'between'},el('span',{class:'xs muted'},label),el('b',{class:'num'},pct+'%')),
+    el('div',{class:'bar'+(cls?' '+cls:'')},el('i',{style:'width:'+pct+'%'}),el('b',{style:'left:'+Math.min(plan,100)+'%'})),
+    el('span',{class:'xs muted num'},'予定 '+plan+'%'+(extra?'・'+extra:'')));
   return [
     top,
-    el('div',{class:'between',style:'margin-top:6px'},el('h2',{},'今日やること'),el('a',{href:'#plan',class:'btn sub sm'},'計画を見る・直す')),
-    el('div',{class:'row',style:'flex-wrap:wrap'},phaseLabel(t)?el('span',{class:'pill'},phaseLabel(t)):null,el('span',{class:'small muted num'},'今週の消化 '+weekRate()+'%')),
+    el('div',{class:'between'},el('h2',{class:'sec'},'今日やること'),el('span',{class:'row',style:'gap:6px'},phaseLabel(t)?el('span',{class:'pill',style:'padding:2px 10px;font-size:12px'},phaseLabel(t)):null)),
     list,
-    el('div',{class:'grid2'},progressCard(P_().study.name+'（1周目）',st.pct,st.plan,''),works().length?progressCard(P_().create.name,mg.pct,mg.plan,'manga'):null),
-    el('a',{href:'#practice',class:'btn'},'演習をはじめる'),
-    next?el('div',{class:'card between',style:'flex-direction:row;padding:12px 16px'},el('span',{class:'small muted'},'次の節目'),el('span',{class:'small',style:'font-weight:500;text-align:right'},md(next[0])+' '+next[1]+'（あと'+diffDays(t,next[0])+'日）')):null,
+    el('div',{class:'grid2'},
+      mini(P_().study.name,st.pct,st.plan,'',T.study==='time'?fmtH(trackTotal('study')):''),
+      works().length?mini(P_().create.name,mg.pct,mg.plan,'manga',T.manga==='time'?fmtH(trackTotal('manga')):''):null),
+    el('div',{class:'grid2'},el('a',{href:'#practice',class:'btn sm'},'演習をはじめる'),el('a',{href:'#plan',class:'btn sub sm'},'計画を見る・直す')),
+    next?el('p',{class:'xs muted',style:'text-align:center'},'次の節目 '+md(next[0])+' '+next[1]+'（あと'+diffDays(t,next[0])+'日）'):null,
     brandNode()
   ];
 }
@@ -1089,6 +1325,7 @@ function viewProgress(){
       el('div',{class:'between',style:'align-items:baseline'},el('h2',{},P_().study.name+'（1周目）'),el('span',{class:'small muted num'},el('b',{style:'font-size:22px;color:var(--ink)'},st.pct+'%'),'　予定 '+st.plan+'%')),
       el('div',{class:'bar'},el('i',{style:'width:'+st.pct+'%'}),el('b',{style:'left:'+st.plan+'%'})),
       el('p',{class:'xs muted'},'取り込んだ問題のうち1回以上解いた割合を、科目の週数で重み付けしています。黒い印が今日時点の予定です。'),
+      trackTotal('study')?el('p',{class:'small num'},'これまでの学習時間 '+fmtH(trackTotal('study'))+'（今週 '+fmtH(trackTotal('study',addDays(today(),-((parseYmd(today()).getDay()+6)%7))))+'）'+(tracks().studyGoal?' ／ 目標 '+tracks().studyGoal+'時間':'')):null,
       el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'科目'),el('th',{},'解いた'),el('th',{},'正解'),el('th',{},'予定'))),
         el('tbody',{},st.rows.map(r=>el('tr',{},el('td',{},r.s.short),
           el('td',{class:'num'},r.c.total?r.c.answered+' / '+r.c.total:'未取り込み'),
@@ -1101,6 +1338,7 @@ function viewProgress(){
     el('div',{class:'card'},
       el('div',{class:'between',style:'align-items:baseline'},el('h2',{},P_().create.name),el('span',{class:'small muted num'},el('b',{style:'font-size:22px;color:var(--ink)'},mg.pct+'%'),'　予定 '+mg.plan+'%')),
       el('div',{class:'bar manga'},el('i',{style:'width:'+mg.pct+'%'}),el('b',{style:'left:'+mg.plan+'%'})),
+      (()=>{const used=trackTotal('manga'), est=works().reduce((a,w)=>a+workPct(w,manga()[w.id]).total,0)*60;return used?el('p',{class:'small num'},'制作に使った時間 '+fmtH(used)+' ／ 見積もり '+fmtH(est)+'（時間で見ると '+Math.round(used/est*100)+'%）'):null;})(),
       el('p',{class:'xs muted'},'終わったページ数を工程ごとに入れると、1ページ'+(P_().create.hoursPerPage||8)+'時間'+(works().some(w=>w.cover)?'・表紙'+(P_().create.coverHours||10)+'時間':'')+'の見積もりで計算します。'),
       works().map((w,wi)=>[
         el('div',{class:'between',style:wi?'border-top:1px solid var(--line);padding-top:12px':''},el('h2',{},w.name+'（'+(mg.per[w.id]||0)+'%）'),pagesIn(w.id)),
@@ -1228,7 +1466,7 @@ function viewImport(){
   if(!DEVICE){DEVICE='d'+Math.random().toString(36).slice(2,10);IDB.put('__device',DEVICE);}
   if(location.hash.indexOf('#sync=')===0){PENDING=parseSyncPayload(location.hash.slice(6));history.replaceState(null,'',location.pathname+'#import');}
   document.getElementById('menuBtn').addEventListener('click',openMenu);
-  document.getElementById('menu').addEventListener('click',e=>{const m=e.currentTarget;if(e.target!==m) return;const r=m.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) m.close();});
+  for(const id of ['menu','sheet']) document.getElementById(id).addEventListener('click',e=>{const m=e.currentTarget;if(e.target!==m) return;const r=m.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) m.close();});
   render();
   try{if(navigator.storage&&navigator.storage.persist) navigator.storage.persist();}catch(e){}
   if('serviceWorker' in navigator){
