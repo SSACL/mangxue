@@ -270,6 +270,7 @@ dialog.wiz::backdrop{background:rgba(10,14,20,.45)}
 .wizh{font-size:20px;margin:0}
 .wizfoot{border-top:1px solid var(--line);padding:8px 16px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;background:var(--surface)}
 .choice.wizchoice{flex-direction:column;gap:4px}
+.keepcard{border:2px solid var(--accent)}
 .choice.wizchoice[aria-pressed="true"]{border:2px solid var(--accent);background:var(--accent-soft)}
 /* plan screens */
 .rw{align-self:flex-start;border:0;background:var(--accent-soft);color:var(--ink);border-radius:999px;padding:6px 12px;min-height:36px;font-size:13px;text-align:left}
@@ -1986,17 +1987,29 @@ function openWizard(at){
   CAPV++;const d=document.getElementById('wiz');wizRender(true);if(!d.open) d.showModal();
 }
 function wizSave(){try{IDB.put('__wiz',WIZ);}catch(e){}}
-function wizUp(fn){fn(WIZ.P);CAPV++;wizSave();wizRender();}
+function wizUp(fn){const k=wizSteps()[WIZ.i];if(k==='events'||k==='targets') WIZ.keep=false;fn(WIZ.P);CAPV++;wizSave();wizRender();}
+/* 組み直し: use the dates set last time as they are, and go straight to 組み方 */
+function wizKeepDates(){WIZ.P.goals=clone(plan2().goals||[]);WIZ.keep=true;CAPV++;WIZ.i=wizSteps().indexOf('method');wizSave();wizRender(true);}
+function keepCard(){
+  const cur=plan2(), G=(cur.goals||[]).filter(g=>g.date).sort(byDate), main=G.filter(g=>g.kind==='event'||g.kind==='target'), rest=G.filter(g=>g.kind!=='event'&&g.kind!=='target');
+  return el('div',{class:'card keepcard'},
+    el('h2',{},'前回の期日をそのまま使いますか？'),
+    el('p',{class:'small'},md(cur.baseline.made)+' に組んだときの期日です。'),
+    el('p',{class:'small num'},main.map(g=>g.name+' '+md(g.date)).join('・')+(rest.length?'、ほか節目・模試・予定 '+rest.length+'件':'')),
+    el('div',{class:'grid2'},el('button',{type:'button',class:'btn','aria-label':'前回の期日をそのまま使う',onclick:wizKeepDates},'そのまま使う'),el('button',{type:'button',class:'btn sub',onclick:()=>{WIZ.keep=false;wizSave();wizRender();}},'期日を見直す')),
+    el('p',{class:'xs muted'},'そのまま使うと、「当日」と「目標日」を飛ばして「組み方」から始めます。あとから戻って直すこともできます。'));
+}
 function wizGo(i){WIZ.i=Math.max(0,Math.min(wizSteps().length-1,i));wizSave();wizRender(true);}
 function wizClose(){document.getElementById('wiz').close();render();}
 function wizSched(){const P=WIZ.P, c=cacheOf(P);if(!c.wr) c.wr=scheduleAll(P,today(),{});return c.wr;}
 function wizTotals(){const R=wizSched(), o={};for(const tr of ['study','create']){const gs=Object.values(R.goals).filter(g=>g.track===tr);o[tr]={W:gs.reduce((a,g)=>a+g.W,0),C:gs.reduce((m,g)=>Math.max(m,g.cap||0),0)};}return o;}
 function wizRender(top){
   const d=document.getElementById('wiz'), st=wizSteps(), k=st[WIZ.i], P=WIZ.P, body=d.querySelector('.wizbody'), y=body&&!top?body.scrollTop:0;
-  const steps=el('ol',{class:'wizsteps','aria-label':'組み方の道順'},st.map((s,i)=>el('li',{class:i===WIZ.i?'cur':i<WIZ.i?'done':''},el('button',{type:'button',onclick:()=>wizGo(i),'aria-current':i===WIZ.i?'step':null},el('span',{class:'num'},String(i+1)),wizName(s)))));
+  const steps=el('ol',{class:'wizsteps','aria-label':'組み方の道順'},st.map((s,i)=>el('li',{class:i===WIZ.i?'cur':i<WIZ.i?'done':''},el('button',{type:'button',onclick:()=>wizGo(i),'aria-current':i===WIZ.i?'step':null},el('span',{class:'num'},String(i+1)),wizName(s)+(WIZ.keep&&(s==='events'||s==='targets')?'（前回のまま）':'')))));
   const T=(k==='events'||k==='targets'||k==='method')?null:wizTotals();
   const view={events:()=>eventsEditor(P,wizUp),targets:()=>targetsEditor(P,wizUp),method:wizMethod,study:()=>studyEditor(P,wizUp),create:()=>createEditor(P,wizUp),need:wizNeed,time:wizTime,outlook:wizOutlook,build:wizBuildView}[k];
-  const nb=el('div',{class:'wizbody'},el('h2',{class:'wizh'},(WIZ.i+1)+'. '+wizName(k)),view());
+  const askKeep=k==='events'&&planActive()&&WIZ.keep==null;
+  const nb=el('div',{class:'wizbody'},askKeep?keepCard():null,el('h2',{class:'wizh'},(WIZ.i+1)+'. '+wizName(k)),WIZ.keep&&(k==='events'||k==='targets')?el('p',{class:'xs',style:'color:var(--good)'},'前回の期日をそのまま使っています。ここで直すと、直した期日で組みます。'):null,view());
   d.replaceChildren(
     el('div',{class:'wizhead'},el('b',{},planActive()?'計画を組み直す':'計画を組む'),el('button',{type:'button',class:'chip sm',onclick:()=>{WIZ=null;wizSave();openWizard();}},'最初から'),el('button',{type:'button',class:'iconbtn','aria-label':'閉じる（ここまでの内容は残ります）',onclick:wizClose},'×')),
     steps,nb,
