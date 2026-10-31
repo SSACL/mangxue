@@ -362,14 +362,15 @@ const IDB=(()=>{let p=null;
   function open(){if(p) return p;p=new Promise(res=>{try{const r=indexedDB.open('mangxue',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);}catch(e){res(null);}});return p;}
   async function put(k,v){const d=await open();if(!d) return;try{d.transaction('kv','readwrite').objectStore('kv').put(v,k);}catch(e){}}
   async function all(){const d=await open();if(!d) return {};return new Promise(res=>{const out={};try{const r=d.transaction('kv').objectStore('kv').openCursor();r.onsuccess=()=>{const c=r.result;if(c){out[c.key]=c.value;c.continue();}else res(out);};r.onerror=()=>res(out);}catch(e){res(out);}});}
-  return {put,all};})();
+  async function get(k){const d=await open();if(!d) return undefined;return new Promise(res=>{try{const r=d.transaction('kv').objectStore('kv').get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>res(undefined);}catch(e){res(undefined);}});}
+  return {put,all,get};})();
 
 /* ---------- store: device first, synced through the user's private GitHub repository ---------- */
 const S={qbank:{},state:{},meta:{},log:{}};
 let SYNC=null, DEVICE='', KNOWN={}, BRANCH='', PENDING=null;
 let planChanged=false, qChanged=false, dirty=new Set(), syncTimer=null, syncing=false, syncAgain=false, syncErr='', netDown=false, lastSync=0;
 function bodyOf(p){const i=p.indexOf('/');return S[p.slice(0,i)][p.slice(i+1)];}
-function save(p){IDB.put(p,bodyOf(p));dirty.add(p);IDB.put('__dirty',[...dirty]);scheduleSync(4000);updateStatus();}
+function save(p){IDB.put(p,bodyOf(p));dirty.add(p);IDB.put('__dirty',[...dirty]);scheduleSync(4000);updateStatus();if(p==='meta/life'||p==='meta/days') schedulePush();}
 function scheduleSync(ms){clearTimeout(syncTimer);syncTimer=setTimeout(()=>sync(),ms);}
 function hm(t){const d=new Date(t);return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');}
 function statusInfo(){
@@ -454,6 +455,7 @@ async function pull(){
     try{data=JSON.parse(await gh('GET',repoPath()+'/git/blobs/'+e.sha,{raw:true}));}catch(err){if(err&&err.code&&err.code!=='http500') throw err;}
     let m;
     if(data&&e.path==='plan.json'){PLAN=data;IDB.put('__plan',PLAN);planChanged=true;}
+    else if(data&&e.path==='push/config.json'){const first=!PUSHCFG;PUSHCFG=data;IDB.put('__pushcfg',data);if(first) planChanged=true;}
     else if(data&&((m=e.path.match(/^questions\/([A-Za-z0-9_.-]+)\.json$/))||(m=e.path.match(/^devices\/[^/]+\/q\/([A-Za-z0-9_.-]+)\.json$/)))){
       const cur=S.qbank[m[1]];
       if(Array.isArray(data.items)&&(!cur||(data.t||0)>(cur.t||0))){const doc=Object.assign({},data);delete doc.local;S.qbank[m[1]]=doc;IDB.put('qbank/'+m[1],doc);qChanged=true;}
@@ -1013,6 +1015,82 @@ function viewCal(){
   ];
 }
 
+
+/* ---------- notifications: the app hands its next two weeks of reminders to the user's own sender on Cloudflare ---------- */
+let PUSHCFG=null, PUSHSUB=null, pushTimer=null, pushLast=0;
+function pushSupported(){return 'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;}
+function ub64u(str){const t=String(str).replace(/-/g,'+').replace(/_/g,'/');const bin=atob(t+'==='.slice((t.length+3)%4));return Uint8Array.from(bin,c=>c.charCodeAt(0));}
+function b64uBytes(buf){let s='';for(const c of new Uint8Array(buf)) s+=String.fromCharCode(c);return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function pushItems(){
+  const L=life(), out=[], now=Date.now(), ds0=dayStartMin();
+  for(let i=0;i<14;i++){
+    const ds=addDays(today(),i), d=dayRec(ds);if(d.off) continue;
+    const midnight=parseYmd(ds).getTime(), at=hm=>midnight+(ds0+sinceStart(toMin(hm)))*60000;
+    for(const r of routines()){
+      if(r.kind==='sleep'||!r.by||!routineApplies(ds,r)||routineState(ds,r)!=null) continue;
+      const t=at(r.by), name=(r.emoji?r.emoji+' ':'')+r.name;
+      if(r.before!=null) out.push({id:'b:'+r.id+':'+ds,at:t-r.before*60000,title:name,body:r.by+' まで、あと'+fmtMin(r.before)+'です',tag:'r:'+r.id+':'+ds,url:'#home'});
+      if(r.at!==false) out.push({id:'a:'+r.id+':'+ds,at:t,title:name+'　できた？',body:r.by+' になりました',tag:'r:'+r.id+':'+ds,url:'#home',ds,rid:r.id,actions:[{action:'ok',title:'○ できた'},{action:'ng',title:'× できなかった'}]});
+    }
+    for(const c of L.checkins){
+      if(!c.on||(d.ci||{})[c.id]) continue;
+      out.push({id:'c:'+c.id+':'+ds,at:at(c.time),title:ciTitle(c)+'（'+c.time+'）',body:c.report?'今日の学習と制作をふり返りましょう':'ルーティンと生活の記録をつけましょう',tag:'c:'+c.id+':'+ds,url:'#checkin/'+c.id});
+    }
+  }
+  return out.filter(x=>x.at>now-30000).sort((a,b)=>a.at-b.at).slice(0,250);
+}
+function pushHeaders(){return {'Authorization':'Bearer '+PUSHCFG.key,'Content-Type':'application/json'};}
+async function pushUpload(){
+  if(!PUSHCFG||!PUSHSUB||!navigator.onLine) return false;
+  try{const r=await fetch(PUSHCFG.url+'/sync',{method:'POST',headers:pushHeaders(),body:JSON.stringify({device:DEVICE,name:SYNC?SYNC.name:'',sub:PUSHSUB,items:pushItems()})});
+    if(r.ok){pushLast=Date.now();IDB.put('__pushLast',pushLast);return true;}}catch(_){}
+  return false;
+}
+function schedulePush(){if(!PUSHSUB) return;clearTimeout(pushTimer);pushTimer=setTimeout(pushUpload,3000);}
+async function pushEnable(){
+  if(!PUSHCFG){toast('通知の送り役の準備がまだです');return;}
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){toast('通知が許可されませんでした');render();return;}
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(sub&&sub.options&&sub.options.applicationServerKey&&b64uBytes(sub.options.applicationServerKey)!==PUSHCFG.vapidPublic){await sub.unsubscribe();sub=null;}
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:ub64u(PUSHCFG.vapidPublic)});
+    PUSHSUB=sub.toJSON();IDB.put('__pushsub',PUSHSUB);
+    toast((await pushUpload())?'この端末で通知を受け取ります':'登録しました。電波が戻ったら予定を送ります');
+  }catch(e){toast('通知を有効にできませんでした（'+((e&&e.name)||'エラー')+'）');}
+  render();
+}
+async function pushDisable(){
+  try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();if(sub) await sub.unsubscribe();}catch(_){}
+  try{if(PUSHCFG) await fetch(PUSHCFG.url+'/sync',{method:'POST',headers:pushHeaders(),body:JSON.stringify({device:DEVICE,sub:null})});}catch(_){}
+  PUSHSUB=null;IDB.put('__pushsub',null);toast('この端末の通知を止めました');render();
+}
+async function pushTest(){
+  try{await pushUpload();const r=await fetch(PUSHCFG.url+'/test',{method:'POST',headers:pushHeaders(),body:JSON.stringify({device:DEVICE})});
+    toast(r.ok?'テスト通知を送りました。数秒で届きます':'送れませんでした（'+r.status+'）');}catch(_){toast('送り役につながりませんでした');}
+}
+// answers given with the ○ / × buttons on a notification
+async function applyAnswers(){
+  const list=await IDB.get('__answers');if(!list||!list.length) return;
+  await IDB.put('__answers',[]);
+  for(const a of list) if(dayRec(a.ds).r[a.rid]==null) setDay(a.ds,d=>{d.r[a.rid]=a.v;});
+  render();
+}
+function pushCard(){
+  const st=!pushSupported()?'unsupported':!PUSHCFG?'nocfg':(Notification.permission==='denied'?'denied':(PUSHSUB?'on':'off'));
+  const n=st==='on'?pushItems().length:0;
+  const msg={unsupported:'この画面では通知を使えません。ホーム画面の「まんしゅぇ」から開いてください。',
+    nocfg:'通知の送り役の準備がまだです。Cloudflare の設定が終わって同期されると、ここで有効にできます。',
+    denied:'通知がブロックされています。Android の「設定」→「アプリ」→「まんしゅぇ」→「通知」で許可してから、もう一度開いてください。',
+    off:'ルーティンの「何分前」「時刻ちょうど」と、チェックイン・レポートの時刻に、この端末へ通知が届くようになります。',
+    on:'通知を受け取っています。これから2週間で '+n+' 件の予定です'+(pushLast?'（送り役に渡した時刻 '+md(ymd(new Date(pushLast)))+' '+hm(pushLast)+'）':'')+'。'}[st];
+  return el('div',{class:'card'},el('div',{class:'between'},el('h2',{},'この端末の通知'),el('span',{class:'pill'+(st==='on'?'':' gray')},st==='on'?'オン':'オフ')),
+    el('p',{class:'small muted'},msg),
+    st==='off'?el('button',{type:'button',class:'btn',onclick:pushEnable},'この端末で通知を受け取る'):null,
+    st==='on'?el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:pushTest},'テスト通知を送る'),el('button',{type:'button',class:'btn sub sm',onclick:pushDisable},'この端末の通知を止める')):null);
+}
+
 /* routine settings */
 const OPEN=new Set();
 function nameTaken(list,name,selfId){const n=name.trim();return list.some(x=>x.id!==selfId&&String(x.name).trim()===n);}
@@ -1112,7 +1190,7 @@ function viewRoutines(){
     (L.quick||[]).length<4&&spanItems.length?el('button',{type:'button',class:'btn sub sm',onclick:()=>{const it=spanItems[0];setLife(x=>{x.quick=(x.quick||[]).concat([{id:'q'+Date.now().toString(36),item:it.id,sub:it.subs&&it.subs[0]?it.subs[0].id:'',m:30}]);});render();}},'＋ ボタンを足す'):null);
 
   return [
-    el('h1',{},'習慣の設定'),statusNode(),help,
+    el('h1',{},'習慣の設定'),statusNode(),pushCard(),help,
     general,ciCards,quickCard,
     el('h2',{},'ルーティン'),
     el('p',{class:'xs muted'},'通知（何分前・時刻ちょうど）は次の段階で届くようになります。設定は今のうちに入れておけます。'),
@@ -1171,7 +1249,7 @@ function openMenu(){
     el('h3',{},'毎日'),a('home','ホーム'),a('day/'+today(),'今日の記録'),a('cal','カレンダー'),
     life().checkins.filter(c=>c.on).map(c=>a('checkin/'+c.id,ciTitle(c)+'（'+c.time+'）')),
     el('h3',{},'勉強と原稿'),a('practice','演習'),a('progress','進捗'),a('share','Xへのシェア'),a('plan','計画'),
-    el('h3',{},'設定と管理'),a('routines','習慣の設定'),a('tracks','学習と制作の記録方法'),a('import','問題の取り込み・同期・バックアップ')].flat());
+    el('h3',{},'設定と管理'),a('routines','習慣の設定・通知'),a('tracks','学習と制作の記録方法'),a('import','問題の取り込み・同期・バックアップ')].flat());
   if(!m.open) m.showModal();
 }
 
@@ -1571,6 +1649,10 @@ function viewImport(){
     if(k==='__lastSync'){lastSync=v||0;continue;}
     if(k==='__device'){DEVICE=v||'';continue;}
     if(k==='__plan'){PLAN=v||null;continue;}
+    if(k==='__pushcfg'){PUSHCFG=v||null;continue;}
+    if(k==='__pushsub'){PUSHSUB=v||null;continue;}
+    if(k==='__pushLast'){pushLast=v||0;continue;}
+    if(k==='__answers') continue;
     const i=k.indexOf('/'); if(i<0) continue; const c=k.slice(0,i); if(S[c]) S[c][k.slice(i+1)]=v;
   }
   if(!DEVICE){DEVICE='d'+Math.random().toString(36).slice(2,10);IDB.put('__device',DEVICE);}
@@ -1587,7 +1669,10 @@ function viewImport(){
   }
   window.addEventListener('online',()=>{netDown=false;sync();});
   window.addEventListener('offline',updateStatus);
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible') sync();});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){applyAnswers();sync();if(PUSHSUB&&Date.now()-pushLast>3*3600e3) pushUpload();}});
+  if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.type==='answers') applyAnswers();});
+  applyAnswers();
+  if(PUSHSUB) setTimeout(pushUpload,5000);
   setInterval(()=>{if(document.visibilityState==='visible') sync();},120000);
   sync();
 })();
