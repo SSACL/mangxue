@@ -198,12 +198,18 @@ details.set[open]{padding-bottom:14px;display:flex;flex-direction:column;gap:10p
 .stamp.kyu{width:40px;height:40px;border:2.5px solid #D9542E;border-radius:50%;color:#D9542E;font-weight:700;font-size:21px;line-height:35px;text-align:center;transform:translate(-50%,-50%) rotate(-12deg);opacity:.85;font-family:var(--font-display)}
 .stamp.hana{width:48px;height:48px;opacity:.62}
 .stamp.hana svg{width:100%;height:100%;fill:none;stroke:#E5484D;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+.ordrow{display:flex;gap:6px;align-items:flex-start}
+.ordrow>details{flex:1;min-width:0}
+.ord{display:flex;flex-direction:column;gap:4px;flex:none}
+.ordb{width:44px;height:24px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:11px;cursor:pointer;padding:0}
+.ordb:disabled{opacity:.3;cursor:default}
+.hrec{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 16px;border-radius:999px;border:none;background:var(--ink);color:var(--bg);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18)}
 /* home on one screen */
 .topslot{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .topslot .hdate{font-family:var(--font-display);font-size:19px;line-height:1.2;white-space:nowrap}
 .topslot .cd{display:flex;flex-direction:column;align-items:flex-end;font-size:11px;color:var(--muted);line-height:1.35}
 .topslot .cd b{font-size:13px!important}
-.wrap.v-home{gap:8px}
+.wrap.v-home{gap:7px}
 .clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .rcard .rh{display:flex;align-items:center;justify-content:space-between;gap:4px}
 .hhead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
@@ -614,7 +620,7 @@ function weekRate(){
 /* ---------- life: routines and daily records (the center of the app) ---------- */
 const ALLDAYS=[0,1,2,3,4,5,6], WEEKDAYS=[1,2,3,4,5], DN='日月火水木金土';
 const PALETTE=['#E5484D','#F76B15','#E2A336','#46A758','#12A594','#0090FF','#8E4EC6','#D6409F'];
-const MIN_CHOICES=[15,30,45,60,90,120,180,240,300,360];
+const MIN_CHOICES=[15,30,45,60,90];   // anything longer is typed in (自由に入れる)
 const TYPES={sleep:'睡眠（寝た時刻と起きた時刻）',span:'時間（内訳を選ぶ・重なってもOK）',memo:'メモ',check:'チェック（やった・やらない）',count:'回数'};
 const LIFE_PRESET={v:3,dayStart:'04:00',sleepTarget:420,
   items:[
@@ -1009,8 +1015,15 @@ function viewCal(){
 
 /* routine settings */
 const OPEN=new Set();
+function nameTaken(list,name,selfId){const n=name.trim();return list.some(x=>x.id!==selfId&&String(x.name).trim()===n);}
+function freshName(list,base){let n=base,i=2;while(list.some(x=>x.name===n)) n=base+(i++);return n;}
+// move an entry up or down among the entries shown in that list (the sleep routine is kept out of the routine list)
+function moveIn(key,id,dir,shown){setLife(x=>{const a=x[key], vis=a.filter(shown), k=vis.findIndex(y=>y.id===id), other=vis[k+dir];if(!other) return;const i=a.findIndex(y=>y.id===id), j=a.findIndex(y=>y.id===other.id);[a[i],a[j]]=[a[j],a[i]];});render();}
 function viewRoutines(){
   const L=life();
+  const arrows=(node,key,id,idx,len,shown,label)=>el('div',{class:'ordrow'},node,el('div',{class:'ord'},
+    el('button',{type:'button',class:'ordb','aria-label':label+'を上へ',disabled:idx===0,onclick:()=>moveIn(key,id,-1,shown)},'▲'),
+    el('button',{type:'button',class:'ordb','aria-label':label+'を下へ',disabled:idx===len-1,onclick:()=>moveIn(key,id,1,shown)},'▼')));
   const det=(key,summary,...kids)=>el('details',{class:'set',open:OPEN.has(key),ontoggle:e=>{if(e.target.open) OPEN.add(key); else OPEN.delete(key);}},el('summary',{},summary),...kids);
   const txt=(id,label,val,onset)=>el('label',{class:'field',for:id},label,el('input',{type:'text',id,value:val||'',onchange:e=>onset(e.target.value.trim())}));
   const twoStep=(label,act,danger)=>{let armed=false;return el('button',{type:'button',class:'btn sub sm',style:danger===false?'':'color:var(--bad)',onclick:e=>{if(!armed){armed=true;e.target.textContent='もう一度押すと実行します';setTimeout(()=>{armed=false;if(e.target.isConnected) e.target.textContent=label;},4000);return;}act();}},label);};
@@ -1035,7 +1048,7 @@ function viewRoutines(){
 
   const sleepDet=sr?det('r:'+sr.id,[el('span',{},sr.emoji||'・'),el('span',{style:'flex:1;min-width:0'},'睡眠のルーティン：'+sr.name),offPill(sr.off)],
     useBox('sl-on','睡眠の目標をルーティンとして使う',!sr.off,v=>updR(sr.id,x=>{x.off=!v;})),
-    el('div',{class:'grid2'},txt('sln','ルーティンの名前',sr.name,v=>{if(v) updR(sr.id,x=>{x.name=v;x.auto=false;});}),txt('sle','絵文字',sr.emoji,v=>updR(sr.id,x=>{x.emoji=v;}))),
+    el('div',{class:'grid2'},txt('sln','ルーティンの名前',sr.name,v=>{if(!v) return;if(nameTaken(L.routines,v,sr.id)){toast('同じ名前のルーティンがあります');render();return;}updR(sr.id,x=>{x.name=v;x.auto=false;});}),txt('sle','絵文字',sr.emoji,v=>updR(sr.id,x=>{x.emoji=v;}))),
     daysPick(sr),
     el('p',{class:'xs muted'},'睡眠の記録から、目標以上眠れたかを自動で判定します。睡眠を記録するまで、ホームには「睡眠を記録」ボタンが出ます。')):null;
   const general=el('div',{class:'card'},el('h2',{},'一日の区切りと睡眠'),
@@ -1061,7 +1074,7 @@ function viewRoutines(){
 
   const rEdit=r=>det('r:'+r.id,[el('span',{},r.emoji||'・'),el('span',{style:'flex:1;min-width:0'},(r.by?r.by+' までに':'')+r.name),offPill(r.off)||el('span',{class:'xs muted'},daysLabel(r.days||ALLDAYS))],
     useBox('ru-'+r.id,'このルーティンを使う',!r.off,v=>updR(r.id,x=>{x.off=!v;})),
-    el('div',{class:'grid2'},txt('rn-'+r.id,'名前',r.name,v=>{if(v) updR(r.id,x=>{x.name=v;});}),txt('re-'+r.id,'絵文字',r.emoji,v=>updR(r.id,x=>{x.emoji=v;}))),
+    el('div',{class:'grid2'},txt('rn-'+r.id,'名前',r.name,v=>{if(!v) return;if(nameTaken(L.routines,v,r.id)){toast('同じ名前のルーティンがあります');render();return;}updR(r.id,x=>{x.name=v;});}),txt('re-'+r.id,'絵文字',r.emoji,v=>updR(r.id,x=>{x.emoji=v;}))),
     el('label',{class:'field',for:'rb-'+r.id},'期限の時刻（なくてもOK）',el('input',{type:'time',id:'rb-'+r.id,value:r.by||'',onchange:e=>updR(r.id,x=>{x.by=e.target.value;})})),
     daysPick(r),
     el('div',{class:'grid2'},
@@ -1072,24 +1085,27 @@ function viewRoutines(){
 
   const iEdit=it=>det('i:'+it.id,[badgeNode(it),el('span',{style:'flex:1;min-width:0'},it.name),offPill(it.off)||el('span',{class:'xs muted'},(TYPES[it.type]||'').replace(/（.*/,''))],
     it.type==='sleep'?null:useBox('iu-'+it.id,'この項目を使う',!it.off,v=>updI(it.id,x=>{x.off=!v;})),
-    el('div',{class:'grid2'},txt('in-'+it.id,'名前',it.name,v=>{if(v) updI(it.id,x=>{x.name=v;});}),txt('ie-'+it.id,'絵文字（なしなら色の点）',it.emoji,v=>updI(it.id,x=>{x.emoji=v;}))),
+    el('div',{class:'grid2'},txt('in-'+it.id,'名前',it.name,v=>{if(!v) return;if(nameTaken(L.items,v,it.id)){toast('同じ名前の項目があります');render();return;}updI(it.id,x=>{x.name=v;});}),txt('ie-'+it.id,'絵文字（なしなら色の点）',it.emoji,v=>updI(it.id,x=>{x.emoji=v;}))),
     it.emoji?null:el('div',{class:'field'},'点の色',el('div',{class:'pal'},PALETTE.map(c=>el('button',{type:'button','aria-label':'色 '+c,'aria-pressed':String((it.color||PALETTE[5])===c),style:'background:'+c,onclick:()=>updI(it.id,x=>{x.color=c;})})))),
     it.type==='sleep'?el('p',{class:'xs muted'},'睡眠の目標は上の「一日の区切りと睡眠」で設定します。'):el('label',{class:'field',for:'it-'+it.id},'記録のしかた',el('select',{id:'it-'+it.id,onchange:e=>updI(it.id,x=>{x.type=e.target.value;if(x.type==='span'&&!x.subs) x.subs=[];})},Object.entries(TYPES).filter(([k])=>k!=='sleep').map(([k,l])=>el('option',{value:k,selected:it.type===k},l)))),
     it.type==='span'?el('div',{class:'field'},'内訳',
       el('div',{class:'chips'},(it.subs||[]).map(s=>el('button',{type:'button',class:'chip sm','aria-label':s.name+'を内訳から外す',onclick:()=>updI(it.id,x=>{x.subs=x.subs.filter(y=>y.id!==s.id);})},s.name+' ×'))),
-      (()=>{let v='';return el('div',{class:'row'},el('input',{type:'text',placeholder:'内訳を足す（例：絵の練習）','aria-label':'足す内訳の名前',oninput:e=>{v=e.target.value.trim();}}),el('button',{type:'button',class:'btn sub sm',style:'flex:none',onclick:()=>{if(v) updI(it.id,x=>{x.subs=(x.subs||[]).concat([{id:'s'+Date.now().toString(36),name:v}]);});}},'足す'));})()):null,
+      (()=>{let v='';return el('div',{class:'row'},el('input',{type:'text',placeholder:'内訳を足す（例：絵の練習）','aria-label':'足す内訳の名前',oninput:e=>{v=e.target.value.trim();}}),el('button',{type:'button',class:'btn sub sm',style:'flex:none',onclick:()=>{if(!v) return;if((it.subs||[]).some(s=>s.name.trim()===v)){toast('「'+v+'」はもうあります');return;}updI(it.id,x=>{x.subs=(x.subs||[]).concat([{id:'s'+Date.now().toString(36),name:v}]);});}},'足す'));})()):null,
     it.type==='sleep'?null:twoStep('この項目を消す',()=>{setLife(x=>{x.items=x.items.filter(y=>y.id!==it.id);x.checkins.forEach(c=>{c.items=c.items.filter(y=>y!==it.id);});x.quick=(x.quick||[]).filter(q=>q.item!==it.id);});toast('消しました（記録した中身は残っています）');render();}));
 
   const spanItems=L.items.filter(i=>i.type==='span');
   const qEdit=(q,qi)=>{
     const it=spanItems.find(i=>i.id===q.item)||spanItems[0];
     const upd=fn=>{setLife(x=>{fn(x.quick.find(y=>y.id===q.id));});render();};
+    const setM=(h,m)=>{const v=h*60+m;if(v<=0){toast('1分以上にしてください');render();return;}upd(x=>{x.m=v;});};
+    const hI=el('input',{type:'number',min:0,max:23,inputmode:'numeric',class:'num',value:Math.floor(q.m/60),'aria-label':'時間',style:'width:68px',onchange:e=>setM(parseInt(e.target.value,10)||0,q.m%60)});
+    const mI=el('input',{type:'number',min:0,max:59,inputmode:'numeric',class:'num',value:q.m%60,'aria-label':'分',style:'width:68px',onchange:e=>setM(Math.floor(q.m/60),parseInt(e.target.value,10)||0)});
     return el('div',{class:'ci'+(qi===0?' first':'')},
       el('div',{class:'between'},el('b',{},'＋'+quickLabel(q)),el('button',{type:'button',class:'x iconbtn','aria-label':'このボタンを消す',onclick:()=>{setLife(x=>{x.quick=x.quick.filter(y=>y.id!==q.id);});render();}},'×')),
-      el('div',{class:'grid2',style:'grid-template-columns:1fr 1fr 1fr'},
-        el('select',{'aria-label':'項目',onchange:e=>upd(x=>{x.item=e.target.value;const ni=spanItems.find(i=>i.id===x.item);x.sub=ni&&ni.subs&&ni.subs[0]?ni.subs[0].id:'';})},spanItems.map(i=>el('option',{value:i.id,selected:i.id===q.item},i.name))),
-        el('select',{'aria-label':'内訳',onchange:e=>upd(x=>{x.sub=e.target.value;})},((it&&it.subs)||[]).map(s=>el('option',{value:s.id,selected:s.id===q.sub},s.name))),
-        el('select',{'aria-label':'時間',onchange:e=>upd(x=>{x.m=Number(e.target.value);})},Array.from({length:24},(_,i)=>(i+1)*15).map(n=>el('option',{value:n,selected:n===q.m},fmtMin(n))))));
+      el('div',{class:'grid2'},
+        el('select',{'aria-label':'項目',onchange:e=>upd(x=>{x.item=e.target.value;const ni=spanItems.find(i=>i.id===x.item);x.sub=ni&&ni.subs&&ni.subs[0]?ni.subs[0].id:'';})},spanItems.map(i=>el('option',{value:i.id,selected:i.id===q.item},(i.emoji?i.emoji+' ':'')+i.name))),
+        el('select',{'aria-label':'内訳',onchange:e=>upd(x=>{x.sub=e.target.value;})},((it&&it.subs)||[]).map(s=>el('option',{value:s.id,selected:s.id===q.sub},s.name)))),
+      el('div',{class:'row',style:'gap:6px'},hI,el('span',{class:'small'},'時間'),mI,el('span',{class:'small'},'分')));
   };
   const quickCard=el('div',{class:'card'},el('h2',{},'ワンタップ記録（4つまで）'),el('p',{class:'xs muted'},'ホームと記録画面に出るボタンです。押すと、その内訳と時間が今日の記録に入ります。'),
     (L.quick||[]).map(qEdit),
@@ -1100,11 +1116,11 @@ function viewRoutines(){
     general,ciCards,quickCard,
     el('h2',{},'ルーティン'),
     el('p',{class:'xs muted'},'通知（何分前・時刻ちょうど）は次の段階で届くようになります。設定は今のうちに入れておけます。'),
-    RS.map(rEdit),
-    el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id='r'+Date.now().toString(36);setLife(x=>{x.routines.push({id,name:'新しいルーティン',emoji:'✅',kind:'manual',by:'',days:ALLDAYS.slice(),before:10,at:true});});OPEN.add('r:'+id);render();}},'＋ ルーティンを足す'),
+    RS.map((r,i)=>arrows(rEdit(r),'routines',r.id,i,RS.length,y=>y.kind!=='sleep',r.name)),
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id='r'+Date.now().toString(36);setLife(x=>{x.routines.push({id,name:freshName(x.routines,'新しいルーティン'),emoji:'✅',kind:'manual',by:'',days:ALLDAYS.slice(),before:10,at:true});});OPEN.add('r:'+id);render();}},'＋ ルーティンを足す'),
     el('h2',{},'生活の記録項目'),
-    IT.map(iEdit),
-    el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id='i'+Date.now().toString(36);setLife(x=>{x.items.push({id,name:'新しい項目',emoji:'⭐',color:'',type:'span',subs:[]});});OPEN.add('i:'+id);render();}},'＋ 記録項目を足す'),
+    IT.map((it,i)=>arrows(iEdit(it),'items',it.id,i,IT.length,()=>true,it.name)),
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id='i'+Date.now().toString(36);setLife(x=>{x.items.push({id,name:freshName(x.items,'新しい項目'),emoji:'⭐',color:'',type:'span',subs:[]});});OPEN.add('i:'+id);render();}},'＋ 記録項目を足す'),
     el('div',{class:'card',style:'margin-top:8px'},el('h2',{},'プリセットに戻す'),el('p',{class:'xs muted'},'この画面の設定を最初の状態に戻します。これまでの記録は消えません。'),
       twoStep('プリセットに戻す',()=>{setLife(x=>{const keep=x.tracks;Object.assign(x,clone(LIFE_PRESET));x.tracks=keep;});OPEN.clear();toast('プリセットに戻しました');render();}))
   ];
@@ -1209,7 +1225,7 @@ function viewHome(){
     return el('a',{href:'#checkin/'+c.id,class:'cib '+s,'aria-label':ciTitle(c)+(s==='done'?'（済み）':s==='hot'?'（いまの時間です）':s==='due'?'（まだです）':'（'+c.time+'から）')},el('b',{},c.report?c.name+'レポート':c.name),el('span',{class:'num'},s==='done'?'済み ✓':c.time));})):null;
   // routines: a horizontal strip; the sleep goal shows a record button until sleep is recorded
   const rs=routines().filter(r=>routineApplies(t,r)), rate=dayRate(t);
-  rs.sort((a,b)=>(a.kind==='sleep'?-1:0)-(b.kind==='sleep'?-1:0)||sinceStart(toMin(a.by)||0)-sinceStart(toMin(b.by)||0));
+  rs.sort((a,b)=>(a.kind==='sleep'?-1:0)-(b.kind==='sleep'?-1:0));   // sleep record first, then the order set in 習慣の設定
   const cards=[];
   for(const r of rs){
     if(r.kind==='sleep'){if(sleepMin(d.rec.sleep)==null) cards.push(el('button',{type:'button',class:'rcard sleep',role:'listitem',onclick:()=>sleepSheet(t)},el('span',{class:'rh'},el('span',{class:'re'},(L.items.find(i=>i.id==='sleep')||{}).emoji||'😴'),el('span',{class:'rtm'},'目標 '+fmtMin(L.sleepTarget))),el('span',{class:'rn'},'睡眠を記録する'),el('span',{class:'xs',style:'color:var(--accent-ink);margin-top:auto'},'寝た・起きた時刻 ›')));continue;}
@@ -1220,7 +1236,7 @@ function viewHome(){
   const routineSec=[
     el('div',{class:'between'},el('h2',{class:'sec'},'ルーティン'),el('span',{class:'xs muted num'},d.off?'':(rate?'できた '+rate.ok+' / '+rate.all:'')+(sk>=2?'　記録 '+sk+'日目':''))),
     d.off?el('p',{class:'small muted'},'今日はお休みの日です。ゆっくり休んでください。'):(cards.length?el('div',{class:'rstrip',role:'list','aria-label':'今日のルーティン'},cards):null),
-    el('div',{class:'qrow'},(L.quick||[]).slice(0,4).map(q=>el('button',{type:'button',class:'chip sm',onclick:()=>addQuick(q,t)},'＋'+quickLabel(q))),el('a',{href:'#day/'+t,class:'chip sm',style:'text-decoration:none;display:inline-flex;align-items:center'},'今日の記録 ›'))];
+    el('div',{class:'qrow'},el('button',{type:'button',class:'hrec',onclick:()=>{DAYTAB='life';go('day/'+t);}},'✎ 今日の習慣記録'),(L.quick||[]).slice(0,4).map(q=>el('button',{type:'button',class:'chip sm',onclick:()=>addQuick(q,t)},'＋'+quickLabel(q))))];
   const next=PLAN?(P_().milestones||[]).find(m=>m[0]>=t):null;
   return [
     comebackCard(t),prog,ciRow,routineSec,
