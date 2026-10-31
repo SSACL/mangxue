@@ -204,6 +204,24 @@ details.set[open]{padding-bottom:14px;display:flex;flex-direction:column;gap:10p
 .ordb{width:44px;height:24px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:11px;cursor:pointer;padding:0}
 .ordb:disabled{opacity:.3;cursor:default}
 .hrec{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 16px;border-radius:999px;border:none;background:var(--ink);color:var(--bg);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+/* plan screens */
+.rw{align-self:flex-start;border:0;background:var(--accent-soft);color:var(--ink);border-radius:999px;padding:6px 12px;min-height:36px;font-size:13px;text-align:left}
+.rw.none{background:transparent;color:var(--accent);padding-left:0}
+.gl{display:flex;flex-direction:column;gap:4px;padding:8px 0;border-top:1px solid var(--line)}
+.gbar{position:relative;height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.gbar i{position:absolute;top:0;bottom:0}
+.gbar .work{background:var(--accent)}
+.gbar .buf{background:repeating-linear-gradient(45deg,var(--accent) 0 3px,transparent 3px 6px);opacity:.55}
+.gbar .now{position:absolute;top:0;bottom:0;width:2px;background:var(--ink)}
+.stp{display:grid;grid-template-columns:minmax(0,1fr) 72px 104px;gap:6px;align-items:center;padding:6px 0;border-top:1px dashed var(--line)}
+.stpb{grid-column:1/-1;display:flex;gap:6px}
+.slot{display:grid;grid-template-columns:98px minmax(0,1fr) 92px;gap:6px;align-items:center;padding:6px 0;border-top:1px dashed var(--line)}
+.wadj{display:grid;grid-template-columns:56px minmax(0,1fr) minmax(0,1fr);gap:6px;align-items:center}
+.card.notice{background:#FFF1E6;border:1px solid #E8590C;gap:8px}
+.card.notice.good{background:var(--good-soft);border-color:var(--good)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .card.notice{background:#3A2416}}
+:root[data-theme="dark"] .card.notice{background:#3A2416}
+input[type=date]{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;font-size:15px;min-height:44px;width:100%;min-width:0}
 /* home on one screen */
 .topslot{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .topslot .hdate{font-family:var(--font-display);font-size:19px;line-height:1.2;white-space:nowrap}
@@ -303,6 +321,7 @@ function currentSubject(ds){
   return units().find(x=>x.start>ds)||null;
 }
 function phaseLabel(ds){
+  if(planActive()){const st=planStats('study');if(!st) return '';const k=planTasks(ds).find(x=>x.kind==='study');const sb=k?(plan2().subjects||[]).find(s=>k.title.indexOf(s.name)===0||k.title.indexOf(s.short)>=0):null;return st.goal.name+(sb?'：'+(sb.short||sb.name):'');}
   const u=units().find(x=>ds>=x.start&&ds<=x.end);
   if(u) return '今週：'+u.name+' '+(Math.floor(diffDays(u.start,ds)/7)+1)+'/'+weeksOf(u)+'週目';
   const ph=(P_().study.phases||[]).find(x=>ds>=x.from&&ds<=x.to);
@@ -316,7 +335,8 @@ function fill(str,ds){
     .replace(/\{focus\.weekday\}/g,f?(f.weekday||''):'').replace(/\{focus\.weekend\}/g,f?(f.weekend||''):'').replace(/\{focus\.note\}/g,f?(f.note||''):'')
     .replace(/\{lastWeekNote\}/g,lw?(P_().study.lastWeekNote||''):'').trim();
 }
-function tasksFor(ds){
+function tasksFor(ds){return planActive()?planTasks(ds):tasksForLegacy(ds);}
+function tasksForLegacy(ds){
   const sc=(P_().schedule||[]).find(x=>ds>=x.from&&ds<=x.to), wd=parseYmd(ds).getDay(), T=[];
   if(sc) for(const it of (wd===6?sc.sat:wd===0?sc.sun:sc.weekday)||[]){
     const title=fill(it.title,ds); if(!title) continue;
@@ -327,6 +347,8 @@ function tasksFor(ds){
   return T;
 }
 function countdowns(t){
+  const P2=S.meta.plan||PLAN2SEED;
+  if(P2) return (P2.goals||[]).filter(g=>g.countdown&&g.date>=t).sort((a,b)=>a.date<b.date?-1:1).slice(0,2).map(g=>el('span',{},g.name+'まで ',el('b',{style:'color:var(--ink);font-size:15px'},String(diffDays(t,g.date))),'日'));
   const out=[], e=P_().study.exam, v=P_().create.event;
   for(const [x,def] of [[e,'試験'],[v,'イベント']]) if(x&&x.date&&x.date>=t)
     out.push(el('span',{},(x.short||x.label||def)+'まで ',el('b',{style:'color:var(--ink);font-size:15px'},String(diffDays(t,x.date))),'日'));
@@ -455,6 +477,8 @@ async function pull(){
     try{data=JSON.parse(await gh('GET',repoPath()+'/git/blobs/'+e.sha,{raw:true}));}catch(err){if(err&&err.code&&err.code!=='http500') throw err;}
     let m;
     if(data&&e.path==='plan.json'){PLAN=data;IDB.put('__plan',PLAN);planChanged=true;}
+    else if(data&&e.path==='plan-v2.json'){PLAN2SEED=data;IDB.put('__plan2seed',data);planChanged=true;}
+    else if(data&&(m=e.path.match(/^materials\/([A-Za-z0-9_.-]+)\.json$/))){MATS[m[1]]=data;IDB.put('__mats',MATS);}
     else if(data&&e.path==='push/config.json'){const first=!PUSHCFG;PUSHCFG=data;IDB.put('__pushcfg',data);if(first) planChanged=true;}
     else if(data&&((m=e.path.match(/^questions\/([A-Za-z0-9_.-]+)\.json$/))||(m=e.path.match(/^devices\/[^/]+\/q\/([A-Za-z0-9_.-]+)\.json$/)))){
       const cur=S.qbank[m[1]];
@@ -614,10 +638,197 @@ function checks(){return S.meta.checks||(S.meta.checks={d:{}});}
 function isChecked(ds,id){const d=checks().d[ds];return !!(d&&d.v&&d.v[id]);}
 function setChecked(ds,id,v){const c=checks();const d=c.d[ds]||{v:{}};d.v=Object.assign({},d.v);if(v) d.v[id]=1; else delete d.v[id];d.t=Date.now();c.d[ds]=d;save('meta/checks');}
 function weekRate(){
-  const t=today(), d=parseYmd(t), off=(d.getDay()+6)%7, mon=addDays(t,-off); let all=0,done=0;
+  const t=today(), mon=weekStartOf(t); let all=0,done=0;
   for(let i=0;i<7;i++){const ds=addDays(mon,i);if(P_().start&&ds<P_().start) continue;for(const k of tasksFor(ds)){all++;if(isChecked(ds,k.id)) done++;}}
   return all?Math.round(done/all*100):0;
 }
+
+/* ---------- plan v2: goals (節目) → steps → days ----------
+   A goal with a deadline covers some steps (subjects × materials, or works × production steps).
+   Steps are spread over the days in proportion to the time each day has for that track, so that each goal
+   finishes at 90% of the time left until its deadline (the last 10% is buffer). The result is kept as the
+   "baseline"; the difference between the baseline and what is actually done is shown as a percentage. */
+let PLAN2SEED=null, MATS={};
+const MANGA_STEPS=[
+  {id:'plot',name:'プロット',perPage:false,hours:8},
+  {id:'name',name:'ネーム',perPage:true,hours:0.9},
+  {id:'shita',name:'下書き',perPage:true,hours:2.25},
+  {id:'pen',name:'ペン入れ',perPage:true,hours:3.15},
+  {id:'shiage',name:'仕上げ',perPage:true,hours:2.7},
+  {id:'cover',name:'カラー表紙',perPage:false,hours:15,cover:true}];
+const DAYTYPE_PRESET=[
+  {id:'w',name:'仕事・終日',slots:[{id:'a',label:'通勤（朝）',time:'08:00',track:'study',min:30,prefer:'solve'},{id:'b',label:'通勤（帰り）',time:'18:40',track:'study',min:30,prefer:'solve'},{id:'c',label:'学習',time:'20:00',track:'study',min:60,prefer:'read'},{id:'d',label:'制作',time:'21:00',track:'create',min:150}]},
+  {id:'wh',name:'仕事・半日',slots:[{id:'a',label:'通勤',time:'08:00',track:'study',min:30,prefer:'solve'},{id:'b',label:'学習',time:'14:00',track:'study',min:150,prefer:'read'},{id:'c',label:'制作',time:'19:30',track:'create',min:180}]},
+  {id:'oh',name:'休み・半日',slots:[{id:'a',label:'制作',time:'10:00',track:'create',min:180},{id:'b',label:'学習',time:'14:00',track:'study',min:120,prefer:'read'}]},
+  {id:'o',name:'休み・終日',slots:[{id:'a',label:'制作（頭を使う作業）',time:'08:30',track:'create',min:180},{id:'b',label:'学習',time:'12:30',track:'study',min:180,prefer:'read'},{id:'c',label:'制作（手を動かす作業）',time:'15:30',track:'create',min:240},{id:'d',label:'週のふり返り',time:'21:00',track:'other',min:15}]}];
+const EMPTY_PLAN2={v:2,names:{study:'学習',create:'制作'},weekStart:1,mode:'week',dayTypes:DAYTYPE_PRESET,week:['o','w','w','w','w','w','oh'],dates:{},adj:{},subjects:[],materials:[],works:[],goals:[]};
+const TABSTATE={day:'study',plan:'all'};
+function plan2(){return S.meta.plan||PLAN2SEED||EMPTY_PLAN2;}
+function setPlan2(fn){const x=clone(plan2());fn(x);x.t=Date.now();S.meta.plan=x;save('meta/plan');}
+function planActive(){const p=S.meta.plan;return !!(p&&p.baseline&&p.baseline.by);}
+function tname(tr){const n=plan2().names||{};return tr==='study'?(n.study||'学習'):(n.create||'制作');}
+
+/* time */
+function dayTypeOf(ds,P){P=P||plan2();const o=P.dates&&P.dates[ds];if(o) return o;return (P.week||[])[parseYmd(ds).getDay()]||'';}
+function dtById(id,P){return ((P||plan2()).dayTypes||[]).find(t=>t.id===id)||null;}
+function weekStartOf(ds,P){const ws=+((P||plan2()).weekStart??1);return addDays(ds,-((parseYmd(ds).getDay()-ws+7)%7));}
+function capOf(ds,tr,P){
+  P=P||plan2();const id=dayTypeOf(ds,P);if(id==='off'||dayRec(ds).off) return 0;
+  const dt=dtById(id,P);if(!dt) return 0;
+  const base=dt.slots.filter(s=>s.track===tr).reduce((a,s)=>a+(+s.min||0),0);
+  const adj=(((P.adj||{})[weekStartOf(ds,P)])||{})[tr];
+  return Math.round(base*(adj==null?1:adj));
+}
+
+/* steps */
+function studySteps(P,round,subs){
+  const out=[];
+  for(const s of P.subjects||[]){
+    if(subs!=='all'&&!(subs||[]).includes(s.id)) continue;
+    let any=false;
+    for(const m of P.materials||[]){
+      (m.toc||[]).forEach((e,ei)=>{
+        if(e.s!==s.id) return;any=true;
+        if(m.kind==='solve'){
+          const q=+e.q||0, ch=Math.max(1,+m.chunkQ||10);
+          for(let a=1,k=0;a<=q;a+=ch,k++){const b=Math.min(q,a+ch-1);out.push({id:'r'+round+':'+m.id+':'+ei+':'+k,title:m.name+'　'+e.t,sub:'問'+a+'〜'+b,min:(b-a+1)*(+m.perQ||3),subject:s.id,kind:'solve'});}
+        }else{
+          const p0=+(e.p||[])[0]||1, p1=+(e.p||[])[1]||p0, ch=Math.max(1,+m.chunkPages||20), n=Math.ceil((p1-p0+1)/ch);
+          for(let k=0;k<n;k++){const a=p0+k*ch,b=Math.min(p1,a+ch-1);out.push({id:'r'+round+':'+m.id+':'+ei+':'+k,title:m.name+'　'+e.t+(n>1?'（'+(k+1)+'/'+n+'）':''),sub:'p.'+a+'〜'+b,min:(b-a+1)*(+m.perPage||4),subject:s.id,kind:'read'});}
+        }
+      });
+    }
+    if(!any){const tot=Math.round((+s.hours||10)*60), n=Math.max(1,Math.round(tot/60));
+      for(let k=0;k<n;k++) out.push({id:'r'+round+':ph:'+s.id+':'+k,title:s.name+'：テキストと問題',sub:'目安 '+(k+1)+'/'+n+'（目次を取り込むと節ごとに分かれます）',min:Math.round(tot/n),subject:s.id,kind:'any'});}
+  }
+  return out;
+}
+function createSteps(P,workIds,part){
+  const out=[];
+  for(const w of P.works||[]){
+    if(workIds!=='all'&&!(workIds||[]).includes(w.id)) continue;
+    for(const sd of w.steps||[]){
+      if(sd.off) continue;const cov=!!sd.cover;if((part==='body'&&cov)||(part==='cover'&&!cov)) continue;
+      if(sd.perPage){const pages=Math.max(1,+w.pages||1), ch=Math.max(1,+w.chunk||4);
+        for(let a=1;a<=pages;a+=ch){const b=Math.min(pages,a+ch-1);out.push({id:w.id+':'+sd.id+':'+a,title:w.name+'　'+sd.name,sub:'p.'+a+'〜'+b,min:Math.round((b-a+1)*(+sd.hours||1)*60),work:w.id,kind:sd.id});}}
+      else out.push({id:w.id+':'+sd.id,title:w.name+'　'+sd.name,sub:'',min:Math.round((+sd.hours||1)*60),work:w.id,kind:sd.id});
+    }
+  }
+  return out;
+}
+// each step belongs to the earliest goal that covers it
+function goalPlan(P){
+  const seen=new Set(), out=[];
+  for(const g of [...(P.goals||[])].filter(g=>g.scope&&(g.track==='study'||g.track==='create')).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0)){
+    const st=(g.track==='study'?studySteps(P,g.scope.round||1,g.scope.subjects||'all'):createSteps(P,g.scope.works||'all',g.scope.part||'all')).filter(s=>!seen.has(s.id));
+    st.forEach(s=>{seen.add(s.id);s.goal=g.id;s.track=g.track;});
+    out.push({g,steps:st});
+  }
+  return out;
+}
+function stepIndex(P){const m={};for(const {steps} of goalPlan(P)) for(const s of steps) m[s.id]=s;return m;}
+function doneMap(){const m={};for(const [ds,d] of Object.entries(checks().d)) for(const k of Object.keys((d&&d.v)||{})) if(k.slice(0,3)==='st:') m[k.slice(3)]=ds;return m;}
+
+/* the scheduler: for each track, a pace that meets every deadline's 90% point with the least daily load */
+function scheduleAll(P,from,noBuf){
+  noBuf=noBuf||{};const done=doneMap(), gp=goalPlan(P);
+  const res={made:from,by:{study:{},create:{}},goals:{},w:{}};
+  for(const {steps} of gp) for(const s of steps) res.w[s.id]=s.min;
+  for(const tr of ['study','create']){
+    const G=gp.filter(x=>x.g.track===tr).map(({g,steps})=>{
+      const rem=steps.filter(s=>!done[s.id]), buf=noBuf[g.id]?false:g.buffer!==false;
+      const span=Math.max(0,diffDays(from,g.date)), T=g.date<from?from:(buf?addDays(from,Math.floor(span*0.9)):g.date);
+      return {g,steps,rem,W:rem.reduce((a,s)=>a+s.min,0),T,T0:T,buf,f:0};});
+    const memo={}, cap=ds=>memo[ds]!=null?memo[ds]:(memo[ds]=capOf(ds,tr,P));
+    const Csum=(a,b)=>{let c=0;for(let ds=a;ds<=b;ds=addDays(ds,1)) c+=cap(ds);return c;};
+    const segs=[];let s=from,k0=0;
+    while(k0<G.length){
+      let acc=0,best=k0,bf=-1;
+      let accB=0;
+      for(let k=k0;k<G.length;k++){acc+=G[k].W;const T=G[k].T<s?s:G[k].T, c=Csum(s,T), r=c?acc/c:(acc?Infinity:0);if(r>=bf){bf=r;best=k;accB=acc;}}
+      // more work than time: eat into that goal's buffer first, and only overload the days once the buffer is gone
+      const X=G[best];
+      if(bf>1.0001&&X.buf&&X.T<X.g.date){let T2=X.T;while(T2<X.g.date&&Csum(s,T2)<accB-1e-6) T2=addDays(T2,1);X.T=T2;continue;}
+      const T=G[best].T<s?s:G[best].T;segs.push({from:s,to:T,f:bf,k1:best});for(let k=k0;k<=best;k++) G[k].f=bf;
+      s=addDays(T,1);k0=best+1;
+    }
+    // every step gets a range [start, end) on the track's running total of minutes; a day "covers" the part of
+    // that total its time allows, so a long step simply runs over several days
+    const queue=G.flatMap(x=>x.rem), q={}, rng={};let i=0,acc=0,Q=0;
+    for(const sg of segs){
+      const f=isFinite(sg.f)?sg.f:0;
+      for(let ds=sg.from;ds<=sg.to;ds=addDays(ds,1)){
+        Q+=cap(ds)*f;q[ds]=Q;
+        while(i<queue.length&&acc<Q-1e-6){const st=queue[i];rng[st.id]=[acc,acc+st.min];(res.by[tr][ds]=res.by[tr][ds]||[]).push(st.id);acc+=st.min;i++;}
+      }
+      const last=G.slice(0,sg.k1+1).reduce((n,x)=>n+x.rem.length,0);
+      while(i<last){const st=queue[i];rng[st.id]=[acc,acc+st.min];(res.by[tr][sg.to]=res.by[tr][sg.to]||[]).push(st.id);acc+=st.min;i++;}
+      if(acc>Q+1e-6){Q=acc;q[sg.to]=Q;}
+    }
+    res.q=res.q||{};res.rng=res.rng||{};res.q[tr]=q;res.rng[tr]=rng;
+    for(const x of G) res.goals[x.g.id]={track:tr,name:x.g.name,from,T:x.T,T0:x.T0,due:x.g.date,W:x.W,f:x.f,buf:x.buf,ids:x.steps.map(s=>s.id)};
+  }
+  return res;
+}
+
+/* running total planned for a track by the end of a day */
+function Qat(B,tr,ds){
+  const q=(B.q||{})[tr]||{};if(q[ds]!=null) return q[ds];
+  const keys=Object.keys(q).sort();if(!keys.length||ds<keys[0]) return 0;
+  let lo=0,hi=keys.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(keys[m]<=ds) lo=m; else hi=m-1;}
+  return q[keys[lo]];
+}
+/* how far the plan and the record are apart, for the goal being worked on now */
+function planStats(tr){
+  const P=plan2(), B=P.baseline;if(!B||!B.by) return null;
+  const t=today(), done=doneMap(), rng=(B.rng||{})[tr]||{}, Qy=Qat(B,tr,addDays(t,-1));
+  const gs=Object.entries(B.goals||{}).filter(([,g])=>g.track===tr).sort((a,b)=>a[1].due<b[1].due?-1:1);
+  if(!gs.length) return null;
+  const cur=gs.find(([,g])=>g.due>=t&&g.ids.some(id=>!done[id]))||gs[gs.length-1];
+  const [gid,g]=cur;let tot=0,dn=0,pl=0;
+  for(const id of g.ids){const w=B.w[id]||0;tot+=w;if(done[id]) dn+=w;const r=rng[id];if(r) pl+=Math.max(0,Math.min(r[1],Qy)-r[0]); else if(done[id]) pl+=w;}
+  const goal=(P.goals||[]).find(x=>x.id===gid)||{name:g.name,date:g.due};
+  return {goal,info:g,pct:tot?Math.round(dn/tot*100):0,plan:tot?Math.round(pl/tot*100):0,gap:tot?(dn-pl)/tot:0,total:tot};
+}
+function gapText(gap){const v=Math.round(gap*100);return '計画との差 '+(v>0?'+':v<0?'−':'±')+Math.abs(v)+'%';}
+
+/* a day's list: the parts of the baseline that fall on that day (plus, today, what should already be finished),
+   placed into the day's time slots */
+function planTasks(ds){
+  const P=plan2(), B=P.baseline, t=today(), done=doneMap(), idx=stepIndex(P), T=[];
+  const off=dayRec(ds).off||dayTypeOf(ds,P)==='off', dt=dtById(dayTypeOf(ds,P),P);
+  const slots=dt&&!off?[...dt.slots].sort((a,b)=>sinceStart(toMin(a.time||'03:59'))-sinceStart(toMin(b.time||'03:59'))):[];
+  for(const tr of ['study','create']){
+    const rng=(B.rng||{})[tr]||{}, Q0=Qat(B,tr,addDays(ds,-1)), Q1=Qat(B,tr,ds), list=[];
+    for(const [id,r] of Object.entries(rng)){
+      if(done[id]&&done[id]!==ds) continue;
+      const part=Math.min(r[1],Q1)-Math.max(r[0],Q0);
+      if(part>0.5) list.push({id,part,first:r[0]>=Q0-1e-6,carry:false,r});
+      else if(ds===t&&r[1]<=Q0+1e-6) list.push({id,part:r[1]-r[0],first:true,carry:true,r});
+    }
+    list.sort((a,b)=>(b.carry-a.carry)||(a.r[0]-b.r[0]));
+    const ss=slots.filter(s=>s.track===tr).map(s=>({s,left:+s.min||0}));
+    for(const x of list){
+      const st=idx[x.id];if(!st) continue;
+      // fill the day's slots in time order (slots of the right kind first); a piece may run over two slots, e.g. both commutes
+      const fit=y=>!y.s.prefer||y.s.prefer==='any'||st.kind==='any'||y.s.prefer===st.kind, used=[];let need=x.part;
+      for(const ok of [fit,()=>true]){for(const y of ss){if(need<=0.5) break;if(!ok(y)||y.left<10) continue;const m=Math.min(y.left,need);y.left-=m;need-=m;const u=used.find(z=>z[0]===y);if(u) u[1]+=m; else used.push([y,m]);}if(need<=0.5) break;}
+      if(need>0.5){if(used.length) used[used.length-1][1]+=need; else if(ss.length) used.push([ss[ss.length-1],need]);}
+      used.sort((a,b)=>ss.indexOf(a[0])-ss.indexOf(b[0]));
+      const whole=Math.round(x.part)<st.min-1, lab=y=>(y.s.time?y.s.time+' ':'')+y.s.label;
+      const when=used.length>1?used.map(([y,m])=>lab(y)+' '+fmtMin(m)).join('＋'):(used.length?lab(used[0][0])+'・':'')+fmtMin(x.part);
+      T.push({id:'st:'+x.id,time:when+(whole?'（全'+fmtMin(st.min)+'）':''),kind:tr==='study'?'study':'manga',
+        title:st.title+(x.first||x.carry?'':'（続き）'),sub:(x.carry?'持ち越し　':'')+(st.sub||''),plan:Math.round(x.part),_t:used.length?used[0][0].s.time||'':''});
+    }
+  }
+  for(const s of slots.filter(s=>s.track!=='study'&&s.track!=='create')) T.push({id:'sl:'+s.id,time:(s.time?s.time+' ':'')+fmtMin(+s.min||0),kind:'admin',title:s.label,sub:'',_t:s.time||''});
+  const b=(P_().batches||{})[ds]; if(b) T.push({id:'batch',time:b.time||'撮影',kind:'admin',title:b.title,sub:b.sub||'',_t:''});
+  const w=(P_().workdays||{})[ds]; if(w) T.push({id:'work',time:w.time||'作業日',kind:'admin',title:w.title,sub:w.sub||'',_t:''});
+  const k=x=>x._t?sinceStart(toMin(x._t)):9999;
+  return T.sort((a,b)=>k(a)-k(b));
+}
+function goalDone(g){const B=plan2().baseline;if(!B||!B.goals||!B.goals[g.id]) return false;const done=doneMap();return B.goals[g.id].ids.length>0&&B.goals[g.id].ids.every(id=>done[id]);}
+function milestones(){const P=S.meta.plan||PLAN2SEED;if(P) return (P.goals||[]).map(g=>[g.date,g.name]).sort((a,b)=>a[0]<b[0]?-1:1);return P_().milestones||[];}
 
 /* ---------- life: routines and daily records (the center of the app) ---------- */
 const ALLDAYS=[0,1,2,3,4,5,6], WEEKDAYS=[1,2,3,4,5], DN='日月火水木金土';
@@ -707,7 +918,7 @@ function addQuick(q,ds){const it=life().items.find(i=>i.id===q.item);if(!it||it.
 /* study / creative time: recorded together with the task when the track is set to "時間も記録する" */
 function tracks(){return life().tracks||TRACKS_DEFAULT;}
 function trackOf(kind){return kind==='study'?'study':kind==='manga'?'manga':null;}
-function trackName(k){return k==='study'?P_().study.name:P_().create.name;}
+function trackName(k){return tname(k==='study'?'study':'create');}
 function plannedMin(timeText){
   const s=String(timeText||''), r=s.match(/(\d{1,2}):(\d{2})\s*〜\s*(\d{1,2}):(\d{2})/);
   if(r) return ((+r[3]*60+ +r[4])-(+r[1]*60+ +r[2])+1440)%1440;
@@ -747,8 +958,9 @@ function minutePicker(def,onPick,extra){
 }
 function taskSheet(ds,k){
   const tk=trackOf(k.kind);
-  openSheet(k.title,el('p',{class:'small muted'},trackName(tk)+'に使った時間を記録します（予定 '+fmtMin(plannedMin(k.time))+'）。'),
-    minutePicker(plannedMin(k.time),m=>{setChecked(ds,k.id,true);setDay(ds,d=>{d.rec['@'+tk]=(Array.isArray(d.rec['@'+tk])?d.rec['@'+tk]:[]).filter(x=>x.s!==k.id).concat([{s:k.id,m,title:k.title}]);});document.getElementById('sheet').close();toast(fmtMin(m)+'を記録しました');render();},
+  const pm=k.plan||plannedMin(k.time);
+  openSheet(k.title,el('p',{class:'small muted'},trackName(tk)+'に使った時間を記録します（予定 '+fmtMin(pm)+'）。'),
+    minutePicker(pm,m=>{setChecked(ds,k.id,true);setDay(ds,d=>{d.rec['@'+tk]=(Array.isArray(d.rec['@'+tk])?d.rec['@'+tk]:[]).filter(x=>x.s!==k.id).concat([{s:k.id,m,title:k.title}]);});document.getElementById('sheet').close();toast(fmtMin(m)+'を記録しました');render();},
       el('button',{type:'button',class:'btn sub sm',onclick:()=>{setChecked(ds,k.id,true);document.getElementById('sheet').close();render();}},'時間は記録しない')));
 }
 function toggleTask(ds,k,on){
@@ -895,13 +1107,13 @@ function lifePanel(ds){
 }
 
 /* two tabs that can also be switched by swiping sideways */
-let DAYTAB='study';
-function swipeTabs(panels){
+function swipeTabs(panels,name){
+  name=name||'day';let DAYTAB=TABSTATE[name];
   const keys=panels.map(p=>p[0]);
-  if(!keys.includes(DAYTAB)) DAYTAB=keys[0];
-  const box=el('div',{class:'tabpanel',role:'tabpanel'}), bar=el('div',{class:'tabs2',role:'tablist'});
+  if(!keys.includes(DAYTAB)) DAYTAB=TABSTATE[name]=keys[0];
+  const box=el('div',{class:'tabpanel',role:'tabpanel'}), bar=el('div',{class:'tabs2',role:'tablist',style:'grid-template-columns:repeat('+panels.length+',minmax(0,1fr))'});
   const show=(k,dir)=>{
-    DAYTAB=k;
+    DAYTAB=k;TABSTATE[name]=k;
     [...bar.children].forEach(b=>b.setAttribute('aria-selected',String(b.dataset.k===k)));
     box.replaceChildren(...[].concat(panels.find(x=>x[0]===k)[2]).flat(9).filter(x=>x!=null&&x!==false));
     box.className='tabpanel'+(dir?(dir>0?' in-r':' in-l'):'');
@@ -921,7 +1133,7 @@ function swipeTabs(panels){
 /* day page */
 function viewDay(arg){
   const t=today(), ds=/^\d{4}-\d{2}-\d{2}$/.test(arg||'')?arg:t, d=dayRec(ds);
-  const ms=(P_().milestones||[]).filter(m=>m[0]===ds), ev=d.g||[];
+  const ms=milestones().filter(m=>m[0]===ds), ev=d.g||[];
   const studyPanel=[
     el('h2',{class:'sec'},'今日やること'),taskList(ds),
     trackEditors(ds),
@@ -934,7 +1146,7 @@ function viewDay(arg){
     statusNode(),
     donut(ds),
     el('label',{class:'card row',for:'off-'+ds,style:'flex-direction:row'},el('input',{type:'checkbox',id:'off-'+ds,checked:!!d.off,onchange:e=>{setDay(ds,x=>{x.off=e.target.checked?1:0;});render();}}),el('span',{},'この日はお休み',el('br'),el('span',{class:'xs muted'},'ルーティンを休んでも、連続記録は途切れません'))),
-    swipeTabs([['study','学習・制作',studyPanel],['life','習慣',lifePanel(ds)]]),
+    swipeTabs([['study','学習・制作',studyPanel],['life','習慣',lifePanel(ds)]],'day'),
     el('a',{href:gcalUrl(ds),target:'_blank',rel:'noopener',class:'btn sub sm'},'Google カレンダーでこの日を開く')
   ];
 }
@@ -979,11 +1191,12 @@ function viewCal(){
   const t=today();if(!CAL.ym) CAL.ym=t.slice(0,7);
   const [y,m]=CAL.ym.split('-').map(Number), first=new Date(y,m-1,1), n=new Date(y,m,0).getDate();
   const RS=routines(), IT=items();
-  const ms={};for(const x of (P_().milestones||[])) (ms[x[0]]=ms[x[0]]||[]).push(x[1]);
+  const ms={};for(const x of milestones()) (ms[x[0]]=ms[x[0]]||[]).push(x[1]);
   const shift=k=>{CAL.ym=ymd(new Date(y,m-1+k,1)).slice(0,7);render();};
   const fr=CAL.f.startsWith('r:')?RS.find(r=>'r:'+r.id===CAL.f):null, fi=CAL.f.startsWith('i:')?IT.find(i=>'i:'+i.id===CAL.f):null;
-  const cells=[...DN].map((w,i)=>el('div',{class:'wd',style:i===0?'color:var(--bad)':''},w));
-  for(let i=0;i<first.getDay();i++) cells.push(el('div',{class:'cc pad','aria-hidden':'true'}));
+  const WS=+(plan2().weekStart??1), ord=Array.from({length:7},(_,i)=>(WS+i)%7);
+  const cells=ord.map(i=>el('div',{class:'wd',style:i===0?'color:var(--bad)':''},DN[i]));
+  for(let i=0;i<(first.getDay()-WS+7)%7;i++) cells.push(el('div',{class:'cc pad','aria-hidden':'true'}));
   for(let i=1;i<=n;i++){
     const ds=CAL.ym+'-'+String(i).padStart(2,'0'), d=dayRec(ds);
     let style='', mark=null, label=jpDate(ds);
@@ -1115,7 +1328,7 @@ function viewRoutines(){
 
   const help=el('details',{class:'set'},el('summary',{},'？ 使い方'),
     el('div',{class:'small',style:'display:flex;flex-direction:column;gap:8px'},
-      el('p',{},el('b',{},'ことばの使い分け：'),'「習慣」は暮らしの側の全体で、「ルーティン」と「生活の記録」からできています。勉強と原稿は「学習・制作の記録」として別に扱います（メニュー「学習と制作の記録方法」）。'),
+      el('p',{},el('b',{},'ことばの使い分け：'),'「習慣」は暮らしの側の全体で、「ルーティン」と「生活の記録」からできています。学習と制作は「学習・制作の記録」として別に扱います（メニュー「学習と制作の記録方法」）。'),
       el('p',{},el('b',{},'ルーティン：'),'時刻や曜日が決まっていて、ホームで ○（できた）か ×（できなかった）を付けるものです。答えなかった日は「記録なし」になり、責められることはありません。'),
       el('p',{},el('b',{},'チェックイン／レポート：'),'アプリを開くよう促す時刻と、そのときに聞く項目です（最大4回）。〆のレポートでは、学習と制作の記録が最初に出ます。時刻の前後1時間は、まだ済んでいなければホームのボタンがオレンジになります。同じ項目を何回聞いてもよく、答え直すと上書きされます。'),
       el('p',{},el('b',{},'生活の記録：'),'睡眠・仕事・家事・趣味・運動など、一日の過ごし方です。時間は15分〜6時間のボタンのほか、自由にも入れられます。「時間」の項目は内訳を選んで、分か時刻で入れます。ながら作業で時刻が重なっても大丈夫です。'),
@@ -1216,27 +1429,244 @@ function viewTracks(){
   return [
     el('h1',{},'学習と制作の記録方法'),statusNode(),
     el('p',{class:'small muted'},'「今日やること」にチェックを入れたときに、使った時間も一緒に記録するかを選びます。時間を記録すると、これまでの合計時間や、制作が見積もりのどのあたりまで来ているかがわかります。'),
-    el('div',{class:'card'},el('h2',{},(P_().study.icon||'📖')+' '+P_().study.name),seg('study'),
+    el('div',{class:'card'},el('h2',{},(P_().study.icon||'📖')+' '+tname('study')),seg('study'),
       el('p',{class:'small num'},'これまで '+fmtH(st)+(T.studyGoal?' ／ 目標 '+T.studyGoal+'時間（'+Math.round(st/60/T.studyGoal*100)+'%）':'')),
       el('label',{class:'field',for:'tg'},'学習時間の目標（任意・時間）',el('input',{type:'number',id:'tg',min:0,inputmode:'numeric',value:T.studyGoal||'',placeholder:'例：900',onchange:e=>setT(x=>{x.studyGoal=Math.max(0,parseInt(e.target.value,10)||0);})}))),
-    el('div',{class:'card'},el('h2',{},(P_().create.icon||'✏️')+' '+P_().create.name),seg('manga'),
+    el('div',{class:'card'},el('h2',{},(P_().create.icon||'✏️')+' '+tname('create')),seg('manga'),
       el('p',{class:'small num'},'これまで '+fmtH(mg)+(est?' ／ 見積もり '+fmtH(est)+'（'+Math.round(mg/est*100)+'%）':''))),
     el('p',{class:'xs muted'},'「時間も記録する」にすると、チェックを入れたときに時間を選ぶ画面が出ます（予定の時間が最初から選ばれています）。記録画面から、あとで足したり消したりもできます。')
   ];
 }
 
-/* plan overview (rebuilt in the planning stage; for now it shows the whole plan at a glance) */
-function viewPlan(){
-  if(!PLAN) return [el('h1',{},'計画'),noPlan()];
-  const t=today(), p=P_();
+/* ---------- the plan screens: 全体 / 節目 / 学習 / 制作 / 時間 ---------- */
+const POPEN=new Set();
+function pdet(key,summary,...kids){return el('details',{class:'set',open:POPEN.has(key),ontoggle:e=>{if(e.target.open) POPEN.add(key); else POPEN.delete(key);}},el('summary',{},summary),...kids);}
+function pfield(id,label,input){return el('label',{class:'field',for:id},label,input);}
+function ptext(id,val,onset,ph){return el('input',{type:'text',id,value:val==null?'':val,placeholder:ph||'',onchange:e=>onset(e.target.value.trim())});}
+function pnum(id,val,onset,step,min){return el('input',{type:'number',id,value:val==null?'':val,step:step||'any',min:min==null?0:min,inputmode:'decimal',class:'num',onchange:e=>{const v=parseFloat(e.target.value);onset(isNaN(v)?0:v);}});}
+function pselect(id,val,opts,onset){return el('select',{id,onchange:e=>onset(e.target.value)},opts.map(([v,l])=>el('option',{value:v,selected:String(v)===String(val)},l)));}
+function pdate(id,val,onset){return el('input',{type:'date',id,value:val||'',onchange:e=>{if(e.target.value) onset(e.target.value);}});}
+function upP(fn){setPlan2(fn);render();}
+function twoStepBtn(label,act){let armed=false;return el('button',{type:'button',class:'btn sub sm',style:'color:var(--bad)',onclick:e=>{if(!armed){armed=true;e.target.textContent='もう一度押すと消えます';setTimeout(()=>{armed=false;if(e.target.isConnected) e.target.textContent=label;},4000);return;}act();}},label);}
+function upDown(list,id,dir){const i=list.findIndex(x=>x.id===id),j=i+dir;if(i<0||j<0||j>=list.length) return;[list[i],list[j]]=[list[j],list[i]];}
+function ordRow(node,label,onUp,onDown,first,last){return el('div',{class:'ordrow'},node,el('div',{class:'ord'},el('button',{type:'button',class:'ordb','aria-label':label+'を上へ',disabled:first,onclick:onUp},'▲'),el('button',{type:'button',class:'ordb','aria-label':label+'を下へ',disabled:last,onclick:onDown},'▼')));}
+function newId(p){return p+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+
+/* overview: the whole plan at a glance */
+function subjectBands(P,R){const rng=(R.rng||{}).study||{}, q=(R.q||{}).study||{}, idx=stepIndex(P), keys=Object.keys(q).sort(), out={};
+    const dayOf=v=>keys.find(ds=>q[ds]>=v-1e-6)||keys[keys.length-1];
+    for(const [id,r] of Object.entries(rng)){const st=idx[id];if(!st||!st.subject) continue;const o=out[st.subject]||(out[st.subject]={a:r[0],b:r[1]});o.a=Math.min(o.a,r[0]);o.b=Math.max(o.b,r[1]);}
+    return (P.subjects||[]).filter(s=>out[s.id]).map(s=>({s,from:keys.find(ds=>q[ds]>out[s.id].a+1e-6)||keys[0],to:dayOf(out[s.id].b)}));}
+function planOverview(){
+  const P=plan2(), t=today(), act=planActive();
+  const R=act?P.baseline:scheduleAll(P,t,{});
+  const goals=(P.goals||[]).slice().sort((a,b)=>a.date<b.date?-1:1);
+  const last=goals.reduce((m,g)=>g.date>m?g.date:m,addDays(t,30)), span=Math.max(1,diffDays(R.made||t,last));
+  const X=ds=>Math.max(0,Math.min(100,diffDays(R.made||t,ds)/span*100));
+  const card=tr=>{
+    const st=act?planStats(tr):null, gl=Object.entries(R.goals||{}).filter(([,g])=>g.track===tr).sort((a,b)=>a[1].due<b[1].due?-1:1);
+    if(!gl.length) return el('div',{class:'card'},el('h2',{},tname(tr)),el('p',{class:'small muted'},'この'+tname(tr)+'の節目はまだありません。「節目」のタブで足してください。'));
+    return el('div',{class:'card'},
+      el('div',{class:'between'},el('h2',{},tname(tr)),st?el('span',{class:'small num',style:st.gap<=-0.1?'color:#E8590C;font-weight:700':'color:var(--muted)'},gapText(st.gap)):null),
+      st?el('p',{class:'xs muted num'},'いまの節目「'+st.goal.name+'」：終わった '+st.pct+'%・予定 '+st.plan+'%'):null,
+      gl.map(([gid,g])=>{
+        const over=!isFinite(g.f)||g.f>1.0001, use=isFinite(g.f)?Math.round(g.f*100):null;
+        return el('div',{class:'gl'},
+          el('div',{class:'between'},el('b',{class:'small'},g.name),el('span',{class:'xs muted num'},'期日 '+md(g.due))),
+          el('div',{class:'gbar','aria-hidden':'true'},el('i',{class:'work',style:'left:'+X(g.from)+'%;width:'+(X(g.T)-X(g.from))+'%'}),g.buf?el('i',{class:'buf',style:'left:'+X(g.T)+'%;width:'+(X(g.due)-X(g.T))+'%'}):null,el('b',{class:'now',style:'left:'+X(t)+'%'})),
+          el('p',{class:'xs muted num'},'完走予定 '+md(g.T)+(g.buf?'・バッファ '+diffDays(g.T,g.due)+'日':'・バッファなし')+'・作業 '+fmtH(g.W)+(use!=null?'・時間の使い方 '+use+'%':'')),
+          over?el('p',{class:'xs',style:'color:#E8590C'},'時間が足りません。期日を延ばすか、量を減らすか、時間割の時間を増やしてください。')
+            :g.T0&&g.T>g.T0?el('p',{class:'xs',style:'color:#E8590C'},'作業の量に対して時間が少し足りないため、バッファのうち '+diffDays(g.T0,g.T)+'日を作業に回しています（残りのバッファ '+diffDays(g.T,g.due)+'日）。'):null);
+      }));
+  };
+  // study subjects as bands (from the plan's own ranges)
+  const bands=subjectBands(P,R);
   return [
-    el('h1',{},'計画'),
-    el('div',{class:'card'},el('h2',{},'ゴール'),
-      p.study.exam?el('p',{class:'small'},p.study.exam.label+'：'+jpDate(p.study.exam.date)+'（あと'+diffDays(t,p.study.exam.date)+'日）'):null,
-      p.create.event?el('p',{class:'small'},p.create.event.label+'：'+jpDate(p.create.event.date)+'（あと'+diffDays(t,p.create.event.date)+'日）'):null),
-    el('div',{class:'card'},el('h2',{},p.study.name+'の流れ'),el('div',{class:'scroll'},el('table',{class:'table'},el('tbody',{},units().map(u=>el('tr',{style:t>=u.start&&t<=u.end?'background:var(--accent-soft)':''},el('td',{},u.name),el('td',{class:'num muted'},md(u.start)+'〜'+md(u.end)))))))),
-    el('div',{class:'card'},el('h2',{},'節目'),(p.milestones||[]).filter(m=>m[0]>=t).map(m=>el('p',{class:'small'},el('span',{class:'num muted'},md(m[0])+'　'),m[1]))),
-    el('div',{class:'warn'},'期日の変更、テキストと目次からのステップ分解、ペース配分の設定は、計画の段階でこの画面に作ります。')
+    act?el('p',{class:'small muted'},'この計画で動いています（'+md(P.baseline.made)+' に組みました）。'):el('div',{class:'warn'},'この計画はまだ使われていません（いまは前の計画で動いています）。中身を確かめて「この計画で組む」を押すと、今日から切り替わります。'),
+    el('button',{type:'button',class:'btn',onclick:replanStart},act?'計画を組み直す（今日から）':'この計画で組む'),
+    card('study'),card('create'),
+    bands.length?el('div',{class:'card'},el('h2',{},tname('study')+'の流れ'),el('div',{class:'scroll'},el('table',{class:'table'},el('tbody',{},bands.map(b=>el('tr',{style:t>=b.from&&t<=b.to?'background:var(--accent-soft)':''},el('td',{},b.s.name),el('td',{class:'num muted'},md(b.from)+'〜'+md(b.to)))))))):null,
+    el('div',{class:'legend'},el('span',{},'■ 作業の期間'),el('span',{},'▨ バッファ'),el('span',{},'｜ 今日'))
+  ];
+}
+
+/* replan: 2-week rule, then set the new baseline */
+function replanStart(){
+  const P=plan2(), t=today(), done=doneMap(), gp=goalPlan(P);
+  const near=gp.filter(({g,steps})=>g.date>=t&&diffDays(t,g.date)<=14&&g.buffer!==false&&steps.some(s=>!done[s.id])).map(x=>x.g);
+  if(!near.length){replanDo({});return;}
+  const pick={};near.forEach(g=>{pick[g.id]=true;});
+  openSheet('期日が2週間以内の節目があります',
+    el('p',{class:'small'},'期日が近いときは、バッファを取ると作業の時間が足りなくなりやすいので、バッファなしで組むのがおすすめです。'),
+    near.map(g=>el('label',{class:'row',for:'nb-'+g.id,style:'min-height:44px'},el('input',{type:'checkbox',id:'nb-'+g.id,checked:true,onchange:e=>{pick[g.id]=e.target.checked;}}),el('span',{},g.name+'（'+md(g.date)+'）をバッファなしで組む'))),
+    el('button',{type:'button',class:'btn',onclick:()=>{document.getElementById('sheet').close();replanDo(pick);}},'この内容で組む'));
+}
+function replanDo(noBuf){
+  const t=today();
+  setPlan2(x=>{for(const g of x.goals||[]) if(noBuf[g.id]) g.buffer=false;x.baseline=scheduleAll(x,t,{});x.start=x.start||t;});
+  toast('計画を組みました。今日の「今日やること」から切り替わります');
+  TABSTATE.plan='all';render();
+}
+
+/* 節目 */
+function planGoals(){
+  const P=plan2(), gs=(P.goals||[]).slice().sort((a,b)=>a.date<b.date?-1:1);
+  const upG=(id,fn)=>upP(x=>{fn(x.goals.find(g=>g.id===id));});
+  const kinds=[['study',tname('study')+'の節目（期日までに終わらせる）'],['create',tname('create')+'の節目（期日までに終わらせる）'],['','日付だけ（お知らせ・イベント）']];
+  const gEdit=g=>{
+    const B=P.baseline&&P.baseline.goals&&P.baseline.goals[g.id], done=goalDone(g);
+    return pdet('g:'+g.id,[el('span',{class:'num xs muted',style:'flex:none;width:3.4em'},md(g.date)),el('span',{style:'flex:1;min-width:0'},g.name),done?el('span',{class:'pill',style:'padding:2px 8px;font-size:11px'},'達成'):(g.reward?el('span',{'aria-label':'ごほうびあり'},'🎁'):null)],
+      el('div',{class:'grid2'},pfield('gn-'+g.id,'名前',ptext('gn-'+g.id,g.name,v=>{if(v) upG(g.id,x=>{x.name=v;});})),pfield('gd-'+g.id,'期日',pdate('gd-'+g.id,g.date,v=>upG(g.id,x=>{x.date=v;})))),
+      pfield('gk-'+g.id,'種類',pselect('gk-'+g.id,g.track||'',kinds,v=>upG(g.id,x=>{x.track=v;x.scope=v==='study'?{round:1,subjects:'all'}:v==='create'?{works:'all',part:'all'}:null;}))),
+      g.track==='study'?el('div',{class:'grid2'},
+        pfield('gr-'+g.id,'何周目',pselect('gr-'+g.id,(g.scope||{}).round||1,[[1,'1周目'],[2,'2周目'],[3,'3周目'],[4,'4周目']],v=>upG(g.id,x=>{x.scope=Object.assign({},x.scope,{round:+v});})))):null,
+      g.track==='study'?el('div',{class:'field'},'科目',el('div',{class:'chips'},
+        el('button',{type:'button',class:'chip sm','aria-pressed':String((g.scope||{}).subjects==='all'),onclick:()=>upG(g.id,x=>{x.scope=Object.assign({},x.scope,{subjects:'all'});})},'すべて'),
+        (P.subjects||[]).map(s=>{const on=Array.isArray((g.scope||{}).subjects)&&g.scope.subjects.includes(s.id);return el('button',{type:'button',class:'chip sm','aria-pressed':String(on),onclick:()=>upG(g.id,x=>{let a=Array.isArray(x.scope.subjects)?x.scope.subjects.slice():[];if(a.includes(s.id)) a=a.filter(y=>y!==s.id); else a.push(s.id);x.scope=Object.assign({},x.scope,{subjects:a.length?a:'all'});})},s.short||s.name);}))):null,
+      g.track==='create'?el('div',{class:'field'},'作品',el('div',{class:'chips'},
+        el('button',{type:'button',class:'chip sm','aria-pressed':String((g.scope||{}).works==='all'),onclick:()=>upG(g.id,x=>{x.scope=Object.assign({},x.scope,{works:'all'});})},'すべて'),
+        (P.works||[]).map(w=>{const on=Array.isArray((g.scope||{}).works)&&g.scope.works.includes(w.id);return el('button',{type:'button',class:'chip sm','aria-pressed':String(on),onclick:()=>upG(g.id,x=>{let a=Array.isArray(x.scope.works)?x.scope.works.slice():[];if(a.includes(w.id)) a=a.filter(y=>y!==w.id); else a.push(w.id);x.scope=Object.assign({},x.scope,{works:a.length?a:'all'});})},w.name);}))):null,
+      g.track==='create'?pfield('gp-'+g.id,'範囲',pselect('gp-'+g.id,(g.scope||{}).part||'all',[['all','ぜんぶ'],['body','本文だけ'],['cover','表紙だけ']],v=>upG(g.id,x=>{x.scope=Object.assign({},x.scope,{part:v});}))):null,
+      g.track?el('label',{class:'row',for:'gb-'+g.id,style:'min-height:44px'},el('input',{type:'checkbox',id:'gb-'+g.id,checked:g.buffer!==false,onchange:e=>upG(g.id,x=>{x.buffer=e.target.checked;})}),el('span',{},'バッファを取る（期間の90%で終わるように組む）')):null,
+      pfield('gw-'+g.id,'🎁 自分にごほうび（任意）',ptext('gw-'+g.id,g.reward,v=>upG(g.id,x=>{x.reward=v;}),'例：気になっていた画集を買う')),
+      el('label',{class:'row',for:'gc-'+g.id,style:'min-height:44px'},el('input',{type:'checkbox',id:'gc-'+g.id,checked:!!g.countdown,onchange:e=>upG(g.id,x=>{x.countdown=e.target.checked;})}),el('span',{},'ホームに残り日数を出す')),
+      el('label',{class:'row',for:'gg-'+g.id,style:'min-height:44px'},el('input',{type:'checkbox',id:'gg-'+g.id,checked:g.gcal!==false,onchange:e=>upG(g.id,x=>{x.gcal=e.target.checked;})}),el('span',{},'Google カレンダーに送る（連携の設定後）')),
+      B?el('p',{class:'xs muted num'},'完走予定 '+md(B.T)+'・作業 '+fmtH(B.W)):null,
+      twoStepBtn('この節目を消す',()=>upP(x=>{x.goals=x.goals.filter(y=>y.id!==g.id);})));
+  };
+  return [
+    el('p',{class:'small muted'},'期日までに終わらせたいことを「節目」として置きます。学習や制作の節目は、期日の前の10%をバッファにして組みます。日付だけの節目は、カレンダーと見通しに出るだけです。'),
+    gs.map(gEdit),
+    el('div',{class:'grid2'},
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id=newId('g');upP(x=>{x.goals.push({id,track:'study',name:'新しい節目',date:addDays(today(),60),buffer:true,reward:'',gcal:true,countdown:false,scope:{round:1,subjects:'all'}});});POPEN.add('g:'+id);}},'＋ 節目を足す'),
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id=newId('m');upP(x=>{x.goals.push({id,track:'',name:'新しい予定',date:addDays(today(),30),buffer:false,reward:'',gcal:true,countdown:false,scope:null});});POPEN.add('g:'+id);}},'＋ 日付だけの節目'))
+  ];
+}
+
+/* 学習: subjects and materials */
+function tocText(m,P){return (m.toc||[]).map(e=>{const s=(P.subjects||[]).find(x=>x.id===e.s);return (s?(s.short||s.name):e.s)+' | '+e.t+' | '+(m.kind==='solve'?(e.q||0):((e.p||[])[0]+'-'+(e.p||[])[1]));}).join('\n');}
+function parseToc(text,m,P){
+  const out=[], bad=[];
+  for(const line of text.split('\n').map(x=>x.trim()).filter(Boolean)){
+    const [a,t,c]=line.split('|').map(x=>(x||'').trim());
+    const s=(P.subjects||[]).find(x=>x.short===a||x.name===a||x.id===a);
+    if(!s||!t||!c){bad.push(line);continue;}
+    if(m.kind==='solve'){const q=parseInt(c,10);if(!(q>0)){bad.push(line);continue;}out.push({s:s.id,t,q});}
+    else{const mm=c.match(/(\d+)\s*[-〜~]\s*(\d+)/);if(!mm){bad.push(line);continue;}out.push({s:s.id,t,p:[+mm[1],+mm[2]]});}
+  }
+  return {out,bad};
+}
+function planStudy(){
+  const P=plan2(), subs=P.subjects||[], mats=P.materials||[];
+  const sEdit=(s,i)=>ordRow(pdet('s:'+s.id,[el('span',{style:'flex:1;min-width:0'},s.name),el('span',{class:'xs muted num'},(mats.some(m=>(m.toc||[]).some(e=>e.s===s.id))?'目次あり':'目安 '+(s.hours||0)+'時間'))],
+      el('div',{class:'grid2'},pfield('sn-'+s.id,'科目名',ptext('sn-'+s.id,s.name,v=>{if(!v) return;if(subs.some(x=>x.id!==s.id&&x.name===v)){toast('同じ名前の科目があります');render();return;}upP(x=>{x.subjects.find(y=>y.id===s.id).name=v;});})),
+        pfield('ss-'+s.id,'短い名前',ptext('ss-'+s.id,s.short,v=>upP(x=>{x.subjects.find(y=>y.id===s.id).short=v||s.name;})))),
+      pfield('sh-'+s.id,'目安の時間（目次がないときに使います）',pnum('sh-'+s.id,s.hours,v=>upP(x=>{x.subjects.find(y=>y.id===s.id).hours=v;}),1,0)),
+      twoStepBtn('この科目を消す',()=>upP(x=>{x.subjects=x.subjects.filter(y=>y.id!==s.id);}))),
+    s.name,()=>upP(x=>upDown(x.subjects,s.id,-1)),()=>upP(x=>upDown(x.subjects,s.id,1)),i===0,i===subs.length-1);
+  const mEdit=(m,i)=>{let draft=tocText(m,P);
+    const n=(m.toc||[]).length;
+    return ordRow(pdet('m:'+m.id,[el('span',{},m.kind==='solve'?'✏️':'📖'),el('span',{style:'flex:1;min-width:0'},m.name),el('span',{class:'xs muted num'},n?'目次 '+n+'項目':'目次なし')],
+      el('div',{class:'grid2'},pfield('mn-'+m.id,'教材名',ptext('mn-'+m.id,m.name,v=>{if(v) upP(x=>{x.materials.find(y=>y.id===m.id).name=v;});})),
+        pfield('mk-'+m.id,'使い方',pselect('mk-'+m.id,m.kind,[['read','読む（テキスト）'],['solve','解く（問題集）']],v=>upP(x=>{x.materials.find(y=>y.id===m.id).kind=v;})))),
+      m.kind==='solve'?el('div',{class:'grid2'},pfield('mq-'+m.id,'1問の目安（分）',pnum('mq-'+m.id,m.perQ||3,v=>upP(x=>{x.materials.find(y=>y.id===m.id).perQ=v||3;}),0.5,0.5)),pfield('mc-'+m.id,'何問ずつ区切る',pnum('mc-'+m.id,m.chunkQ||10,v=>upP(x=>{x.materials.find(y=>y.id===m.id).chunkQ=Math.max(1,Math.round(v));}),1,1)))
+        :el('div',{class:'grid2'},pfield('mp-'+m.id,'1ページの目安（分）',pnum('mp-'+m.id,m.perPage||4,v=>upP(x=>{x.materials.find(y=>y.id===m.id).perPage=v||4;}),0.5,0.5)),pfield('mc-'+m.id,'何ページずつ区切る（節より長いとき）',pnum('mc-'+m.id,m.chunkPages||20,v=>upP(x=>{x.materials.find(y=>y.id===m.id).chunkPages=Math.max(1,Math.round(v));}),1,1))),
+      pfield('mt-'+m.id,'目次（1行に1項目：科目の短い名前 | 見出し | '+(m.kind==='solve'?'問題数':'開始ページ-終了ページ')+'）',el('textarea',{id:'mt-'+m.id,rows:Math.min(12,Math.max(4,n+1)),value:draft,placeholder:m.kind==='solve'?'労基 | 第1章 総則 | 25':'労基 | 第1章 第1節 労働条件の原則 | 12-20',oninput:e=>{draft=e.target.value;}})),
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>{const r=parseToc(draft,m,P);if(r.bad.length){toast('読めない行があります：'+r.bad[0].slice(0,20));return;}upP(x=>{x.materials.find(y=>y.id===m.id).toc=r.out;});toast('目次を保存しました（'+r.out.length+'項目）');}},'目次を保存'),
+      twoStepBtn('この教材を消す',()=>upP(x=>{x.materials=x.materials.filter(y=>y.id!==m.id);}))),
+      m.name,()=>upP(x=>upDown(x.materials,m.id,-1)),()=>upP(x=>upDown(x.materials,m.id,1)),i===0,i===mats.length-1);};
+  const repo=Object.entries(MATS).filter(([id])=>!mats.some(m=>m.id===id));
+  return [
+    el('h2',{class:'sec'},'科目'),
+    el('p',{class:'xs muted'},'上から順に進みます。▲▼で並べ替えられます。'),
+    subs.map(sEdit),
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id=newId('s');upP(x=>{let n='新しい科目',k=2;while(x.subjects.some(y=>y.name===n)) n='新しい科目'+(k++);x.subjects.push({id,name:n,short:n,hours:10});});POPEN.add('s:'+id);}},'＋ 科目を足す'),
+    el('h2',{class:'sec'},'教材'),
+    el('p',{class:'xs muted'},'教材の目次を、ステップに分ける単位にします。テキストは節ごと、問題集は何問ずつかで区切ります。'),
+    mats.map(mEdit),
+    repo.length?el('div',{class:'card'},el('h2',{},'Claude が取り込んだ目次'),repo.map(([id,m])=>el('div',{class:'between'},el('span',{class:'small'},m.name+'（'+(m.toc||[]).length+'項目）'),el('button',{type:'button',class:'btn sub sm',onclick:()=>upP(x=>{x.materials.push(clone(Object.assign({id},m)));})},'計画に入れる')))):null,
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id=newId('mat');upP(x=>{x.materials.push({id,name:'新しい教材',kind:'read',perPage:4,chunkPages:20,perQ:3,chunkQ:10,toc:[]});});POPEN.add('m:'+id);}},'＋ 教材を足す')
+  ];
+}
+
+/* 制作: works and their steps */
+function planCreate(){
+  const P=plan2(), ws=P.works||[];
+  const upW=(id,fn)=>upP(x=>{fn(x.works.find(w=>w.id===id));});
+  const wEdit=(w,i)=>{
+    const total=createSteps(P,[w.id],'all').reduce((a,s)=>a+s.min,0);
+    return ordRow(pdet('w:'+w.id,[el('span',{style:'flex:1;min-width:0'},w.name),el('span',{class:'xs muted num'},(w.type==='manga'?'漫画型・':'')+(w.pages||0)+'p・'+fmtH(total))],
+      el('div',{class:'grid2'},pfield('wn-'+w.id,'作品名',ptext('wn-'+w.id,w.name,v=>{if(!v) return;if(ws.some(x=>x.id!==w.id&&x.name===v)){toast('同じ名前の作品があります');render();return;}upW(w.id,x=>{x.name=v;});})),
+        pfield('wp-'+w.id,'ページ数（量）',pnum('wp-'+w.id,w.pages,v=>upW(w.id,x=>{x.pages=Math.max(1,Math.round(v));}),1,1))),
+      pfield('wc-'+w.id,'何ページずつ区切る',pnum('wc-'+w.id,w.chunk||4,v=>upW(w.id,x=>{x.chunk=Math.max(1,Math.round(v));}),1,1)),
+      el('div',{class:'field'},'ステップ（上から順に進みます）',
+        (w.steps||[]).map((sd,si)=>el('div',{class:'stp'},
+          el('input',{type:'text','aria-label':'ステップ名',value:sd.name,onchange:e=>{const v=e.target.value.trim();if(!v) return;if(w.steps.some(y=>y.id!==sd.id&&y.name===v)){toast('同じ名前のステップがあります');render();return;}upW(w.id,x=>{x.steps[si].name=v;});}}),
+          el('input',{type:'number','aria-label':sd.perPage?'1ページの時間':'時間',class:'num',step:'0.05',min:0,value:sd.hours,onchange:e=>upW(w.id,x=>{x.steps[si].hours=parseFloat(e.target.value)||0;})}),
+          el('select',{'aria-label':'時間の数え方',onchange:e=>upW(w.id,x=>{x.steps[si].perPage=e.target.value==='p';})},el('option',{value:'p',selected:!!sd.perPage},'時間/ページ'),el('option',{value:'t',selected:!sd.perPage},'時間')),
+          el('div',{class:'stpb'},
+            el('button',{type:'button',class:'ordb','aria-label':sd.name+'を上へ',disabled:si===0,onclick:()=>upW(w.id,x=>upDown(x.steps,sd.id,-1))},'▲'),
+            el('button',{type:'button',class:'ordb','aria-label':sd.name+'を下へ',disabled:si===w.steps.length-1,onclick:()=>upW(w.id,x=>upDown(x.steps,sd.id,1))},'▼'),
+            el('button',{type:'button',class:'ordb','aria-label':sd.name+'を外す',onclick:()=>upW(w.id,x=>{x.steps=x.steps.filter(y=>y.id!==sd.id);})},'×')),
+          el('label',{class:'row xs',style:'grid-column:1/-1'},el('input',{type:'checkbox',checked:!!sd.cover,onchange:e=>upW(w.id,x=>{x.steps[si].cover=e.target.checked;})}),'表紙（本文とは別の期日にできる）')))),
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>upW(w.id,x=>{let n='新しいステップ',k=2;while(x.steps.some(y=>y.name===n)) n='新しいステップ'+(k++);x.steps.push({id:newId('st'),name:n,perPage:true,hours:1});})},'＋ ステップを足す'),
+      twoStepBtn('この作品を消す',()=>upP(x=>{x.works=x.works.filter(y=>y.id!==w.id);}))),
+      w.name,()=>upP(x=>upDown(x.works,w.id,-1)),()=>upP(x=>upDown(x.works,w.id,1)),i===0,i===ws.length-1);};
+  const add=(type)=>{const id=newId('w');upP(x=>{let n='新しい作品',k=2;while(x.works.some(y=>y.name===n)) n='新しい作品'+(k++);x.works.push({id,name:n,type,pages:16,chunk:4,steps:type==='manga'?clone(MANGA_STEPS):[{id:'s1',name:'ステップ1',perPage:false,hours:5}]});});POPEN.add('w:'+id);};
+  return [
+    el('p',{class:'small muted'},'作品ごとに、ステップ（工程）と、1ページあたりの時間か、ステップ全体の時間を決めます。漫画型のプリセットのほかに、動画や小説のようにステップを一から組むこともできます。'),
+    ws.map(wEdit),
+    el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>add('manga')},'＋ 漫画型で足す'),el('button',{type:'button',class:'btn sub sm',onclick:()=>add('custom')},'＋ 一から組む'))
+  ];
+}
+
+/* 時間: day types, the weekly pattern, dates, and weekly adjustments */
+function planTime(){
+  const P=plan2(), types=P.dayTypes||[], ws=+(P.weekStart??1);
+  const tOpts=[...types.map(d=>[d.id,d.name]),['off','お休み（予定を入れない）']];
+  const upT=(id,fn)=>upP(x=>{fn(x.dayTypes.find(d=>d.id===id));});
+  const sum=(d,tr)=>d.slots.filter(s=>s.track===tr).reduce((a,s)=>a+(+s.min||0),0);
+  const tEdit=d=>pdet('t:'+d.id,[el('span',{style:'flex:1;min-width:0'},d.name),el('span',{class:'xs muted num'},tname('study')+' '+fmtMin(sum(d,'study'))+'・'+tname('create')+' '+fmtMin(sum(d,'create')))],
+    pfield('tn-'+d.id,'日のタイプの名前',ptext('tn-'+d.id,d.name,v=>{if(!v) return;if(types.some(x=>x.id!==d.id&&x.name===v)){toast('同じ名前のタイプがあります');render();return;}upT(d.id,x=>{x.name=v;});})),
+    el('div',{class:'field'},'時間の枠',
+      d.slots.map((s,si)=>el('div',{class:'slot'},
+        el('input',{type:'time','aria-label':'はじめる時刻',value:s.time||'',onchange:e=>upT(d.id,x=>{x.slots[si].time=e.target.value;})}),
+        el('input',{type:'text','aria-label':'枠の名前',value:s.label,onchange:e=>upT(d.id,x=>{x.slots[si].label=e.target.value.trim()||s.label;})}),
+        el('select',{'aria-label':'何に使うか',onchange:e=>upT(d.id,x=>{x.slots[si].track=e.target.value;})},[['study',tname('study')],['create',tname('create')],['other','そのほか']].map(([v,l])=>el('option',{value:v,selected:s.track===v},l))),
+        el('input',{type:'number','aria-label':'分',class:'num',min:0,step:5,value:s.min,onchange:e=>upT(d.id,x=>{x.slots[si].min=Math.max(0,parseInt(e.target.value,10)||0);})}),
+        s.track==='study'?el('select',{'aria-label':'向いている作業',onchange:e=>upT(d.id,x=>{x.slots[si].prefer=e.target.value;})},[['any','どちらでも'],['read','読む向き'],['solve','解く向き']].map(([v,l])=>el('option',{value:v,selected:(s.prefer||'any')===v},l))):el('span',{}),
+        el('button',{type:'button',class:'ordb','aria-label':'この枠を消す',onclick:()=>upT(d.id,x=>{x.slots.splice(si,1);})},'×')))),
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>upT(d.id,x=>{x.slots.push({id:newId('sl'),label:tname('study'),time:'',track:'study',min:60,prefer:'any'});})},'＋ 枠を足す'),
+    types.length>1?twoStepBtn('このタイプを消す',()=>upP(x=>{x.dayTypes=x.dayTypes.filter(y=>y.id!==d.id);x.week=x.week.map(v=>v===d.id?x.dayTypes[0].id:v);for(const k of Object.keys(x.dates||{})) if(x.dates[k]===d.id) delete x.dates[k];})):null);
+  const order=Array.from({length:7},(_,i)=>(ws+i)%7);
+  const start=weekStartOf(today(),P), weeks=Array.from({length:8},(_,i)=>addDays(start,i*7));
+  const pct=[[0,'0%'],[0.5,'50%'],[0.75,'75%'],[1,'100%'],[1.25,'125%'],[1.5,'150%']];
+  return [
+    el('div',{class:'card'},el('h2',{},'組み方'),
+      el('div',{class:'seg',style:'grid-template-columns:1fr 1fr'},
+        el('button',{type:'button','aria-pressed':String(P.mode!=='dates'),onclick:()=>upP(x=>{x.mode='week';})},'曜日で繰り返す'),
+        el('button',{type:'button','aria-pressed':String(P.mode==='dates'),onclick:()=>upP(x=>{x.mode='dates';})},'日付ごとに選ぶ')),
+      el('p',{class:'xs muted'},P.mode==='dates'?'シフトのように、日付ごとに日のタイプを選びます。選んでいない日は、曜日の繰り返しで埋まります。':'曜日ごとに日のタイプを決めて繰り返します。特別な日だけ、下の「日付ごと」で変えられます。'),
+      pfield('wst','週のはじまり',pselect('wst',ws,[0,1,2,3,4,5,6].map(i=>[i,DN[i]+'曜日']),v=>upP(x=>{x.weekStart=+v;})))),
+    el('h2',{class:'sec'},'日のタイプ'),
+    types.map(tEdit),
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id=newId('t');upP(x=>{let n='新しいタイプ',k=2;while(x.dayTypes.some(y=>y.name===n)) n='新しいタイプ'+(k++);x.dayTypes.push({id,name:n,slots:[]});});POPEN.add('t:'+id);}},'＋ 日のタイプを足す'),
+    el('div',{class:'card'},el('h2',{},'曜日ごとの日のタイプ'),
+      order.map(i=>el('div',{class:'between'},el('span',{class:'small',style:i===0?'color:var(--bad)':''},DN[i]+'曜日'),el('div',{style:'width:60%'},pselect('wk-'+i,(P.week||[])[i],tOpts,v=>upP(x=>{x.week[i]=v;})))))),
+    el('div',{class:'card'},el('h2',{},'日付ごと（この先4週間）'),el('p',{class:'xs muted'},'変えた日だけが太字になります。'),
+      Array.from({length:28},(_,i)=>addDays(today(),i)).map(ds=>{const set=(P.dates||{})[ds];
+        return el('div',{class:'between'},el('span',{class:'small num',style:set?'font-weight:700':''},md(ds)+'（'+WD[parseYmd(ds).getDay()]+'）'),el('div',{style:'width:60%'},pselect('dt-'+ds,set||'',[['','（曜日どおり：'+((dtById((P.week||[])[parseYmd(ds).getDay()],P)||{}).name||'お休み')+'）'],...tOpts],v=>upP(x=>{x.dates=x.dates||{};if(v) x.dates[ds]=v; else delete x.dates[ds];}))));})),
+    el('div',{class:'card'},el('h2',{},'週ごとの重め・軽め'),el('p',{class:'xs muted'},'その週だけ、時間割の時間を何%使うかを変えます（100%がふつう）。'),
+      weeks.map(w=>el('div',{class:'wadj'},el('span',{class:'small num'},md(w)+'〜'),
+        ...['study','create'].map(tr=>pselect('wa-'+tr+w,(((P.adj||{})[w]||{})[tr])??1,pct.map(([v,l])=>[v,tname(tr)+' '+l]),v=>upP(x=>{x.adj=x.adj||{};const o=Object.assign({},x.adj[w]);if(+v===1) delete o[tr]; else o[tr]=+v;if(Object.keys(o).length) x.adj[w]=o; else delete x.adj[w];}))))))
+  ];
+}
+
+function viewPlan(){
+  const P=plan2();
+  return [
+    el('h1',{},'計画'),statusNode(),
+    swipeTabs([['all','全体',planOverview()],['goals','節目',planGoals()],['study',tname('study'),planStudy()],['create',tname('create'),planCreate()],['time','時間',planTime()]],'plan')
   ];
 }
 
@@ -1248,7 +1678,7 @@ function openMenu(){
     el('div',{class:'between',style:'padding:0 4px 4px 12px'},brandNode(),el('button',{type:'button',class:'iconbtn','aria-label':'メニューを閉じる',onclick:()=>m.close()},'×')),
     el('h3',{},'毎日'),a('home','ホーム'),a('day/'+today(),'今日の記録'),a('cal','カレンダー'),
     life().checkins.filter(c=>c.on).map(c=>a('checkin/'+c.id,ciTitle(c)+'（'+c.time+'）')),
-    el('h3',{},'勉強と原稿'),a('practice','演習'),a('progress','進捗'),a('share','Xへのシェア'),a('plan','計画'),
+    el('h3',{},'学習と制作'),a('practice','演習'),a('progress','進捗'),a('share','Xへのシェア'),a('plan','計画'),
     el('h3',{},'設定と管理'),a('routines','習慣の設定・通知'),a('tracks','学習と制作の記録方法'),a('import','問題の取り込み・同期・バックアップ')].flat());
   if(!m.open) m.showModal();
 }
@@ -1285,17 +1715,26 @@ function progressCard(label,pct,plan,cls){
 function viewHome(){
   const t=today(), L=life(), d=dayRec(t);
   // progress and the two main buttons first
-  let prog=null;
-  if(PLAN){
-    const st=studyStats(), mg=mangaStats(), T=tracks();
-    const pb=(label,pct,plan,cls,hours)=>el('a',{href:'#progress',class:'pb','aria-label':label+' '+pct+'%（予定 '+plan+'%）'+(hours?' これまで'+hours:'')},
-      el('div',{class:'between',style:'align-items:baseline'},el('span',{class:'xs muted num',style:'min-width:0'},el('b',{style:'color:var(--ink);font-weight:500'},label),' 予定'+plan+'%'+(hours?'・'+hours:'')),el('b',{class:'num'},pct+'%')),
+  let prog=null, notice=[];
+  if(PLAN||planActive()){
+    const act=planActive(), ps=act?planStats('study'):null, pc=act?planStats('create'):null;
+    const st=ps||studyStats(), mg=pc||mangaStats(), T=tracks();
+    const gapOf=x=>x&&x.gap!=null?('差'+(Math.round(x.gap*100)>0?'+':Math.round(x.gap*100)<0?'−':'±')+Math.abs(Math.round(x.gap*100))+'%'):'';
+    const pb=(label,pct,plan,cls,hours,x)=>el('a',{href:'#progress',class:'pb','aria-label':label+' '+pct+'%（予定 '+plan+'%）'+(x?' '+gapText(x.gap):'')+(hours?' これまで'+hours:'')},
+      el('div',{class:'between',style:'align-items:baseline'},el('span',{class:'xs muted num',style:'min-width:0'},el('b',{style:'color:var(--ink);font-weight:500'},label),' '+(x?gapOf(x):'予定'+plan+'%')+(hours?'・'+hours:'')),el('b',{class:'num'},pct+'%')),
       el('div',{class:'bar'+(cls?' '+cls:'')},el('i',{style:'width:'+pct+'%'}),el('b',{style:'left:'+Math.min(plan,100)+'%'})));
     prog=el('div',{class:'card topcard'},
       el('div',{class:'grid2',style:'gap:14px'},
-        pb(P_().study.name,st.pct,st.plan,'',T.study==='time'?fmtH(trackTotal('study')):''),
-        works().length?pb(P_().create.name,mg.pct,mg.plan,'manga',T.manga==='time'?fmtH(trackTotal('manga')):''):null),
+        pb(tname('study'),st.pct,st.plan,'',T.study==='time'&&!act?fmtH(trackTotal('study')):'',ps),
+        (act?pc:works().length)?pb(tname('create'),mg.pct,mg.plan,'manga',T.manga==='time'&&!act?fmtH(trackTotal('manga')):'',pc):null),
       el('div',{class:'grid2'},el('a',{href:'#practice',class:'btn sm'},'演習をはじめる'),el('a',{href:'#plan',class:'btn sub sm'},'計画を見る・直す')));
+    const late=[ps,pc].filter(x=>x&&x.gap<=-0.1);
+    if(late.length) notice.push(el('div',{class:'card notice'},
+      el('p',{class:'small'},el('b',{},'計画より10%以上遅れています'),'（'+late.map(x=>tname(x===ps?'study':'create')+' '+gapText(x.gap)).join('、')+'）。計画を組み直すか、記録の付け忘れがないかを見直してください。'),
+      el('div',{class:'grid2'},el('button',{type:'button',class:'btn sm',onclick:()=>{TABSTATE.plan='all';go('plan');}},'計画を組み直す'),el('button',{type:'button',class:'btn sub sm',onclick:()=>{TABSTATE.day='study';go('day/'+addDays(t,-1));}},'記録を見直す'))));
+    if(act) for(const g of plan2().goals||[]) if(g.reward&&!g.got&&goalDone(g)) notice.push(el('div',{class:'card notice good'},
+      el('p',{class:'small'},el('b',{},'🎁 「'+g.name+'」を達成しました！'),'ごほうび：'+g.reward),
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>upP(x=>{x.goals.find(y=>y.id===g.id).got=true;})},'ごほうびを受け取った')));
   }
   // check-ins / report: one row; within an hour of the time and not yet done, the button turns orange
   const cis=L.checkins.filter(c=>c.on);
@@ -1314,12 +1753,12 @@ function viewHome(){
   const routineSec=[
     el('div',{class:'between'},el('h2',{class:'sec'},'ルーティン'),el('span',{class:'xs muted num'},d.off?'':(rate?'できた '+rate.ok+' / '+rate.all:'')+(sk>=2?'　記録 '+sk+'日目':''))),
     d.off?el('p',{class:'small muted'},'今日はお休みの日です。ゆっくり休んでください。'):(cards.length?el('div',{class:'rstrip',role:'list','aria-label':'今日のルーティン'},cards):null),
-    el('div',{class:'qrow'},el('button',{type:'button',class:'hrec',onclick:()=>{DAYTAB='life';go('day/'+t);}},'✎ 今日の習慣記録'),(L.quick||[]).slice(0,4).map(q=>el('button',{type:'button',class:'chip sm',onclick:()=>addQuick(q,t)},'＋'+quickLabel(q))))];
-  const next=PLAN?(P_().milestones||[]).find(m=>m[0]>=t):null;
+    el('div',{class:'qrow'},el('button',{type:'button',class:'hrec',onclick:()=>{TABSTATE.day='life';go('day/'+t);}},'✎ 今日の習慣記録'),(L.quick||[]).slice(0,4).map(q=>el('button',{type:'button',class:'chip sm',onclick:()=>addQuick(q,t)},'＋'+quickLabel(q))))];
+  const next=milestones().find(m=>m[0]>=t);
   return [
-    comebackCard(t),prog,ciRow,routineSec,
+    comebackCard(t),notice,prog,ciRow,routineSec,
     el('div',{class:'between'},el('h2',{class:'sec'},'今日やること'),phaseLabel(t)?el('span',{class:'pill',style:'padding:2px 10px;font-size:12px'},phaseLabel(t)):null),
-    PLAN?taskList(t,{compact:true}):noPlan(),
+    PLAN||planActive()?taskList(t,{compact:true}):noPlan(),
     next?el('p',{class:'xs muted',style:'text-align:center'},'次の節目 '+md(next[0])+' '+next[1]+'（あと'+diffDays(t,next[0])+'日）'):null,
     brandNode()
   ];
@@ -1495,8 +1934,43 @@ function paperForm(){
 }
 
 /* progress */
+function planProgressCards(){
+  const P=plan2(), B=P.baseline, done=doneMap();
+  const trk=tr=>{const st=planStats(tr);if(!st) return null;
+    return el('div',{class:'card'},el('div',{class:'between',style:'align-items:baseline'},el('h2',{style:'min-width:0'},tname(tr)+'：'+st.goal.name),el('span',{class:'small muted num',style:'white-space:nowrap'},el('b',{style:'font-size:22px;color:var(--ink)'},st.pct+'%'),'　予定 '+st.plan+'%')),
+      el('div',{class:'bar'+(tr==='create'?' manga':'')},el('i',{style:'width:'+st.pct+'%'}),el('b',{style:'left:'+Math.min(100,st.plan)+'%'})),
+      el('p',{class:'small num',style:st.gap<=-0.1?'color:#E8590C;font-weight:700':'color:var(--muted)'},gapText(st.gap)+'（期日 '+md(st.goal.date)+'・完走予定 '+md(st.info.T)+'）'));};
+  const wk=(P.works||[]).map(w=>{const sts=createSteps(P,[w.id],'all'), tot=sts.reduce((a,x)=>a+x.min,0), dn=sts.reduce((a,x)=>a+(done[x.id]?x.min:0),0), nx=sts.find(x=>!done[x.id]);return {w,pct:tot?Math.round(dn/tot*100):0,nx};});
+  const goals=(P.goals||[]).slice().sort((a,b)=>a.date<b.date?-1:1);
+  const gpct=g=>{const b=B&&B.goals&&B.goals[g.id];if(!b) return null;const tot=b.ids.reduce((a,id)=>a+(B.w[id]||0),0);return tot?Math.round(b.ids.reduce((a,id)=>a+(done[id]?(B.w[id]||0):0),0)/tot*100):100;};
+  return [trk('study'),trk('create'),
+    wk.length?el('div',{class:'card'},el('h2',{},tname('create')+'の作品'),wk.map(x=>el('div',{class:'gl'},el('div',{class:'between'},el('b',{class:'small'},x.w.name),el('span',{class:'small num'},x.pct+'%')),el('div',{class:'bar manga'},el('i',{style:'width:'+x.pct+'%'})),x.nx?el('p',{class:'xs muted'},'次：'+x.nx.title.replace(x.w.name,'').trim()+' '+x.nx.sub):el('p',{class:'xs',style:'color:var(--good)'},'すべて終わりました')))):null,
+    el('div',{class:'card'},el('div',{class:'between'},el('h2',{},'節目とごほうび'),el('button',{type:'button',class:'btn sub sm',onclick:()=>{TABSTATE.plan='goals';go('plan');}},'節目を編集')),
+      goals.map(g=>{const p=gpct(g), ok=g.track&&p===100;return el('div',{class:'gl'},
+        el('div',{class:'between'},el('span',{class:'small'},el('span',{class:'num muted'},md(g.date)+'　'),g.name),el('span',{class:'small num',style:ok?'color:var(--good);font-weight:700':''},g.track?(ok?'達成 ✓':(p==null?'—':p+'%')):'')),
+        g.reward?el('button',{type:'button',class:'rw','aria-label':g.name+'のごほうびを直す',onclick:()=>rewardSheet(g)},'🎁 '+g.reward+(g.got?'（受け取りました）':''))
+          :el('button',{type:'button',class:'rw none',onclick:()=>rewardSheet(g)},'＋ ごほうびを決める'));}))];
+}
+function rewardSheet(g){
+  const inp=el('input',{type:'text',id:'rw-in',value:g.reward||'',placeholder:'例：ケーキを買う、映画を観に行く'});
+  const put=v=>{document.getElementById('sheet').close();upP(x=>{const y=x.goals.find(y=>y.id===g.id);y.reward=v;if(!v) delete y.got;});};
+  openSheet('🎁 自分にごほうび',el('p',{class:'small muted'},md(g.date)+'　'+g.name),el('label',{class:'field',for:'rw-in'},'達成したら',inp),
+    el('div',{class:'grid2'},el('button',{type:'button',class:'btn',onclick:()=>put(inp.value.trim())},'これにする'),g.reward?el('button',{type:'button',class:'btn sub',onclick:()=>put('')},'なしにする'):el('button',{type:'button',class:'btn sub',onclick:()=>document.getElementById('sheet').close()},'やめる')));
+  setTimeout(()=>inp.focus(),50);
+}
+function practiceCard(){
+  const P=plan2(), t=today(), bands=subjectBands(P,P.baseline), when=Object.fromEntries(bands.map(b=>[b.s.id,b]));
+  return el('div',{class:'card'},el('h2',{},'演習の記録（科目ごと）'),
+    el('p',{class:'xs muted'},'取り込んだ問題のうち、1回以上解いたもの。「計画」は'+tname('study')+'の計画でその科目を進める期間です。'),
+    el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'科目'),el('th',{},'解いた'),el('th',{},'正解'),el('th',{},'計画'))),
+      el('tbody',{},(P.subjects||[]).map(s=>{const c=coverage(s.id), b=when[s.id];return el('tr',{style:b&&t>=b.from&&t<=b.to?'background:var(--accent-soft)':''},el('td',{},s.short||s.name),
+        el('td',{class:'num'},c.total?c.answered+' / '+c.total:'未取り込み'),
+        el('td',{class:'num'},c.answered?Math.round(c.ok/c.answered*100)+'%':'—'),
+        el('td',{class:'num muted'},b?(t>b.to?'済み予定':md(b.from)+'〜'+md(b.to)):'—'));})))),
+    trackTotal('study')?el('p',{class:'small num'},'これまでの学習時間 '+fmtH(trackTotal('study'))):null);
+}
 function viewProgress(){
-  const st=studyStats(), mg=mangaStats(), m=manga();
+  const st=studyStats(), mg=mangaStats(), m=manga(), act=planActive();
   const setM=fn=>{const x=clone(manga());fn(x);x.t=Date.now();S.meta.manga=x;save('meta/manga');render();};
   const stepper=(bk,i)=>{const b=m[bk],id='st-'+bk+'-'+i;
     return el('div',{class:'stepper'},el('label',{for:id,class:'small'},stages()[i].name),
@@ -1509,8 +1983,9 @@ function viewProgress(){
   return [
     el('div',{class:'between'},el('h1',{},'進捗'),el('a',{href:'#share',class:'btn dark sm'},'シェア')),
     statusNode(),
-    el('div',{class:'card'},
-      el('div',{class:'between',style:'align-items:baseline'},el('h2',{},P_().study.name+'（1周目）'),el('span',{class:'small muted num'},el('b',{style:'font-size:22px;color:var(--ink)'},st.pct+'%'),'　予定 '+st.plan+'%')),
+    act?planProgressCards():el('div',{class:'card'},el('div',{class:'between'},el('h2',{},'節目とごほうび'),el('button',{type:'button',class:'btn sub sm',onclick:()=>{TABSTATE.plan='goals';go('plan');}},'節目を編集')),el('p',{class:'small muted'},'新しい計画を組むと、ここに節目ごとの進み具合とごほうびが並びます。')),
+    act?practiceCard():el('div',{class:'card'},
+      el('div',{class:'between',style:'align-items:baseline'},el('h2',{},tname('study')+'（1周目）'),el('span',{class:'small muted num'},el('b',{style:'font-size:22px;color:var(--ink)'},st.pct+'%'),'　予定 '+st.plan+'%')),
       el('div',{class:'bar'},el('i',{style:'width:'+st.pct+'%'}),el('b',{style:'left:'+st.plan+'%'})),
       el('p',{class:'xs muted'},'取り込んだ問題のうち1回以上解いた割合を、科目の週数で重み付けしています。黒い印が今日時点の予定です。'),
       trackTotal('study')?el('p',{class:'small num'},'これまでの学習時間 '+fmtH(trackTotal('study'))+'（今週 '+fmtH(trackTotal('study',addDays(today(),-((parseYmd(today()).getDay()+6)%7))))+'）'+(tracks().studyGoal?' ／ 目標 '+tracks().studyGoal+'時間':'')):null,
@@ -1523,8 +1998,8 @@ function viewProgress(){
       w.length?el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'論点'),el('th',{},'正解率'),el('th',{},'回答'),el('th',{},'勘'))),
         el('tbody',{},w.map(x=>el('tr',{},el('td',{},x.k),el('td',{class:'num'},x.rate+'%'),el('td',{class:'num'},String(x.n)),el('td',{class:'num'},String(x.kan)))))))
       :el('p',{class:'small muted'},'3回以上解いた論点がでてくると、正解率の低いものからここに並びます。勘での正解は正解に数えません。'));})(),
-    el('div',{class:'card'},
-      el('div',{class:'between',style:'align-items:baseline'},el('h2',{},P_().create.name),el('span',{class:'small muted num'},el('b',{style:'font-size:22px;color:var(--ink)'},mg.pct+'%'),'　予定 '+mg.plan+'%')),
+    act?null:el('div',{class:'card'},
+      el('div',{class:'between',style:'align-items:baseline'},el('h2',{},tname('create')),el('span',{class:'small muted num'},el('b',{style:'font-size:22px;color:var(--ink)'},mg.pct+'%'),'　予定 '+mg.plan+'%')),
       el('div',{class:'bar manga'},el('i',{style:'width:'+mg.pct+'%'}),el('b',{style:'left:'+mg.plan+'%'})),
       (()=>{const used=trackTotal('manga'), est=works().reduce((a,w)=>a+workPct(w,manga()[w.id]).total,0)*60;return used?el('p',{class:'small num'},'制作に使った時間 '+fmtH(used)+' ／ 見積もり '+fmtH(est)+'（時間で見ると '+Math.round(used/est*100)+'%）'):null;})(),
       el('p',{class:'xs muted'},'終わったページ数を工程ごとに入れると、1ページ'+(P_().create.hoursPerPage||8)+'時間'+(works().some(w=>w.cover)?'・表紙'+(P_().create.coverHours||10)+'時間':'')+'の見積もりで計算します。'),
@@ -1569,7 +2044,7 @@ function viewShare(){
       el('div',{class:'chips'},topicsToday().map(tp=>el('button',{type:'button',class:'chip','aria-pressed':String(SH.topic===tp),onclick:e=>{SH.topic=tp;input.placeholder='題材：'+tp;e.target.parentNode.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',String(c===e.target)));input.focus();}},tp)))),
     el('label',{class:'field',for:'line'},'ひと言',input),
     el('fieldset',{style:'border:none;margin:0;padding:0;display:flex;flex-direction:column'},el('legend',{class:'small muted',style:'padding:0;margin-bottom:4px'},'載せるもの'),
-      opt('study',(P_().study.icon||'📖')+' '+P_().study.name+'の％','o-study'),opt('manga',(P_().create.icon||'✏️')+' '+P_().create.name+'の％','o-manga'),opt('delta','前回からの変化','o-delta'),opt('tag','ハッシュタグ','o-tag'),
+      opt('study',(P_().study.icon||'📖')+' '+tname('study')+'の％','o-study'),opt('manga',(P_().create.icon||'✏️')+' '+tname('create')+'の％','o-manga'),opt('delta','前回からの変化','o-delta'),opt('tag','ハッシュタグ','o-tag'),
       el('input',{type:'text',id:'tagtext','aria-label':'ハッシュタグ',value:SH.tagText,placeholder:'#〜',oninput:e=>{SH.tagText=e.target.value;refresh();}})),
     offline?el('button',{type:'button',class:'btn',disabled:true},'オフラインのためシェアできません'):link,
     el('p',{class:'xs muted',style:'text-align:center'},moved?'投稿するかどうかはXの画面で決めます。アプリが自動で投稿することはありません。':'前回のシェアから％が動いていません。同じ数字が並ぶので、次の機会でも大丈夫です。')
@@ -1650,6 +2125,8 @@ function viewImport(){
     if(k==='__device'){DEVICE=v||'';continue;}
     if(k==='__plan'){PLAN=v||null;continue;}
     if(k==='__pushcfg'){PUSHCFG=v||null;continue;}
+    if(k==='__plan2seed'){PLAN2SEED=v||null;continue;}
+    if(k==='__mats'){MATS=v||{};continue;}
     if(k==='__pushsub'){PUSHSUB=v||null;continue;}
     if(k==='__pushLast'){pushLast=v||0;continue;}
     if(k==='__answers') continue;
