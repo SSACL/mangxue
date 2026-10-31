@@ -271,6 +271,11 @@ dialog.wiz::backdrop{background:rgba(10,14,20,.45)}
 .wizfoot{border-top:1px solid var(--line);padding:8px 16px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;background:var(--surface)}
 .choice.wizchoice{flex-direction:column;gap:4px}
 .keepcard{border:2px solid var(--accent)}
+.savebar{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:5;display:flex;flex-direction:column;gap:8px;padding:10px 14px;border-radius:14px;border:1px solid var(--line);background:var(--surface);box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.savebar.on{border:2px solid #E8590C}
+.savebar.on>span{color:#E8590C;font-weight:700}
+.tsaved{gap:4px}
+
 .choice.wizchoice[aria-pressed="true"]{border:2px solid var(--accent);background:var(--accent-soft)}
 /* plan screens */
 .rw{align-self:flex-start;border:0;background:var(--accent-soft);color:var(--ink);border-radius:999px;padding:6px 12px;min-height:36px;font-size:13px;text-align:left}
@@ -1368,19 +1373,20 @@ function swipeTabs(panels,name){
   const keys=panels.map(p=>p[0]);
   if(!keys.includes(DAYTAB)) DAYTAB=TABSTATE[name]=keys[0];
   const box=el('div',{class:'tabpanel',role:'tabpanel'}), bar=el('div',{class:'tabs2',role:'tablist',style:'grid-template-columns:repeat('+panels.length+',minmax(0,1fr))'});
-  const show=(k,dir)=>{
+  const show=(k,dir,user)=>{
+    if(user&&name==='plan'&&DAYTAB==='time'&&k!=='time'&&guardLeave(()=>{TABSTATE.plan=k;render();})) return;
     DAYTAB=k;TABSTATE[name]=k;
     [...bar.children].forEach(b=>b.setAttribute('aria-selected',String(b.dataset.k===k)));
     box.replaceChildren(...[].concat(panels.find(x=>x[0]===k)[2]).flat(9).filter(x=>x!=null&&x!==false));
     box.className='tabpanel'+(dir?(dir>0?' in-r':' in-l'):'');
   };
-  bar.append(...panels.map(([k,l])=>el('button',{type:'button',role:'tab','data-k':k,'aria-selected':String(k===DAYTAB),onclick:()=>{if(k!==DAYTAB) show(k,keys.indexOf(k)-keys.indexOf(DAYTAB));}},l)));
+  bar.append(...panels.map(([k,l])=>el('button',{type:'button',role:'tab','data-k':k,'aria-selected':String(k===DAYTAB),onclick:()=>{if(k!==DAYTAB) show(k,keys.indexOf(k)-keys.indexOf(DAYTAB),true);}},l)));
   let x0=null,y0=null;
   box.addEventListener('touchstart',e=>{const t=e.touches[0];x0=t.clientX;y0=t.clientY;},{passive:true});
   box.addEventListener('touchend',e=>{
     if(x0==null) return;const t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;x0=null;
     if(e.target.closest&&e.target.closest('.qrow,.chips,input,textarea,select')) return;
-    if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){const i=keys.indexOf(DAYTAB)+(dx<0?1:-1);if(i>=0&&i<keys.length) show(keys[i],dx<0?1:-1);}
+    if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){const i=keys.indexOf(DAYTAB)+(dx<0?1:-1);if(i>=0&&i<keys.length) show(keys[i],dx<0?1:-1,true);}
   },{passive:true});
   show(DAYTAB);
   return [bar,box];
@@ -1982,7 +1988,7 @@ function wizName(k){return {events:'当日',targets:'目標日',method:'組み�
 function openWizard(at){
   const cur=plan2();
   if(!WIZ){WIZ={P:clone(cur),i:0,method:'work',src:cur.t||0};delete WIZ.P.baseline;}
-  else if((cur.t||0)!==WIZ.src){for(const k of TIMEKEYS) WIZ.P[k]=clone(cur[k]);WIZ.src=cur.t||0;}
+  else if((cur.t||0)!==WIZ.src){for(const k of TIMEKEYS) WIZ.P[k]=clone(cur[k]);keepRewards(WIZ.P,cur);WIZ.src=cur.t||0;}
   if(at){const k=wizSteps().indexOf(at);if(k>=0) WIZ.i=k;}
   CAPV++;const d=document.getElementById('wiz');wizRender(true);if(!d.open) d.showModal();
 }
@@ -2100,8 +2106,9 @@ function wizBuildView(){
     over?el('div',{class:'warn'},'はみ出す節目があるので、まだ組めません。「見通し」で直してください。',el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf('outlook'))},'見通しへ')):null,
     el('button',{type:'button',class:'btn',disabled:over,onclick:wizBuild},'この内容で組む（今日から）')];
 }
+function keepRewards(dst,cur){for(const g of dst.goals||[]){const c=(cur.goals||[]).find(x=>x.id===g.id);if(c&&c.reward&&!g.reward){g.reward=c.reward;if(c.got) g.got=c.got;}}}
 function wizBuild(){
-  const t=today(), pick=WIZ.nb||{}, src=clone(WIZ.P);
+  const t=today(), pick=WIZ.nb||{}, src=clone(WIZ.P);keepRewards(src,plan2());
   for(const g of src.goals||[]) if(pick[g.id]&&diffDays(t,g.date)<=14) g.buffer=false;
   setPlan2(x=>{for(const k of Object.keys(x)) delete x[k];Object.assign(x,src);x.v=3;x.baseline=scheduleAll(x,t,{});x.start=t;});
   WIZ=null;wizSave();document.getElementById('wiz').close();
@@ -2154,10 +2161,36 @@ function planGoals(){
         p!=null?el('p',{class:'xs num',style:p===100?'color:var(--good)':''},p===100?'達成 ✓':'進み '+p+'%'):null,
         isWork(g)?(g.reward?el('button',{type:'button',class:'rw',onclick:()=>rewardSheet(g)},'🎁 '+g.reward+(g.got?'（受け取りました）':'')):el('button',{type:'button',class:'rw none',onclick:()=>rewardSheet(g)},'＋ ごほうびを決める')):null);}))];
 }
+/* the 時間 tab keeps changes in a draft until 保存する; leaving with unsaved changes asks first */
+let TDRAFT=null;
+function tUp(fn){if(!TDRAFT) TDRAFT=clone(plan2());fn(TDRAFT);CAPV++;render();}
+function tSave(){const d=TDRAFT;if(!d) return;TDRAFT=null;const act=planActive();liveUp(x=>{for(const k of TIMEKEYS) x[k]=clone(d[k]);});if(!act) toast('保存しました');}
+function tDiscard(){TDRAFT=null;CAPV++;render();}
+function guardLeave(proceed){
+  if(!TDRAFT) return false;
+  const sh=()=>document.getElementById('sheet').close();
+  openSheet('保存していない変更があります',
+    el('p',{class:'small'},'時間の設定を変えたまま、まだ保存していません。このまま移動すると、変更は失われます。'),
+    el('button',{type:'button',class:'btn',onclick:()=>{sh();tSave();proceed();}},'保存して移動する'),
+    el('button',{type:'button',class:'btn sub',onclick:()=>{sh();TDRAFT=null;CAPV++;proceed();}},'保存せずに移動する（変更は失われます）'),
+    el('button',{type:'button',class:'btn sub',onclick:sh},'このページに戻る'));
+  return true;
+}
+function timeTab(){
+  const saved=plan2(), P=TDRAFT||saved, dirty=!!TDRAFT, mode=m=>m==='dates'?'日ごと':'週ごと';
+  return [
+    el('div',{class:'card tsaved'},
+      el('p',{class:'small'},'保存されている設定：',el('b',{},mode(saved.mode)),dirty&&(P.mode||'week')!==(saved.mode||'week')?el('span',{},'　→ 保存すると ',el('b',{},mode(P.mode))):null),
+      el('p',{class:'xs muted'},'変えたあと「保存する」を押すまで、計画には反映しません。'+(planActive()?'保存すると、減った時間は同じ週の余りで吸収し、無理なら予備日が減ります。':'ここで決めた時間は、計画を組むときにも使われます。'))),
+    timeEditor(P,tUp,render),
+    el('div',{class:'savebar'+(dirty?' on':''),role:'region','aria-label':'保存'},
+      el('span',{class:'small'},dirty?'保存していない変更があります':'変更はありません'),
+      el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',disabled:!dirty,onclick:tDiscard},'元に戻す'),el('button',{type:'button',class:'btn sm',disabled:!dirty,onclick:tSave},'保存する')))];
+}
 function viewPlan(){
   return [
     el('h1',{},'計画'),statusNode(),
-    swipeTabs([['all','全体',planOverview()],['goals','節目',planGoals()],['time','時間',[planActive()?el('p',{class:'xs muted'},'ここで変えると、すぐ計画に反映します（減った時間は同じ週の余りで吸収し、無理なら予備日が減ります）。'):el('p',{class:'xs muted'},'ここで決めた時間は、計画を組むときにも使われます。'),timeEditor(plan2(),liveUp)]]],'plan')
+    swipeTabs([['all','全体',planOverview()],['goals','節目',planGoals()],['time','時間',timeTab()]],'plan')
   ];
 }
 
@@ -2193,7 +2226,12 @@ function render(){
   const main=document.getElementById('main'); main.replaceChildren(); main.className='wrap v-'+VIEW;
   main.append(...[].concat(VIEWS[VIEW](arg)).flat(9).filter(x=>x!=null&&x!==false));
 }
-window.addEventListener('hashchange',()=>{window.scrollTo(0,0);render();});
+let LASTHASH=location.hash||'#home';
+window.addEventListener('hashchange',()=>{
+  const to=location.hash||'#home';
+  if(TDRAFT&&!to.startsWith('#plan')){history.replaceState(null,'',LASTHASH);guardLeave(()=>{LASTHASH=to;if(location.hash!==to) location.hash=to; else render();});return;}
+  LASTHASH=to;window.scrollTo(0,0);render();});
+window.addEventListener('beforeunload',e=>{if(TDRAFT){e.preventDefault();e.returnValue='';}});
 
 function brandNode(){return el('p',{class:'brand brandline'},el('ruby',{},'芒',el('rt',{},'まん'),'学',el('rt',{},'しゅぇ')),el('span',{class:'py'},'mángxué'));}
 function progressCard(label,pct,plan,cls){
