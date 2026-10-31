@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>芒学 mángxué</title>
+<meta name="theme-color" content="#F4F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#11161D" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="まんしゅぇ">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@700&display=swap">
+<style>
+/* Layout: one narrow column like a pocket notebook, bottom tab bar for the four places you go every day */
+:root{
+  --bg:#F4F5F7; --surface:#FFFFFF; --line:#E3E6EB; --ink:#1E2A3A; --muted:#5B6472;
+  --accent:#2F6FDB; --accent-ink:#1F4E9E; --accent-soft:#E4ECFA;
+  --manga:#D9822B; --manga-ink:#8A4A12; --manga-soft:#FDEBD8;
+  --good:#1E7A4C; --good-soft:#E1F2E8; --bad:#B3261E; --bad-soft:#FBE3E1;
+  --chip:#E8EAEE; --chip-ink:#3D4653;
+  --font-body:'Noto Sans JP',system-ui,-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;
+  --font-display:'Zen Kaku Gothic New','Noto Sans JP',system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161D; --surface:#1A212B; --line:#2A3441; --ink:#E8ECF1; --muted:#9AA5B4;
+  --accent:#5B8FEA; --accent-ink:#A9C4F5; --accent-soft:#1E2F4D;
+  --manga:#E3964A; --manga-ink:#F2C08F; --manga-soft:#3A2A1A;
+  --good:#5FC48E; --good-soft:#173527; --bad:#F08A82; --bad-soft:#3C2120;
+  --chip:#252E3A; --chip-ink:#C9D1DC; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161D; --surface:#1A212B; --line:#2A3441; --ink:#E8ECF1; --muted:#9AA5B4;
+  --accent:#5B8FEA; --accent-ink:#A9C4F5; --accent-soft:#1E2F4D;
+  --manga:#E3964A; --manga-ink:#F2C08F; --manga-soft:#3A2A1A;
+  --good:#5FC48E; --good-soft:#173527; --bad:#F08A82; --bad-soft:#3C2120;
+  --chip:#252E3A; --chip-ink:#C9D1DC; color-scheme:dark}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px)}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
+.wrap{max-width:560px;margin:0 auto;padding-block:20px calc(96px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+h1{font-family:var(--font-display);font-size:24px;line-height:1.3;margin:0;text-wrap:balance}
+h2{font-size:15px;margin:0;font-weight:700}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}.xs{font-size:12px}
+.num{font-variant-numeric:tabular-nums}
+.card{background:var(--surface);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.row{display:flex;gap:10px;align-items:center}
+.between{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.bar{height:8px;border-radius:4px;background:var(--line);position:relative;overflow:visible}
+.bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--accent)}
+.bar.manga>i{background:var(--manga)}
+.bar>b{position:absolute;top:-3px;width:2px;height:14px;background:var(--ink);border-radius:1px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:13px;font-weight:500;background:var(--accent-soft);color:var(--accent-ink)}
+.pill.manga{background:var(--manga-soft);color:var(--manga-ink)}
+.pill.gray{background:var(--chip);color:var(--chip-ink)}
+.status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.status::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--good)}
+.status.wait::before{background:var(--manga)}
+.status.off::before{background:var(--muted)}
+button,select,input,textarea{font:inherit;color:inherit}
+.btn{display:flex;justify-content:center;align-items:center;gap:8px;min-height:52px;padding:0 18px;border-radius:14px;border:none;background:var(--accent);color:#fff;font-size:16px;font-weight:700;text-decoration:none;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sub{background:var(--surface);color:var(--ink);border:1px solid var(--line);font-weight:500}
+.btn.dark{background:var(--ink);color:var(--bg)}
+.btn.sm{min-height:44px;font-size:14px;padding:0 14px;border-radius:12px}
+.seg{display:grid;gap:8px}
+.seg button,.chip{min-height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:14px;cursor:pointer}
+.seg button[aria-pressed="true"],.chip[aria-pressed="true"]{border:2px solid var(--accent);background:var(--accent-soft);color:var(--accent-ink);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border-radius:999px;padding:0 14px}
+label.field{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+input[type=text],input[type=number],select,textarea{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;font-size:15px;min-height:44px;width:100%;min-width:0}
+textarea{resize:vertical}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);margin:0;flex:none}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.task{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+.task:first-child{border-top:none}
+.task label{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;cursor:pointer}
+.task .t{font-size:12px;color:var(--muted)}
+.task.manga .t{color:var(--manga-ink)}
+.task .m{font-size:15px;font-weight:500}
+.task.done .m{text-decoration:line-through;color:var(--muted)}
+.big{font-family:var(--font-display);font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.big small{font-size:16px}
+.qtext{font-size:18px;line-height:1.8;font-weight:500;white-space:pre-wrap;overflow-wrap:anywhere}
+.blank{display:inline-block;min-width:2.4em;padding:0 6px;margin:0 2px;border-bottom:2px solid var(--accent);color:var(--accent-ink);font-weight:700;text-align:center}
+.tf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tf button{height:96px;border-radius:16px;background:var(--surface);font-size:40px;font-weight:700;cursor:pointer}
+.tf .o{border:2px solid var(--accent);color:var(--accent-ink)}
+.tf .x{border:2px solid var(--manga);color:var(--manga-ink)}
+.choice{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:15px;line-height:1.7}
+.choice b{flex:none;width:28px;height:28px;border-radius:50%;background:var(--chip);display:flex;align-items:center;justify-content:center;font-size:14px}
+.verdict{display:flex;align-items:center;gap:14px}
+.verdict .mark{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700;flex:none}
+.ok .mark{background:var(--good-soft);color:var(--good)}
+.ng .mark{background:var(--bad-soft);color:var(--bad)}
+.empty{border:2px dashed var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.warn{background:var(--manga-soft);color:var(--manga-ink);border-radius:14px;padding:12px 16px;font-size:14px}
+.stepper{display:grid;grid-template-columns:minmax(64px,88px) 44px minmax(44px,1fr) 44px auto;gap:6px;align-items:center}
+.stepper button{height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:18px;cursor:pointer}
+.stepper input{text-align:center;padding:10px 2px;-moz-appearance:textfield;appearance:textfield}
+.stepper input::-webkit-inner-spin-button,.stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th,.table td{text-align:left;padding:8px 6px;border-top:1px solid var(--line);vertical-align:top}
+.table th{color:var(--muted);font-weight:500}
+.scroll{overflow-x:auto}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding-bottom:env(safe-area-inset-bottom,0px);
+  padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);z-index:5}
+nav.tabs a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:64px;font-size:11px;color:var(--muted);text-decoration:none}
+nav.tabs a[aria-current="page"]{color:var(--accent-ink);font-weight:700}
+nav.tabs svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:9;max-width:calc(100% - 32px)}
+.brand{display:flex;align-items:baseline;gap:.4em;flex-wrap:wrap}
+.brand ruby{font-family:var(--font-display);ruby-position:over}
+.brand rt{font-family:var(--font-body);font-size:.42em;font-weight:500;color:var(--muted);letter-spacing:.06em}
+.brand .py{font-family:var(--font-body);font-weight:400;font-size:.62em;color:var(--muted);letter-spacing:.02em}
+.brandline{justify-content:center;font-size:17px;color:var(--ink);margin-top:6px}
+@media (prefers-reduced-motion: no-preference){.btn,.chip,.seg button,.choice{transition:background .15s,border-color .15s}}
+</style>
+</head>
+<body>
+<div class="wrap" id="main" aria-live="polite">
+  <div class="card"><h1 class="brand"><ruby>芒<rt>まん</rt>学<rt>しゅぇ</rt></ruby><span class="py">mángxué</span></h1><p class="muted">読み込み中です。少しお待ちください。</p></div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<nav class="tabs" aria-label="メインメニュー">
+  <a href="#home" data-v="home"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>ホーム</a>
+  <a href="#practice" data-v="practice"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h16v12H8l-4 3z"/><path d="M9 10h6"/></svg>演習</a>
+  <a href="#progress" data-v="progress"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>進捗</a>
+  <a href="#import" data-v="import"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>取り込み</a>
+</nav>
+
+<script>
+'use strict';
+/* ---------- dates ---------- */
+const WD='日月火水木金土';
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function parseYmd(s){const a=s.split('-').map(Number);return new Date(a[0],a[1]-1,a[2]);}
+function today(){return ymd(new Date());}
+function addDays(s,n){const d=parseYmd(s);d.setDate(d.getDate()+n);return ymd(d);}
+function diffDays(a,b){return Math.round((parseYmd(b)-parseYmd(a))/864e5);}
+function jpDate(s){const d=parseYmd(s);return (d.getMonth()+1)+'月'+d.getDate()+'日（'+WD[d.getDay()]+'）';}
+function md(s){const d=parseYmd(s);return (d.getMonth()+1)+'/'+d.getDate();}
+function ym(s){return (s||today()).slice(0,7);}
+function clone(o){return o==null?o:JSON.parse(JSON.stringify(o));}
+
+/* ---------- plan: read from plan.json in the user's private data repository (nothing personal lives in this code) ---------- */
+let PLAN=null;
+const EMPTY_PLAN={v:1,start:'',study:{name:'学習',icon:'📖',units:[],phases:[],books:{}},create:{name:'創作',icon:'✏️',works:[],stages:[],focus:[]},schedule:[],milestones:[],batches:{},workdays:{}};
+function P_(){return PLAN||EMPTY_PLAN;}
+function units(){return P_().study.units||[];}
+function UNIT(id){return units().find(u=>u.id===id)||null;}
+function subj(id){return UNIT(id)||{id:id,name:id||'',short:id||'',start:'9999-12-31',end:'9999-12-31'};}
+function weeksOf(u){return Math.max(1,Math.round((diffDays(u.start,u.end)+1)/7));}
+function bookName(id){const b=P_().study.books||{};return b[id]||({exam:'本試験（公開問題）',sample:'サンプル問題'})[id]||id;}
+function idPrefix(){return P_().study.idPrefix||{};}
+function isBlankBook(id){return (P_().study.blankBooks||[]).includes(id);}
+function currentSubject(ds){
+  const u=units().find(x=>ds>=x.start&&ds<=x.end); if(u) return u;
+  return units().find(x=>x.start>ds)||null;
+}
+function phaseLabel(ds){
+  const u=units().find(x=>ds>=x.start&&ds<=x.end);
+  if(u) return '今週：'+u.name+' '+(Math.floor(diffDays(u.start,ds)/7)+1)+'/'+weeksOf(u)+'週目';
+  const ph=(P_().study.phases||[]).find(x=>ds>=x.from&&ds<=x.to);
+  return ph?ph.label:'';
+}
+function focusOf(ds){return (P_().create.focus||[]).find(f=>ds<=f.until)||null;}
+function fill(str,ds){
+  if(!str) return '';
+  const u=currentSubject(ds), f=focusOf(ds), lw=u&&ds>=u.start&&diffDays(ds,u.end)<7;
+  return String(str).replace(/\{unit\}/g,u?u.short:'弱点').replace(/\{unitName\}/g,u?u.name:'')
+    .replace(/\{focus\.weekday\}/g,f?(f.weekday||''):'').replace(/\{focus\.weekend\}/g,f?(f.weekend||''):'').replace(/\{focus\.note\}/g,f?(f.note||''):'')
+    .replace(/\{lastWeekNote\}/g,lw?(P_().study.lastWeekNote||''):'').trim();
+}
+function tasksFor(ds){
+  const sc=(P_().schedule||[]).find(x=>ds>=x.from&&ds<=x.to), wd=parseYmd(ds).getDay(), T=[];
+  if(sc) for(const it of (wd===6?sc.sat:wd===0?sc.sun:sc.weekday)||[]){
+    const title=fill(it.title,ds); if(!title) continue;
+    T.push({id:it.id,time:it.time||'',kind:it.kind||'study',title,sub:fill(it.sub,ds)});
+  }
+  const b=(P_().batches||{})[ds]; if(b) T.push({id:'batch',time:b.time||'撮影',kind:'admin',title:b.title,sub:b.sub||''});
+  const w=(P_().workdays||{})[ds]; if(w) T.push({id:'work',time:w.time||'作業日',kind:'admin',title:w.title,sub:w.sub||''});
+  return T;
+}
+function countdowns(t){
+  const out=[], e=P_().study.exam, v=P_().create.event;
+  for(const [x,def] of [[e,'試験'],[v,'イベント']]) if(x&&x.date&&x.date>=t)
+    out.push(el('span',{},(x.short||x.label||def)+'まで ',el('b',{style:'color:var(--ink);font-size:15px'},String(diffDays(t,x.date))),'日'));
+  return out;
+}
+function noPlan(){
+  return el('div',{class:'empty'},el('h2',{},'計画ファイルを読み込むと始められます'),
+    el('p',{class:'small muted'},'「取り込み」タブで同期を設定すると、ご自分の非公開リポジトリにある plan.json（試験・科目・時間割・作品・イベント）を読み込みます。書き方は公開リポジトリの examples/plan-example.json にあります。'),
+    el('a',{href:'#import',class:'btn sub sm'},'同期を設定する'));
+}
+
+/* ---------- tiny DOM builder (text only, never innerHTML for data) ---------- */
+function el(tag,props,...kids){
+  const e=document.createElement(tag);
+  for(const [k,v] of Object.entries(props||{})){
+    if(k==='checked'){e.checked=!!v;continue;}
+    if(k==='value'){e.value=v==null?'':v;continue;}
+    if(v==null||v===false) continue;
+    if(k==='class') e.className=v;
+    else if(k==='text') e.textContent=v;
+    else if(k.slice(0,2)==='on') e.addEventListener(k.slice(2),v);
+    else if(v===true) e.setAttribute(k,'');
+    else e.setAttribute(k,String(v));
+  }
+  for(const c of kids.flat(9)){if(c==null||c===false) continue; e.append(c instanceof Node?c:document.createTextNode(String(c)));}
+  return e;
+}
+let toastTimer=null;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.hidden=true;},3200);}
+
+/* ---------- device storage (IndexedDB) ---------- */
+const IDB=(()=>{let p=null;
+  function open(){if(p) return p;p=new Promise(res=>{try{const r=indexedDB.open('mangxue',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);}catch(e){res(null);}});return p;}
+  async function put(k,v){const d=await open();if(!d) return;try{d.transaction('kv','readwrite').objectStore('kv').put(v,k);}catch(e){}}
+  async function all(){const d=await open();if(!d) return {};return new Promise(res=>{const out={};try{const r=d.transaction('kv').objectStore('kv').openCursor();r.onsuccess=()=>{const c=r.result;if(c){out[c.key]=c.value;c.continue();}else res(out);};r.onerror=()=>res(out);}catch(e){res(out);}});}
+  return {put,all};})();
+
+/* ---------- store: device first, synced through the user's private GitHub repository ---------- */
+const S={qbank:{},state:{},meta:{},log:{}};
+let SYNC=null, DEVICE='', KNOWN={}, BRANCH='', PENDING=null;
+let planChanged=false, qChanged=false, dirty=new Set(), syncTimer=null, syncing=false, syncAgain=false, syncErr='', netDown=false, lastSync=0;
+function bodyOf(p){const i=p.indexOf('/');return S[p.slice(0,i)][p.slice(i+1)];}
+function save(p){IDB.put(p,bodyOf(p));dirty.add(p);IDB.put('__dirty',[...dirty]);scheduleSync(4000);updateStatus();}
+function scheduleSync(ms){clearTimeout(syncTimer);syncTimer=setTimeout(()=>sync(),ms);}
+function hm(t){const d=new Date(t);return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');}
+function statusInfo(){
+  if(!SYNC) return ['off','この端末だけに保存（同期は「取り込み」タブで設定）'];
+  if(!navigator.onLine||netDown) return ['wait','電波待ち：つながったら同期します'+(dirty.size?'（'+dirty.size+'件）':'')];
+  if(syncErr) return ['off','同期できません：'+syncErr];
+  if(syncing) return ['wait','同期中…'];
+  if(dirty.size) return ['wait','同期待ち '+dirty.size+'件'];
+  return ['ok',lastSync?'同期済み（'+hm(lastSync)+'）':'同期済み'];
+}
+function updateStatus(){const n=document.getElementById('status');if(!n) return;const [c,t]=statusInfo();n.className='status'+(c==='ok'?'':' '+c);n.textContent=t;}
+function statusNode(){const [c,t]=statusInfo();return el('span',{id:'status',class:'status'+(c==='ok'?'':' '+c)},t);}
+
+function mergeState(id,remote){
+  const loc=S.state[id]||{s:{}}; const r=(remote&&remote.s)||{}; let push=false;
+  for(const [q,v] of Object.entries(r)){const l=loc.s[q];if(!l||(v.t||0)>(l.t||0)) loc.s[q]=clone(v);}
+  for(const [q,v] of Object.entries(loc.s)){const rv=r[q];if(!rv||(v.t||0)>(rv.t||0)) push=true;}
+  const rr=(remote&&remote.round)||1; if(rr>(loc.round||1)) loc.round=rr; else if((loc.round||1)>rr) push=true;
+  S.state[id]=loc; IDB.put('state/'+id,loc); if(push) save('state/'+id);
+}
+function mergeMeta(id,remote){
+  if(!remote) return;
+  if(id==='checks'){
+    const loc=S.meta.checks||{d:{}}; const r=remote.d||{}; let push=false;
+    for(const [k,v] of Object.entries(r)){const l=loc.d[k];if(!l||(v.t||0)>(l.t||0)) loc.d[k]=clone(v);}
+    for(const [k,v] of Object.entries(loc.d)){const rv=r[k];if(!rv||(v.t||0)>(rv.t||0)) push=true;}
+    S.meta.checks=loc; IDB.put('meta/checks',loc); if(push) save('meta/checks'); return;
+  }
+  const loc=S.meta[id];
+  if(!loc||(remote.t||0)>(loc.t||0)){S.meta[id]=clone(remote);IDB.put('meta/'+id,S.meta[id]);}
+  else if((loc.t||0)>(remote.t||0)) save('meta/'+id);
+}
+function mergeLog(k,remote){
+  const loc=S.log[k]||{e:[]}; const seen=new Set(loc.e.map(x=>x[0]+'|'+x[1])); let add=false;
+  for(const x of (remote&&remote.e)||[]){const key=x[0]+'|'+x[1];if(!seen.has(key)){loc.e.push(x);seen.add(key);add=true;}}
+  if(add) loc.e.sort((a,b)=>a[0]-b[0]);
+  S.log[k]=loc; IDB.put('log/'+k,loc);
+}
+
+/* GitHub (contents API). Each device writes only its own files, so writes never collide. */
+const ERR={auth:'トークンが無効か期限切れです',forbidden:'リポジトリに入れません（名前と権限を確認）',rate:'GitHubの回数制限です。少し待つと再開します',conflict:'書き込みが重なりました。すぐにやり直します',net:'通信できませんでした'};
+function b64(str){const b=new TextEncoder().encode(str);let s='';for(let i=0;i<b.length;i+=0x8000) s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(s);}
+function hashStr(s){let h=5381;for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0)+':'+s.length;}
+function repoPath(){return '/repos/'+encodeURIComponent(SYNC.owner)+'/'+encodeURIComponent(SYNC.repo);}
+async function gh(method,path,opt){
+  opt=opt||{};
+  let r;
+  try{r=await fetch('https://api.github.com'+path,{method,cache:'no-store',
+    headers:Object.assign({'Authorization':'Bearer '+SYNC.token,'Accept':opt.raw?'application/vnd.github.raw+json':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'},opt.body?{'Content-Type':'application/json'}:{}),
+    body:opt.body?JSON.stringify(opt.body):undefined});}
+  catch(e){throw {code:'net'};}
+  if(r.status===401) throw {code:'auth'};
+  if(r.status===403||r.status===429) throw {code:r.headers.get('x-ratelimit-remaining')==='0'||r.status===429?'rate':'forbidden'};
+  if(r.status===404) return null;
+  if(r.status===409&&method==='GET') return null;
+  if(r.status===409||r.status===422) throw {code:'conflict'};
+  if(!r.ok) throw {code:'http'+r.status};
+  return opt.raw?r.text():r.json();
+}
+async function branch(){if(BRANCH) return BRANCH;const r=await gh('GET',repoPath());if(!r) throw {code:'forbidden'};BRANCH=r.default_branch||'main';return BRANCH;}
+async function writeFile(path,obj){
+  const text=JSON.stringify(obj), h=hashStr(text);
+  if(KNOWN[path]&&KNOWN[path].h===h) return;
+  const br=await branch();
+  const put=(sha,withBranch)=>gh('PUT',repoPath()+'/contents/'+path,{body:Object.assign({message:'sync '+SYNC.name+': '+path.split('/').slice(-1)[0],content:b64(text)},withBranch?{branch:br}:{},sha?{sha}:{})});
+  let res;
+  try{res=await put(KNOWN[path]&&KNOWN[path].sha,true);if(res===null) res=await put(KNOWN[path]&&KNOWN[path].sha,false);}
+  catch(e){if(e.code!=='conflict') throw e;const cur=await gh('GET',repoPath()+'/contents/'+path+'?ref='+encodeURIComponent(br));res=await put(cur&&cur.sha,true);}
+  KNOWN[path]={sha:res&&res.content?res.content.sha:'',h};
+}
+async function pull(){
+  const br=await branch();
+  const tree=await gh('GET',repoPath()+'/git/trees/'+encodeURIComponent(br)+'?recursive=1');
+  if(!tree||!Array.isArray(tree.tree)) return;
+  const mine='devices/'+DEVICE+'/';
+  for(const e of tree.tree){
+    if(e.type!=='blob'||!/\.json$/.test(e.path)) continue;
+    if(e.path.startsWith(mine)){if(!KNOWN[e.path]) KNOWN[e.path]={sha:e.sha,h:''};continue;}
+    if(KNOWN[e.path]&&KNOWN[e.path].sha===e.sha) continue;
+    let data=null;
+    try{data=JSON.parse(await gh('GET',repoPath()+'/git/blobs/'+e.sha,{raw:true}));}catch(err){if(err&&err.code&&err.code!=='http500') throw err;}
+    let m;
+    if(data&&e.path==='plan.json'){PLAN=data;IDB.put('__plan',PLAN);planChanged=true;}
+    else if(data&&((m=e.path.match(/^questions\/([A-Za-z0-9_.-]+)\.json$/))||(m=e.path.match(/^devices\/[^/]+\/q\/([A-Za-z0-9_.-]+)\.json$/)))){
+      const cur=S.qbank[m[1]];
+      if(Array.isArray(data.items)&&(!cur||(data.t||0)>(cur.t||0))){const doc=Object.assign({},data);delete doc.local;S.qbank[m[1]]=doc;IDB.put('qbank/'+m[1],doc);qChanged=true;}
+    }else if(data&&/^devices\/[^/]+\/state\.json$/.test(e.path)){
+      for(const [id,v] of Object.entries(data.state||{})) mergeState(id,v);
+      for(const [id,v] of Object.entries(data.meta||{})) mergeMeta(id,v);
+    }else if(data&&(m=e.path.match(/^devices\/[^/]+\/log-(\d{4}-\d{2})\.json$/))) mergeLog(m[1],data);
+    KNOWN[e.path]={sha:e.sha,h:''};
+  }
+}
+async function push(){
+  const snap=[...dirty]; dirty.clear();
+  try{
+    let stateDirty=false;
+    for(const p of snap){
+      const i=p.indexOf('/'), c=p.slice(0,i), id=p.slice(i+1);
+      if(c==='state'||c==='meta') stateDirty=true;
+      else if(c==='log'){const own=((S.log[id]||{}).e||[]).filter(x=>x[6]==null||x[6]===DEVICE);if(own.length) await writeFile('devices/'+DEVICE+'/log-'+id+'.json',{v:1,device:DEVICE,e:own});}
+      else if(c==='qbank'){const d=S.qbank[id];if(d&&d.local) await writeFile('devices/'+DEVICE+'/q/'+id+'.json',d);}
+    }
+    if(stateDirty) await writeFile('devices/'+DEVICE+'/state.json',{v:1,device:DEVICE,name:SYNC.name,state:S.state,meta:S.meta});
+  }catch(e){for(const p of snap) dirty.add(p);throw e;}
+  finally{IDB.put('__dirty',[...dirty]);}
+}
+async function sync(){
+  if(!SYNC){updateStatus();return;}
+  if(!navigator.onLine){netDown=true;updateStatus();return;}
+  if(syncing){syncAgain=true;return;}
+  syncing=true; updateStatus();
+  try{await pull();await push();syncErr='';netDown=false;lastSync=Date.now();IDB.put('__lastSync',lastSync);}
+  catch(e){
+    const c=e&&e.code;
+    if(c==='net'){netDown=true;syncErr='';}
+    else if(c==='rate'||c==='conflict'){syncErr='';scheduleSync(60000);}
+    else syncErr=ERR[c]||('GitHubでエラー（'+c+'）');
+  }
+  finally{syncing=false;IDB.put('__known',KNOWN);updateStatus();softRender();if(planChanged&&!(VIEW==='practice'&&P.step!=='setup')){planChanged=false;qChanged=false;render();}else if(qChanged&&VIEW==='import'){qChanged=false;render();}if(syncAgain){syncAgain=false;scheduleSync(1500);}}
+}
+function parseSyncPayload(s){
+  try{const t=s.replace(/-/g,'+').replace(/_/g,'/');const bin=atob(t+'==='.slice((t.length+3)%4));
+    const j=JSON.parse(new TextDecoder().decode(Uint8Array.from(bin,c=>c.charCodeAt(0))));if(j&&j.o&&j.r&&j.k) return j;}catch(_){}
+  return null;
+}
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.append(s);});}
+async function showTransfer(box){
+  const payload=b64(JSON.stringify({o:SYNC.owner,r:SYNC.repo,k:SYNC.token})).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const link=location.origin+location.pathname+'#sync='+payload;
+  const kids=[el('p',{class:'small',style:'color:var(--manga-ink)'},'このコードとリンクにはトークンが入っています。ほかの人に見せたり送ったりしないでください。')];
+  try{
+    if(!window.qrcode) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js');
+    const qr=window.qrcode(0,'M');qr.addData(link);qr.make();
+    kids.push(el('img',{src:qr.createDataURL(5,8),alt:'同期の設定を移すQRコード',style:'width:240px;height:240px;image-rendering:pixelated;background:#fff;border-radius:8px'}));
+    kids.push(el('p',{class:'xs muted'},'スマホ：カメラでこのQRコードを読み取ると設定が入ります。iPad：ホーム画面のアプリを開き、「設定リンクを貼り付け」にリンクを貼ってください。'));
+  }catch(_){kids.push(el('p',{class:'xs muted'},'QRコードを表示できませんでした（電波がない可能性）。下のボタンでリンクをコピーし、移したい端末の「設定リンクを貼り付け」に貼ってください。'));}
+  kids.push(el('button',{type:'button',class:'btn sub sm',onclick:async()=>{try{await navigator.clipboard.writeText(link);toast('リンクをコピーしました');}catch(_){toast('コピーできませんでした');}}},'リンクをコピー'));
+  box.replaceChildren(...kids);
+}
+function syncCard(){
+  if(!SYNC){
+    const f={owner:(PENDING&&PENDING.o)||'',repo:(PENDING&&PENDING.r)||'mangxue-data',token:(PENDING&&PENDING.k)||'',name:''};
+    const msg=el('p',{class:'small',role:'status'});
+    const inp=(id,label,key,type,ph)=>el('label',{class:'field',for:id},label,el('input',{type:type||'text',id,value:f[key],placeholder:ph||'',autocomplete:'off',autocapitalize:'off',spellcheck:'false',oninput:e=>{f[key]=e.target.value.trim();}}));
+    const submit=async e=>{
+      e.preventDefault();
+      if(!f.owner||!f.repo||!f.token||!f.name){msg.textContent='4つとも入れてください。';return;}
+      msg.textContent='確認しています…';
+      SYNC={owner:f.owner,repo:f.repo,token:f.token,name:f.name};BRANCH='';
+      try{
+        const r=await gh('GET',repoPath()); if(!r) throw {code:'forbidden'};
+        if(!r.private){SYNC=null;msg.textContent='このリポジトリは公開（Public）です。問題と記録を置くので、非公開（Private）のリポジトリを指定してください。';return;}
+        await IDB.put('__sync',SYNC);PENDING=null;toast('同期を設定しました');render();sync();
+      }catch(err){SYNC=null;msg.textContent='つながりませんでした：'+(ERR[err&&err.code]||('エラー（'+(err&&err.code)+'）'));}
+    };
+    return el('form',{class:'card',onsubmit:submit},
+      el('h2',{},'端末どうしの自動同期'),
+      el('p',{class:'small muted'},PENDING?'ほかの端末から設定が届きました。この端末の名前を入れて保存してください。':'問題と記録を、ご自分の非公開リポジトリ経由で、スマホ・iPad・PCの間で自動的にそろえます。2台目からは、1台目の「ほかの端末に設定を移す」を使うと入力が要りません。'),
+      el('label',{class:'field',for:'s-paste'},'設定リンクを貼り付け（2台目以降）',el('input',{type:'text',id:'s-paste',autocomplete:'off',placeholder:'https://…#sync=…',oninput:e=>{const v=e.target.value;const i=v.indexOf('#sync=');if(i<0) return;const p=parseSyncPayload(v.slice(i+6).trim());if(p){PENDING=p;render();}else msg.textContent='リンクを読み取れませんでした。もう一度コピーしてください。';}})),
+      inp('s-owner','GitHubのユーザー名','owner'),inp('s-repo','データ用のリポジトリ（非公開）','repo'),
+      inp('s-token','トークン','token','password','github_pat_…'),inp('s-name','この端末の名前','name','text','スマホ／iPad／PC'),
+      el('button',{type:'submit',class:'btn'},'保存して同期する'),msg);
+  }
+  const share=el('div',{style:'display:flex;flex-direction:column;gap:8px;align-items:flex-start'});
+  return el('div',{class:'card'},
+    el('div',{class:'between'},el('h2',{},'端末どうしの自動同期'),el('span',{class:'pill gray'},SYNC.name)),
+    el('p',{class:'small muted'},SYNC.owner+'/'+SYNC.repo+(lastSync?' ・ 最後の同期 '+md(ymd(new Date(lastSync)))+' '+hm(lastSync):'')),
+    el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>{syncErr='';sync();}},'今すぐ同期'),el('button',{type:'button',class:'btn sub sm',onclick:()=>showTransfer(share)},'ほかの端末に設定を移す')),
+    share,
+    el('button',{type:'button',class:'btn sub sm',onclick:async()=>{await IDB.put('__sync',null);SYNC=null;toast('この端末の同期をやめました。記録はこの端末に残っています');render();}},'この端末の同期をやめる'));
+}
+
+/* ---------- learning logic ---------- */
+// 周回方式：単元（問題集×科目）ごとに「今何周目か」だけを持ち、先の出題日は決めない
+function roundOf(docId){const s=S.state[docId];return (s&&s.round)||1;}
+function realDocs(){return Object.entries(S.qbank).filter(([,d])=>d&&d.book!=='sample');}
+function allItems(filter){
+  const out=[];
+  for(const [docId,d] of Object.entries(S.qbank)){
+    if(!d||!Array.isArray(d.items)) continue;
+    if(filter&&!filter(d)) continue;
+    for(const q of d.items) out.push({docId,doc:d,q});
+  }
+  out.sort((a,b)=>(a.doc.book>b.doc.book?1:a.doc.book<b.doc.book?-1:0)||((a.q.no||0)-(b.q.no||0)));
+  return out;
+}
+function stOf(docId,qid){const s=S.state[docId];return s&&s.s?s.s[qid]:null;}
+function record(docId,q,ok,conf,ms,blanks){
+  const sd=S.state[docId]||(S.state[docId]={s:{}});
+  const cur=Object.assign({c:0,w:0,k:0},sd.s[q.id]||{}), now=Date.now(), rd=roundOf(docId);
+  cur.last=today();cur.lastOk=!!ok&&conf!==2;cur.conf=conf;cur.t=now;cur.lr=rd;
+  if(ok) cur.c++; else cur.w++;
+  if(conf===2) cur.k=(cur.k||0)+1;
+  if(blanks) cur.b=blanks;
+  cur.h=(cur.h||[]).concat([[rd,ok?1:0,conf===2?1:0]]).slice(-12);
+  sd.s[q.id]=cur; save('state/'+docId);
+  const k=ym(); S.log[k]=S.log[k]||{e:[]}; S.log[k].e.push([now,q.id,ok?1:0,conf,ms||0,rd,DEVICE]); save('log/'+k);
+  return {cur,round:rd};
+}
+function weakTags(){
+  const m={};
+  for(const it of allItems(d=>d.book!=='sample')){
+    const s=stOf(it.docId,it.q.id); if(!s) continue; const tot=(s.c||0)+(s.w||0); if(!tot) continue;
+    for(const g of (it.q.tags&&it.q.tags.length?it.q.tags:['その他'])){
+      const k=subj(it.doc.subject).short+'・'+g; const x=m[k]||(m[k]={n:0,ok:0,kan:0}); x.n+=tot; x.ok+=Math.max(0,(s.c||0)-(s.k||0)); x.kan+=(s.k||0);}
+  }
+  return Object.entries(m).filter(([,x])=>x.n>=3).map(([k,x])=>({k,rate:Math.round(x.ok/x.n*100),n:x.n,kan:x.kan})).sort((a,b)=>a.rate-b.rate).slice(0,5);
+}
+function coverage(subId){
+  const items=allItems(d=>d.subject===subId&&d.book!=='sample');
+  let answered=0,ok=0;
+  for(const it of items){const s=stOf(it.docId,it.q.id);if(s&&(s.c+s.w)>0){answered++;if(s.lastOk) ok++;}}
+  return {total:items.length,answered,ok};
+}
+function studyStats(){
+  const t=today(); let W=0,done=0,plan=0; const rows=[];
+  for(const s of units()){
+    const c=coverage(s.id), cov=c.total?c.answered/c.total:0;
+    const p=t<s.start?0:t>s.end?1:(diffDays(s.start,t)+1)/(diffDays(s.start,s.end)+1);
+    W+=weeksOf(s);done+=weeksOf(s)*cov;plan+=weeksOf(s)*p;rows.push({s,c,cov,p});
+  }
+  return {pct:W?Math.round(done/W*100):0,plan:W?Math.round(plan/W*100):0,rows};
+}
+function works(){return P_().create.works||[];}
+function stages(){return P_().create.stages||[];}
+function manga(){const m=clone(S.meta.manga)||{t:0};for(const w of works()) if(!m[w.id]) m[w.id]={pages:w.pages||16,st:[],cover:0,plot:0};return m;}
+function bodyFrac(b){const p=Math.max(1,b.pages||1);return stages().reduce((a,st,i)=>a+(st.w||0)*Math.min((b.st||[])[i]||0,p)/p,0);}
+function workPct(w,b){const c=P_().create;const hb=(b.pages||0)*(c.hoursPerPage||8),hc=w.cover?(c.coverHours||10):0,hp=w.plot?(c.plotHours||8):0;
+  return {done:hb*bodyFrac(b)+hc*(b.cover||0)/100+hp*(b.plot?1:0),total:Math.max(1,hb+hc+hp)};}
+function mangaStats(){
+  const m=manga(), c=P_().create; let D=0,T=0; const per={};
+  for(const w of works()){const r=workPct(w,m[w.id]);D+=r.done;T+=r.total;per[w.id]=Math.round(r.done/r.total*100);}
+  const t=today(), st=c.start||P_().start, e=c.due;
+  const plan=(!st||!e)?0:t<st?0:t>e?1:diffDays(st,t)/Math.max(1,diffDays(st,e));
+  return {pct:T?Math.round(D/T*100):0,plan:Math.round(plan*100),per};
+}
+function checks(){return S.meta.checks||(S.meta.checks={d:{}});}
+function isChecked(ds,id){const d=checks().d[ds];return !!(d&&d.v&&d.v[id]);}
+function setChecked(ds,id,v){const c=checks();const d=c.d[ds]||{v:{}};d.v=Object.assign({},d.v);if(v) d.v[id]=1; else delete d.v[id];d.t=Date.now();c.d[ds]=d;save('meta/checks');}
+function weekRate(){
+  const t=today(), d=parseYmd(t), off=(d.getDay()+6)%7, mon=addDays(t,-off); let all=0,done=0;
+  for(let i=0;i<7;i++){const ds=addDays(mon,i);if(P_().start&&ds<P_().start) continue;for(const k of tasksFor(ds)){all++;if(isChecked(ds,k.id)) done++;}}
+  return all?Math.round(done/all*100):0;
+}
+
+/* ---------- views ---------- */
+let VIEW='home';
+const P={step:'setup',subject:null,book:'all',mode:'cont',count:10,queue:[],i:0,conf:0,t0:0,res:null,stats:{n:0,ok:0},ans:null};
+function go(v){if(location.hash!=='#'+v) location.hash=v; else render();}
+function softRender(){updateStatus();if(VIEW==='home'||VIEW==='progress'||(VIEW==='practice'&&P.step==='setup')) render();}
+function render(){
+  const h=(location.hash||'#home').slice(1);
+  VIEW=['home','practice','progress','share','import'].includes(h)?h:'home';
+  document.querySelectorAll('nav.tabs a').forEach(a=>{if(a.dataset.v===VIEW||(VIEW==='share'&&a.dataset.v==='progress')) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');});
+  const main=document.getElementById('main'); main.replaceChildren();
+  const f={home:viewHome,practice:viewPractice,progress:viewProgress,share:viewShare,import:viewImport}[VIEW];
+  main.append(...[].concat(f()).flat(9).filter(x=>x!=null&&x!==false));
+}
+window.addEventListener('hashchange',()=>{window.scrollTo(0,0);render();});
+
+function brandNode(){return el('p',{class:'brand brandline'},el('ruby',{},'芒',el('rt',{},'まん'),'学',el('rt',{},'しゅぇ')),el('span',{class:'py'},'mángxué'));}
+function progressCard(label,pct,plan,cls){
+  const diff=pct-plan;
+  return el('a',{href:'#progress',class:'card',style:'text-decoration:none;color:inherit;gap:6px'},
+    el('span',{class:'small muted'},label),
+    el('span',{class:'big'},String(pct),el('small',{},'%')),
+    el('span',{class:'xs muted num'},'予定 '+plan+'%（'+(diff>=0?'+':'−')+Math.abs(diff)+'pt）'),
+    el('div',{class:'bar'+(cls?' '+cls:'')},el('i',{style:'width:'+pct+'%'}),el('b',{style:'left:'+Math.min(plan,100)+'%'})));
+}
+function viewHome(){
+  if(!PLAN) return [el('h1',{},'はじめに'),statusNode(),noPlan(),brandNode()];
+  const t=today(), st=studyStats(), mg=mangaStats();
+  const tasks=tasksFor(t);
+  const next=(P_().milestones||[]).find(m=>m[0]>=t);
+  const list=el('div',{class:'card',style:'padding:4px 16px'},
+    tasks.map(k=>{const done=isChecked(t,k.id), id='task-'+k.id;
+      return el('div',{class:'task'+(k.kind==='manga'?' manga':'')+(done?' done':'')},
+        el('input',{type:'checkbox',id,checked:done,onchange:e=>{setChecked(t,k.id,e.target.checked);e.target.closest('.task').classList.toggle('done',e.target.checked);}}),
+        el('label',{for:id},el('span',{class:'t'},k.time),el('span',{class:'m'},k.title),k.sub?el('span',{class:'small muted'},k.sub):null));}));
+  return [
+    el('div',{class:'between',style:'align-items:flex-end'},
+      el('div',{style:'display:flex;flex-direction:column;gap:2px'},el('span',{class:'small muted'},jpDate(t)),el('h1',{},'今日やること')),
+      el('div',{class:'xs muted num',style:'text-align:right;display:flex;flex-direction:column'},
+        countdowns(t))),
+    statusNode(),
+    el('div',{class:'grid2'},progressCard(P_().study.name+'（1周目）',st.pct,st.plan,''),works().length?progressCard(P_().create.name,mg.pct,mg.plan,'manga'):null),
+    el('div',{class:'row',style:'flex-wrap:wrap'},phaseLabel(t)?el('span',{class:'pill'},phaseLabel(t)):null,el('span',{class:'small muted num'},'今週の消化 '+weekRate()+'%')),
+    list,
+    el('a',{href:'#practice',class:'btn'},'演習をはじめる'),
+    next?el('div',{class:'card between',style:'flex-direction:row;padding:12px 16px'},el('span',{class:'small muted'},'次の節目'),el('span',{class:'small',style:'font-weight:500;text-align:right'},md(next[0])+' '+next[1]+'（あと'+diffDays(t,next[0])+'日）')):null,
+    brandNode()
+  ];
+}
+
+/* practice */
+function poolFor(subject,book){
+  const hasReal=allItems(d=>d.subject===subject&&d.book!=='sample').length>0;
+  return allItems(d=>d.subject===subject&&(book==='all'?(d.book!=='sample'||!hasReal):d.book===book));
+}
+function modeFilter(mode){
+  if(mode==='cont') return it=>{const s=stOf(it.docId,it.q.id);return !s||(s.lr||0)<roundOf(it.docId);};
+  if(mode==='miss') return it=>{const s=stOf(it.docId,it.q.id);return s&&(s.note||s.lastOk===false);};
+  return ()=>true;
+}
+function viewPractice(){
+  if(!P.subject){const s=currentSubject(today());P.subject=(s||units()[0]||{id:''}).id;}
+  if(P.step==='q') return viewQuestion();
+  if(P.step==='a') return viewAnswer();
+  if(P.step==='done') return viewDone();
+  const pool=poolFor(P.subject,P.book);
+  const n={cont:pool.filter(modeFilter('cont')).length,miss:pool.filter(modeFilter('miss')).length,all:pool.length};
+  const books=['all',...new Set([...Object.keys(P_().study.books||{}),...Object.values(S.qbank).map(d=>d&&d.book).filter(Boolean)])];
+  const docIds=[...new Set(pool.map(x=>x.docId))];
+  const roundLine=docIds.map(id=>{const d=S.qbank[id], rd=roundOf(id);const done=d.items.filter(q=>{const s=stOf(id,q.id);return s&&(s.lr||0)>=rd;}).length;return bookName(d.book)+'：'+rd+'周目 '+done+' / '+d.items.length;}).join('　');
+  const newRound=()=>{for(const id of docIds){const sd=S.state[id]||(S.state[id]={s:{}});sd.round=roundOf(id)+1;save('state/'+id);}P.mode='cont';toast(roundOf(docIds[0])+'周目を始めます');render();};
+  const start=()=>{
+    let q=pool.filter(modeFilter(P.mode));
+    if(P.count) q=q.slice(0,P.count);
+    P.queue=q.map(x=>[x.docId,x.q.id]);P.i=0;P.stats={n:0,ok:0};P.step='q';P.conf=0;P.t0=Date.now();render();
+  };
+  return [
+    el('h1',{},'演習'),statusNode(),
+    el('div',{class:'card'},el('h2',{},'科目'),
+      el('div',{class:'chips'},units().map(s=>el('button',{type:'button',class:'chip','aria-pressed':String(P.subject===s.id),onclick:()=>{P.subject=s.id;render();}},s.short)))),
+    el('div',{class:'card'},el('h2',{},'出し方'),
+      el('div',{class:'seg',style:'grid-template-columns:repeat(3,minmax(0,1fr))'},
+        [['cont','続きから'],['miss','間違えた問題'],['all','最初から']].map(([k,l])=>el('button',{type:'button','aria-pressed':String(P.mode===k),onclick:()=>{P.mode=k;render();}},l+'（'+n[k]+'）'))),
+      roundLine?el('p',{class:'small muted num'},roundLine):null,
+      el('p',{class:'xs muted'},'問題は本の順番どおりに出ます。「続きから」は、今の周でまだ解いていない問題です。'),
+      el('label',{class:'field',for:'book'},'問題集',el('select',{id:'book',onchange:e=>{P.book=e.target.value;render();}},books.map(b=>{const o=el('option',{value:b},b==='all'?'すべて':bookName(b));if(P.book===b) o.selected=true;return o;}))),
+      el('label',{class:'field',for:'count'},'問題数',el('select',{id:'count',onchange:e=>{P.count=Number(e.target.value);}},[[10,'10問'],[20,'20問'],[0,'全部']].map(([v,l])=>{const o=el('option',{value:v},l);if(P.count===v) o.selected=true;return o;})))),
+    pool.length?((P.mode==='cont'&&!n.cont)?el('button',{type:'button',class:'btn',onclick:newRound},'この周は終わりです。次の周を始める'):el('button',{type:'button',class:'btn',disabled:!n[P.mode],onclick:start},n[P.mode]?'はじめる':'この出し方の問題はありません')):
+      el('div',{class:'empty'},el('h2',{},subj(P.subject).name+'の問題はまだありません'),el('p',{class:'small muted'},'土曜の撮影分をClaudeに送ると、取り込まれてここに出ます。取り込み予定は「取り込み」タブで見られます。')),
+    paperForm()
+  ];
+}
+function curItem(){const [docId,qid]=P.queue[P.i];const d=S.qbank[docId];const q=d&&d.items.find(x=>x.id===qid);return q?{docId,doc:d,q}:null;}
+function confPicker(){
+  return el('div',{class:'card row',style:'flex-direction:row;padding:4px 16px;min-height:52px'},
+    el('input',{type:'checkbox',id:'kan',checked:P.conf===2,onchange:e=>{P.conf=e.target.checked?2:0;}}),
+    el('label',{for:'kan',style:'flex:1;padding-block:12px;cursor:pointer'},'勘で答える'),
+    el('span',{class:'xs muted'},'当たっても「間違えた問題」に入ります'));
+}
+function header(it){
+  return el('div',{class:'between'},
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>{P.step=P.stats.n?'done':'setup';render();}},'終わる'),
+    el('span',{class:'small',style:'font-weight:500'},subj(it.doc.subject).short+' ・ '+(P.i+1)+' / '+P.queue.length+'問'),
+    el('span',{style:'width:64px'}));
+}
+function tags(it){
+  const s=stOf(it.docId,it.q.id);const out=[];
+  if(s&&s.lastOk===false) out.push(el('span',{class:'pill manga'},'前回まちがい'));
+  else if(s&&(s.c+s.w)>0) out.push(el('span',{class:'pill'},'前回 正解'));
+  else out.push(el('span',{class:'pill gray'},'はじめて'));
+  if(it.q.numeric) out.push(el('span',{class:'pill gray'},'数字あり'));
+  for(const g of (it.q.tags||[]).slice(0,2)) out.push(el('span',{class:'pill gray'},g));
+  if(it.doc.book==='sample') out.push(el('span',{class:'pill gray'},'サンプル'));
+  return el('div',{class:'row',style:'flex-wrap:wrap;gap:6px'},out);
+}
+function stemNode(q){
+  if(q.type!=='blank') return el('p',{class:'qtext'},q.stem);
+  const parts=String(q.stem).split(/\{([A-E])\}/);
+  return el('p',{class:'qtext'},parts.map((s,i)=>i%2?el('span',{class:'blank'},s):s));
+}
+function finish(it,ok,ans,blanks){
+  const ms=Date.now()-P.t0;
+  const r=record(it.docId,it.q,ok,P.conf,ms,blanks);
+  P.stats.n++; if(ok&&P.conf!==2) P.stats.ok++;
+  P.ans={ok,ans,blanks,round:r.round,conf:P.conf}; P.step='a'; render(); window.scrollTo(0,0);
+}
+function viewQuestion(){
+  const it=curItem(); if(!it){P.i++; if(P.i>=P.queue.length){P.step='done';} return viewPractice();}
+  const q=it.q, src=el('span',{class:'xs muted'},'出典：'+bookName(it.doc.book)+' '+subj(it.doc.subject).short+' No.'+(q.no!=null?q.no:'—')+(q.page?' ・ p.'+q.page:''));
+  let answerUI;
+  if(q.type==='tf'){
+    answerUI=el('div',{class:'tf'},
+      el('button',{type:'button',class:'o','aria-label':'○ と答える',onclick:()=>finish(it,q.answer===true,'○')},'○'),
+      el('button',{type:'button',class:'x','aria-label':'× と答える',onclick:()=>finish(it,q.answer===false,'×')},'×'));
+  }else if(q.type==='mc5'){
+    answerUI=el('div',{style:'display:flex;flex-direction:column;gap:8px'},(q.choices||[]).map(c=>
+      el('button',{type:'button',class:'choice',onclick:()=>finish(it,c.k===q.correct,c.k)},el('b',{},c.k),el('span',{style:'min-width:0'},c.text))));
+  }else{
+    const sels=(q.blanks||[]).map(b=>{
+      const id='blank-'+b.k;
+      const ctl=(q.words&&q.words.length)?el('select',{id},el('option',{value:''},'選ぶ'),q.words.map(w=>el('option',{value:w},w))):el('input',{type:'text',id,autocomplete:'off'});
+      return el('label',{class:'field',for:id},'空欄 '+b.k,ctl);});
+    const norm=s=>String(s||'').normalize('NFKC').replace(/\s/g,'');
+    answerUI=el('div',{style:'display:flex;flex-direction:column;gap:10px'},sels,
+      el('button',{type:'button',class:'btn',onclick:()=>{
+        const res=(q.blanks||[]).map(b=>{const v=document.getElementById('blank-'+b.k).value;return {k:b.k,v,ok:norm(v)===norm(b.answer)};});
+        const score=res.filter(r=>r.ok).length;
+        finish(it,score===res.length,res.map(r=>r.v),res.map(r=>r.ok?1:0));}},'答え合わせ'));
+  }
+  return [header(it),el('div',{class:'bar',style:'height:4px'},el('i',{style:'width:'+Math.round(P.i/P.queue.length*100)+'%'})),tags(it),
+    el('div',{class:'card',style:'padding:20px;gap:14px'},el('span',{class:'xs muted'},q.type==='tf'?'○か×か':q.type==='mc5'?'正しいもの（問題の指示どおり）を選ぶ':'空欄に入る語句'),stemNode(q),src),
+    confPicker(),answerUI];
+}
+function correctText(q){
+  if(q.type==='tf') return q.answer?'○':'×';
+  if(q.type==='mc5') return q.correct;
+  return (q.blanks||[]).map(b=>b.k+'：'+b.answer).join('　');
+}
+function viewAnswer(){
+  const it=curItem(), q=it.q, a=P.ans, s=stOf(it.docId,q.id)||{};
+  const okShown=a.ok&&a.conf!==2;
+  const confL=a.conf===2?' ・ 勘':'';
+  const memoId='memo', noteId='note';
+  let memoTimer=null;
+  const verdictText=a.ok?(a.conf===2?'正解（勘）':'正解'):'不正解';
+  const blanksScore=q.type==='blank'&&a.blanks?a.blanks.reduce((x,y)=>x+y,0)+' / '+a.blanks.length+'（基準点 3）':null;
+  const next=()=>{P.i++;P.conf=0;P.t0=Date.now();P.step=P.i>=P.queue.length?'done':'q';render();window.scrollTo(0,0);};
+  return [header(it),
+    el('div',{class:'card verdict '+(okShown?'ok':'ng')},el('span',{class:'mark','aria-hidden':'true'},okShown?'○':'×'),
+      el('div',{style:'display:flex;flex-direction:column;gap:2px;min-width:0'},
+        el('span',{style:'font-size:18px;font-weight:700'},verdictText),
+        el('span',{class:'small muted'},'正解 '+correctText(q)+' ・ あなた '+(Array.isArray(a.ans)?a.ans.map(v=>v||'—').join('・'):a.ans)+confL),
+        blanksScore?el('span',{class:'small muted num'},'空欄 '+blanksScore):null,
+        el('span',{class:'small muted num'},a.round+'周目 ・ これまで ○'+Math.max(0,(s.c||0)-(s.k||0))+' ×'+(s.w||0)+((s.k||0)?' 勘'+s.k:'')))),
+    el('div',{class:'card'},el('h2',{class:'muted',style:'font-size:13px'},'解説'),el('p',{style:'white-space:pre-wrap;line-height:1.8'},q.expl||'解説は取り込まれていません。'),
+      q.type==='mc5'&&q.choiceNotes?el('div',{style:'display:flex;flex-direction:column;gap:4px'},Object.entries(q.choiceNotes).map(([k,v])=>el('p',{class:'small muted'},k+'：'+v))):null),
+    el('div',{class:'card',style:'gap:4px'},el('span',{class:'xs muted'},'紙の本を開く'),
+      el('span',{style:'font-weight:700'},q.base?(P_().study.baseBook||'基本書')+' p.'+q.base:(P_().study.baseBook||'基本書')+'（目次の取り込み後にページを表示）'),
+      el('span',{class:'xs muted'},'出典 '+bookName(it.doc.book)+' No.'+(q.no!=null?q.no:'—')+(q.page?' ・ p.'+q.page:''))),
+    el('label',{class:'field',for:memoId},'自分のことばでメモ',el('textarea',{id:memoId,rows:2,value:s.memo||'',oninput:e=>{const v=e.target.value;clearTimeout(memoTimer);memoTimer=setTimeout(()=>{const sd=S.state[it.docId];sd.s[q.id].memo=v;sd.s[q.id].t=Date.now();save('state/'+it.docId);},600);}})),
+    el('div',{class:'row'},el('input',{type:'checkbox',id:noteId,checked:!!s.note,onchange:e=>{const sd=S.state[it.docId];sd.s[q.id].note=e.target.checked;sd.s[q.id].t=Date.now();save('state/'+it.docId);}}),el('label',{for:noteId},'間違いノートに入れる')),
+    el('button',{type:'button',class:'btn',onclick:next},P.i+1>=P.queue.length?'結果を見る':'次の問題')];
+}
+function viewDone(){
+  const {n,ok}=P.stats;
+  return [el('h1',{},'おつかれさまでした'),
+    el('div',{class:'card'},el('span',{class:'big'},String(ok),el('small',{},' / '+n+'問')),el('p',{class:'small muted'},'「勘」で当たった問題と間違えた問題は、「間違えた問題」から解き直せます。')),
+    el('button',{type:'button',class:'btn',onclick:()=>{P.step='setup';render();}},'もう一度えらぶ'),
+    el('a',{href:'#home',class:'btn sub',onclick:()=>{P.step='setup';}},'ホームにもどる')];
+}
+function paperForm(){
+  const st={book:Object.keys(idPrefix())[0]||'',subject:P.subject,no:'',res:'',conf:0};
+  const resWrap=el('div',{});
+  const drawRes=()=>{resWrap.replaceChildren(isBlankBook(st.book)?
+    el('label',{class:'field',for:'p-res'},'正解した空欄の数',el('select',{id:'p-res',onchange:e=>st.res=e.target.value},el('option',{value:''},'選ぶ'),[5,4,3,2,1,0].map(v=>el('option',{value:v},v+' / 5')))):
+    el('label',{class:'field',for:'p-res'},'結果',el('select',{id:'p-res',onchange:e=>st.res=e.target.value},el('option',{value:''},'選ぶ'),el('option',{value:'1'},'○ 正解'),el('option',{value:'0'},'× 不正解'))));};
+  drawRes();
+  const submit=e=>{
+    e.preventDefault();
+    const no=parseInt(st.no,10);
+    if(!no||st.res===''){toast('番号と結果を入れてください');return;}
+    const docId=st.book+'-'+st.subject, qid=(idPrefix()[st.book]||String(st.book).toUpperCase())+'-'+st.subject+'-'+String(no).padStart(((P_().study.idPad||{})[st.book])||4,'0');
+    const okv=isBlankBook(st.book)?Number(st.res)===5:st.res==='1';
+    const blanks=isBlankBook(st.book)?[Number(st.res)]:null;
+    record(docId,{id:qid},okv,st.conf,0,blanks);
+    toast('記録しました：'+bookName(st.book)+' '+subj(st.subject).short+' No.'+no);
+    const f=document.getElementById('p-no');f.value='';f.focus();st.no='';document.getElementById('p-kan').checked=false;st.conf=0;
+  };
+  return el('form',{class:'card',onsubmit:submit},
+    el('h2',{},'紙で解いた分を記録'),el('p',{class:'small muted'},'本で解いた問題の番号と結果だけを入れます。取り込みのあとも記録は引き継がれます。'),
+    el('div',{class:'grid2'},
+      el('label',{class:'field',for:'p-book'},'問題集',el('select',{id:'p-book',onchange:e=>{st.book=e.target.value;drawRes();}},Object.keys(idPrefix()).map(b=>el('option',{value:b},bookName(b))))),
+      el('label',{class:'field',for:'p-sub'},'科目',el('select',{id:'p-sub',onchange:e=>st.subject=e.target.value},units().map(s=>{const o=el('option',{value:s.id},s.short);if(s.id===st.subject) o.selected=true;return o;})))),
+    el('div',{class:'grid2'},
+      el('label',{class:'field',for:'p-no'},'問題番号',el('input',{type:'number',id:'p-no',inputmode:'numeric',min:1,oninput:e=>st.no=e.target.value})),resWrap),
+    el('div',{class:'row',style:'min-height:44px'},el('input',{type:'checkbox',id:'p-kan',onchange:e=>st.conf=e.target.checked?2:0}),el('label',{for:'p-kan'},'勘で答えた')),
+    el('button',{type:'submit',class:'btn sub'},'記録する'));
+}
+
+/* progress */
+function viewProgress(){
+  const st=studyStats(), mg=mangaStats(), m=manga();
+  const setM=fn=>{const x=clone(manga());fn(x);x.t=Date.now();S.meta.manga=x;save('meta/manga');render();};
+  const stepper=(bk,i)=>{const b=m[bk],id='st-'+bk+'-'+i;
+    return el('div',{class:'stepper'},el('label',{for:id,class:'small'},stages()[i].name),
+      el('button',{type:'button','aria-label':stages()[i].name+'を1ページ減らす',onclick:()=>setM(x=>{x[bk].st[i]=Math.max(0,(x[bk].st[i]||0)-1);})},'−'),
+      el('input',{type:'number',id,min:0,max:b.pages,value:b.st[i]||0,class:'num',onchange:e=>setM(x=>{x[bk].st[i]=Math.max(0,Math.min(x[bk].pages,parseInt(e.target.value,10)||0));})}),
+      el('button',{type:'button','aria-label':stages()[i].name+'を1ページ増やす',onclick:()=>setM(x=>{x[bk].st[i]=Math.min(x[bk].pages,(x[bk].st[i]||0)+1);})},'+'),
+      el('span',{class:'small muted num'},'/ '+b.pages+'p'));};
+  const coverSel=bk=>{const id='cv-'+bk;return el('label',{class:'field',for:id},'カラー表紙',el('select',{id,onchange:e=>setM(x=>{x[bk].cover=Number(e.target.value);})},[[0,'まだ'],[25,'ラフ'],[50,'線画'],[75,'塗り'],[100,'完成']].map(([v,l])=>{const o=el('option',{value:v},l);if((m[bk].cover||0)===v) o.selected=true;return o;})));};
+  const pagesIn=bk=>{const id='pg-'+bk;return el('label',{class:'field',for:id,style:'max-width:120px'},'ページ数',el('input',{type:'number',id,min:1,value:m[bk].pages,class:'num',onchange:e=>setM(x=>{x[bk].pages=Math.max(1,parseInt(e.target.value,10)||1);})}));};
+  return [
+    el('div',{class:'between'},el('h1',{},'進捗'),el('a',{href:'#share',class:'btn dark sm'},'シェア')),
+    statusNode(),
+    el('div',{class:'card'},
+      el('div',{class:'between',style:'align-items:baseline'},el('h2',{},P_().study.name+'（1周目）'),el('span',{class:'small muted num'},el('b',{style:'font-size:22px;color:var(--ink)'},st.pct+'%'),'　予定 '+st.plan+'%')),
+      el('div',{class:'bar'},el('i',{style:'width:'+st.pct+'%'}),el('b',{style:'left:'+st.plan+'%'})),
+      el('p',{class:'xs muted'},'取り込んだ問題のうち1回以上解いた割合を、科目の週数で重み付けしています。黒い印が今日時点の予定です。'),
+      el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'科目'),el('th',{},'解いた'),el('th',{},'正解'),el('th',{},'予定'))),
+        el('tbody',{},st.rows.map(r=>el('tr',{},el('td',{},r.s.short),
+          el('td',{class:'num'},r.c.total?r.c.answered+' / '+r.c.total:'未取り込み'),
+          el('td',{class:'num'},r.c.answered?Math.round(r.c.ok/r.c.answered*100)+'%':'—'),
+          el('td',{class:'num muted'},r.p>=1?'済':r.p>0?Math.round(r.p*100)+'%':md(r.s.start)+'〜'))))))),
+    (()=>{const w=weakTags();return el('div',{class:'card'},el('h2',{},'弱いところ'),
+      w.length?el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'論点'),el('th',{},'正解率'),el('th',{},'回答'),el('th',{},'勘'))),
+        el('tbody',{},w.map(x=>el('tr',{},el('td',{},x.k),el('td',{class:'num'},x.rate+'%'),el('td',{class:'num'},String(x.n)),el('td',{class:'num'},String(x.kan)))))))
+      :el('p',{class:'small muted'},'3回以上解いた論点がでてくると、正解率の低いものからここに並びます。勘での正解は正解に数えません。'));})(),
+    el('div',{class:'card'},
+      el('div',{class:'between',style:'align-items:baseline'},el('h2',{},P_().create.name),el('span',{class:'small muted num'},el('b',{style:'font-size:22px;color:var(--ink)'},mg.pct+'%'),'　予定 '+mg.plan+'%')),
+      el('div',{class:'bar manga'},el('i',{style:'width:'+mg.pct+'%'}),el('b',{style:'left:'+mg.plan+'%'})),
+      el('p',{class:'xs muted'},'終わったページ数を工程ごとに入れると、1ページ'+(P_().create.hoursPerPage||8)+'時間'+(works().some(w=>w.cover)?'・表紙'+(P_().create.coverHours||10)+'時間':'')+'の見積もりで計算します。'),
+      works().map((w,wi)=>[
+        el('div',{class:'between',style:wi?'border-top:1px solid var(--line);padding-top:12px':''},el('h2',{},w.name+'（'+(mg.per[w.id]||0)+'%）'),pagesIn(w.id)),
+        w.plot?el('div',{class:'row'},el('input',{type:'checkbox',id:'plot-'+w.id,checked:!!m[w.id].plot,onchange:e=>setM(x=>{x[w.id].plot=e.target.checked?1:0;})}),el('label',{for:'plot-'+w.id},'プロット完成')):null,
+        stages().map((_,i)=>stepper(w.id,i)),
+        w.cover?coverSel(w.id):null]))
+  ];
+}
+
+/* share */
+const SH={study:true,manga:false,delta:true,tag:false,tagText:'',line:'',topic:''};
+function topicsToday(){
+  const t=today(), start=parseYmd(t).getTime(); const L=(S.log[ym()]||{e:[]}).e.filter(x=>x[0]>=start);
+  const out=[];
+  if(L.some(x=>{const h=new Date(x[0]).getHours();return (h>=7&&h<9)||(h>=18&&h<20);})) out.push('電車の窓の外、今日の空');
+  if(L.length) out.push('今日覚えた言葉をひとつ（説明なしで）');
+  const mt=S.meta.manga&&S.meta.manga.t; if(mt&&mt>=start) out.push('今日つくったものをひとつ');
+  if(!L.length&&!(mt&&mt>=start)) out.push('それでもやったことをひとつ');
+  out.push('今日の飲み物'); out.push('今日の天気');
+  return [...new Set(out)].slice(0,3);
+}
+function viewShare(){
+  const st=studyStats().pct, mg=mangaStats().pct, last=S.meta.share||{};
+  const fmt=(icon,cur,prev)=>icon+' '+(SH.delta&&prev!=null&&prev!==cur?prev+'→'+cur:cur)+'%';
+  const text=()=>{const parts=[];if(SH.study) parts.push(fmt(P_().study.icon||'📖',st,last.study));if(SH.manga) parts.push(fmt(P_().create.icon||'✏️',mg,last.manga));
+    let s=parts.join('　');if(SH.line) s+=(s?'\n':'')+SH.line;if(SH.tag&&SH.tagText) s+='\n'+SH.tagText;return s;};
+  const moved=(last.study==null||Math.abs(st-last.study)>=1)||(SH.manga&&(last.manga==null||Math.abs(mg-last.manga)>=1));
+  const preview=el('p',{style:'font-size:17px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere'},text());
+  const link=el('a',{class:'btn '+(moved?'dark':'sub'),target:'_blank',rel:'noopener',href:'https://x.com/intent/post?text='+encodeURIComponent(text()),
+    onclick:()=>{S.meta.share={study:st,manga:mg,t:Date.now()};save('meta/share');}},'Xの投稿画面を開く');
+  const refresh=()=>{preview.textContent=text();link.href='https://x.com/intent/post?text='+encodeURIComponent(text());};
+  const opt=(k,label,id)=>el('div',{class:'row',style:'min-height:44px'},el('input',{type:'checkbox',id,checked:SH[k],onchange:e=>{SH[k]=e.target.checked;refresh();}}),el('label',{for:id},label));
+  const input=el('input',{type:'text',id:'line',value:SH.line,placeholder:SH.topic?'題材：'+SH.topic:'ひと言（なくてもよい）',oninput:e=>{SH.line=e.target.value;refresh();}});
+  const offline=!navigator.onLine;
+  return [
+    el('div',{class:'between'},el('a',{href:'#progress',class:'btn sub sm'},'もどる'),el('h1',{style:'font-size:18px'},'シェアの下書き'),el('span',{style:'width:64px'})),
+    el('div',{class:'card'},el('span',{class:'xs muted'},'タイムラインではこう見えます'),preview,
+      el('span',{class:'xs muted num'},last.t?'前回のシェア '+md(ymd(new Date(last.t)))+'：'+(P_().study.icon||'📖')+' '+last.study+'% '+(P_().create.icon||'✏️')+' '+last.manga+'%':'はじめてのシェアです')),
+    el('div',{style:'display:flex;flex-direction:column;gap:8px'},el('h2',{class:'muted',style:'font-size:13px'},'ひと言の題材（今日の記録から）'),
+      el('div',{class:'chips'},topicsToday().map(tp=>el('button',{type:'button',class:'chip','aria-pressed':String(SH.topic===tp),onclick:e=>{SH.topic=tp;input.placeholder='題材：'+tp;e.target.parentNode.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',String(c===e.target)));input.focus();}},tp)))),
+    el('label',{class:'field',for:'line'},'ひと言',input),
+    el('fieldset',{style:'border:none;margin:0;padding:0;display:flex;flex-direction:column'},el('legend',{class:'small muted',style:'padding:0;margin-bottom:4px'},'載せるもの'),
+      opt('study',(P_().study.icon||'📖')+' '+P_().study.name+'の％','o-study'),opt('manga',(P_().create.icon||'✏️')+' '+P_().create.name+'の％','o-manga'),opt('delta','前回からの変化','o-delta'),opt('tag','ハッシュタグ','o-tag'),
+      el('input',{type:'text',id:'tagtext','aria-label':'ハッシュタグ',value:SH.tagText,placeholder:'#〜',oninput:e=>{SH.tagText=e.target.value;refresh();}})),
+    offline?el('button',{type:'button',class:'btn',disabled:true},'オフラインのためシェアできません'):link,
+    el('p',{class:'xs muted',style:'text-align:center'},moved?'投稿するかどうかはXの画面で決めます。アプリが自動で投稿することはありません。':'前回のシェアから％が動いていません。同じ数字が並ぶので、次の機会でも大丈夫です。')
+  ];
+}
+
+/* import */
+function viewImport(){
+  const t=today();
+  const BT=P_().batches||{}, nextB=Object.keys(BT).sort().find(d=>d>=t);
+  const docs=Object.entries(S.qbank).filter(([,d])=>d&&Array.isArray(d.items)).sort((a,b)=>a[0]>b[0]?1:-1);
+  const checksList=[];
+  for(const [docId,d] of docs) for(const q of d.items) if(q.check) checksList.push({docId,d,q});
+  const confirm=(x,patch)=>{const d=clone(S.qbank[x.docId]);const q=d.items.find(i=>i.id===x.q.id);Object.assign(q,patch);delete q.check;d.t=Date.now();d.local=1;S.qbank[x.docId]=d;save('qbank/'+x.docId);toast('確認済みにしました');render();};
+  const checkCard=x=>{
+    const q=x.q, sid='fix-'+q.id;
+    let ansCtl;
+    if(q.type==='tf') ansCtl=el('select',{id:sid+'-a'},(()=>{const o=el('option',{value:'1'},'○');if(q.answer) o.selected=true;return o;})(),(()=>{const o=el('option',{value:'0'},'×');if(!q.answer) o.selected=true;return o;})());
+    else if(q.type==='mc5') ansCtl=el('select',{id:sid+'-a'},['A','B','C','D','E'].map(k=>{const o=el('option',{value:k},k);if(q.correct===k) o.selected=true;return o;}));
+    else ansCtl=el('input',{type:'text',id:sid+'-a',value:(q.blanks||[]).map(b=>b.answer).join(' / ')});
+    return el('div',{class:'card'},
+      el('div',{class:'between'},el('h2',{},bookName(x.d.book)+' '+subj(x.d.subject).short+' No.'+q.no),el('span',{class:'xs muted'},q.page?'本 p.'+q.page:'')),
+      el('p',{class:'small',style:'color:var(--manga-ink)'},'確認してほしい点：'+q.check),
+      el('label',{class:'field',for:sid+'-s'},'問題文',el('textarea',{id:sid+'-s',rows:4,value:q.stem})),
+      el('label',{class:'field',for:sid+'-a'},q.type==='blank'?'空欄の答え（A / B / … の順に「 / 」区切り）':'正解',ansCtl),
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>{
+        const stem=document.getElementById(sid+'-s').value, av=document.getElementById(sid+'-a').value;
+        const patch={stem};
+        if(q.type==='tf') patch.answer=av==='1'; else if(q.type==='mc5') patch.correct=av;
+        else {const arr=av.split('/').map(s=>s.trim());patch.blanks=(q.blanks||[]).map((b,i)=>({k:b.k,answer:arr[i]!=null?arr[i]:b.answer}));}
+        confirm(x,patch);}},'本と同じなので確認済みにする'));};
+
+  /* backup */
+  const exportAll=async()=>{
+    const data=JSON.stringify({app:'mangxue',v:1,at:new Date().toISOString(),qbank:S.qbank,state:S.state,meta:S.meta,log:S.log});
+    try{const url=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+      const a=el('a',{href:url,download:'mangxue-backup-'+t+'.json'});document.body.append(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),4000);toast('書き出しました（ダウンロードフォルダ）');}
+    catch(e){toast('書き出せませんでした');}
+  };
+  const importFile=e=>{
+    const f=e.target.files&&e.target.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=()=>{try{const j=JSON.parse(r.result);if(j.app!=='shaxnote'&&j.app!=='mangxue') throw 0;
+      for(const [id,d] of Object.entries(j.qbank||{})){const cur=S.qbank[id];if((!cur||(d.t||0)>(cur.t||0))){S.qbank[id]=Object.assign({},d,{local:1});save('qbank/'+id);}}
+      for(const [id,d] of Object.entries(j.state||{})) mergeState(id,d);
+      for(const [id,d] of Object.entries(j.meta||{})) mergeMeta(id,d);
+      for(const [k,d] of Object.entries(j.log||{})) mergeLog(k,d);
+      toast('読み込みました');render();}catch(_){toast('このファイルは読み込めません（バックアップのJSONを選んでください）');}};
+    r.readAsText(f);
+  };
+  return [
+    el('h1',{},'取り込み'),statusNode(),syncCard(),
+    nextB?el('div',{class:'card between',style:'flex-direction:row'},el('span',{class:'small muted'},'次の撮影'),el('span',{class:'small',style:'font-weight:500;text-align:right'},md(nextB)+'（'+WD[parseYmd(nextB).getDay()]+'）'+(BT[nextB].time?' '+BT[nextB].time:'')+' '+BT[nextB].title)):null,
+    el('div',{class:'card'},el('h2',{},'取り込み済みの問題'),
+      docs.length?el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'問題集'),el('th',{},'科目'),el('th',{},'問題数'),el('th',{},'要確認'),el('th',{},'番号の抜け'))),
+        el('tbody',{},docs.map(([id,d])=>el('tr',{},el('td',{},bookName(d.book)||d.book),el('td',{},subj(d.subject)?subj(d.subject).short:d.subject),el('td',{class:'num'},String(d.items.length)),
+          el('td',{class:'num'},String(d.items.filter(q=>q.check).length)),el('td',{class:'num'},(d.missing&&d.missing.length)?'No.'+d.missing.join('・'):'なし'))))))
+      :el('p',{class:'small muted'},'まだありません。撮影したPDFをClaudeに送ると、同期を設定した端末に自動で届きます。')),
+    docs.some(([,d])=>d.missing&&d.missing.length)?el('div',{class:'warn'},'番号が抜けている問題があります。その番号のページだけ撮り直して送ってください。'):null,
+    checksList.length?el('h2',{},'要確認：本と見比べてください（'+checksList.length+'件）'):null,
+    checksList.slice(0,10).map(checkCard),
+    checksList.length>10?el('p',{class:'small muted'},'残り'+(checksList.length-10)+'件は、上を確認すると順に出てきます。'):null,
+    el('div',{class:'card'},el('h2',{},'バックアップ'),el('p',{class:'small muted'},'同期を設定していれば、記録は自動でほかの端末にもそろいます。書き出しは、念のための控えとして月に1回ほどで十分です。'),
+      el('button',{type:'button',class:'btn sub sm',onclick:exportAll},'バックアップを書き出す'),
+      el('label',{class:'field',for:'restore'},'ファイルを読み込む（問題ファイル・バックアップ）',el('input',{type:'file',id:'restore',accept:'application/json,.json',onchange:importFile})))
+  ];
+}
+
+/* ---------- boot ---------- */
+(async function boot(){
+  const all=await IDB.all();
+  for(const [k,v] of Object.entries(all)){
+    if(k==='__dirty'){(v||[]).forEach(p=>dirty.add(p));continue;}
+    if(k==='__sync'){SYNC=v||null;continue;}
+    if(k==='__known'){KNOWN=v||{};continue;}
+    if(k==='__lastSync'){lastSync=v||0;continue;}
+    if(k==='__device'){DEVICE=v||'';continue;}
+    if(k==='__plan'){PLAN=v||null;continue;}
+    const i=k.indexOf('/'); if(i<0) continue; const c=k.slice(0,i); if(S[c]) S[c][k.slice(i+1)]=v;
+  }
+  if(!DEVICE){DEVICE='d'+Math.random().toString(36).slice(2,10);IDB.put('__device',DEVICE);}
+  if(location.hash.indexOf('#sync=')===0){PENDING=parseSyncPayload(location.hash.slice(6));history.replaceState(null,'',location.pathname+'#import');}
+  render();
+  try{if(navigator.storage&&navigator.storage.persist) navigator.storage.persist();}catch(e){}
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.addEventListener('updatefound',()=>{const w=reg.installing;if(!w) return;w.addEventListener('statechange',()=>{
+        if(w.state==='installed'&&navigator.serviceWorker.controller) toast('新しい版があります。アプリを開き直すと切り替わります');});});
+    }).catch(()=>{});
+  }
+  window.addEventListener('online',()=>{netDown=false;sync();});
+  window.addEventListener('offline',updateStatus);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible') sync();});
+  setInterval(()=>{if(document.visibilityState==='visible') sync();},120000);
+  sync();
+})();
+</script>
+</body>
+</html>
