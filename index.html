@@ -309,6 +309,12 @@ details.more[open]{display:flex;flex-direction:column;gap:8px}
 .bytype:first-child{border-top:none}
 .trip{display:flex;flex-direction:column;gap:4px;padding:8px 0;border-top:1px solid var(--line)}
 .tleg{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding-left:4px}
+.ciret{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:6;min-height:48px;padding:10px 20px;border-radius:999px;border:2px solid var(--accent);background:var(--surface);color:var(--accent-ink);font:inherit;font-size:15px;font-weight:700;white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:pointer}
+body.has-ret .toast{bottom:calc(136px + env(safe-area-inset-bottom,0px))}
+body.has-ret .wrap{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+.cidir{display:flex;flex-direction:column;gap:2px;padding:6px 0;border-top:1px dashed var(--line)}
+.bring{display:flex;flex-direction:column;gap:8px}
+.bring-at input{max-width:200px}
 .cmline{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:6px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-align:left;cursor:pointer}
 .cmline .small{flex:1;min-width:0}
 .savebar{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:5;display:flex;flex-direction:column;gap:8px;padding:10px 14px;border-radius:14px;border:1px solid var(--line);background:var(--surface);box-shadow:0 4px 16px rgba(0,0,0,.08)}
@@ -844,6 +850,10 @@ function daySlots(ds,P){
   if(dt&&!dayRec(ds).off){
     let base=dt.slots||[];const cmd=cmDay(ds);
     const cmBlocks=[];
+    // with the commute on, the type's own アプリ演習 コマ stand for the commute: they give way to the real trips, and
+    // they go too on a day without the commute (通勤しない, or 行き/帰りなし)
+    const ubt=cmOn()?(commute().byType||{})[id]||{}:{}, usual=!!((ubt.go&&ubt.go.route)||(ubt.back&&ubt.back.route));
+    if(!cmd&&usual) base=base.filter(s=>!(s.track==='study'&&s.use==='app'));
     if(cmd){const C=commute();base=base.filter(s=>!(s.track==='study'&&s.use==='app'));
       for(const dir of ['go','back']){const t=cmd[dir];if(!t) continue;
         for(const x of t.legs){if(x.skip) continue;const w=C.waitStudy&&cmRide(x.l.kind)?(x.wait||0):0;cmBlocks.push([x.dep-(x.wait||0),x.arr]);
@@ -1364,7 +1374,7 @@ function cmDay(ds){
   const C=commute(), d=dayRec(ds), o=d.cm||{};
   if(d.off||o.none) return c.cm[ds]=null;
   const bt=(C.byType||{})[dayTypeOf(ds,plan2())]||{};
-  const one=dir=>{const s=bt[dir]||{}, od=o[dir]||{}, rid=od.route||s.route, r=(C.routes||[]).find(x=>x.id===rid);if(!r||!(r.legs||[]).length) return null;
+  const one=dir=>{const s=bt[dir]||{}, od=o[dir]||{}, rid=od.route||s.route, r=(C.routes||[]).find(x=>x.id===rid);if(od.skip||!r||!(r.legs||[]).length) return null;
     const mode=od.mode||s.mode||'at', at=od.at||s.at, train=od.train||s.train, stay=od.stay!=null?od.stay:s.stay;
     if(mode==='train'?!train:!at) return null;
     return cmPlan(r,dir,ds,{mode,at:at?sinceStart(toMin(at)):null,train:train?sinceStart(toMin(train)):null,stay,fix:o[dir+'Fix']||null});};
@@ -1671,11 +1681,42 @@ function viewCheckin(id){
     rs.length?el('div',{class:'card'},el('h2',{},'ルーティン'),rs.map((r,i)=>routineRow(ds,r,i===0))):null,
     its.length&&c.report?el('h2',{class:'sec'},'生活の記録'):null,
     its.map(it=>itemEditor(ds,it)),
+    c.report?ciTomorrow(c):null,
     (!rs.length&&!its.length&&!c.report)?el('div',{class:'empty'},el('p',{class:'small'},'ここで聞く項目がまだありません。'),el('a',{href:'#routines',class:'btn sub sm'},'習慣の設定で選ぶ')):null,
     el('button',{type:'button',class:'btn',onclick:()=>{setDay(ds,d=>{d.ci=Object.assign({},d.ci,{[id]:Date.now()});});toast(c.report?'今日もおつかれさまでした':'記録しました');go('home');}},c.report?'レポートを終える':'チェックインを終える')
   ];
 }
 
+/* the 〆 report: tomorrow at a glance. 立ち寄る and 行き/帰りなし can be chosen here, and 持ち物 set; anything else
+   (the day type, routes, times) is changed in the calendar, with a button there to come back */
+let CIRET=null, CIFOCUS=false;
+function ciTomorrow(c){
+  const ds=addDays(today(),1), d=dayRec(ds), P=plan2(), id=dayTypeOf(ds,P), dt=dtById(id,P), o=d.cm||{}, C=commute(), bt=(C.byType||{})[id]||{}, p=cmDay(ds);
+  const dirRow=dir=>{const s=bt[dir]||{}, od=o[dir]||{}, rid=od.route||s.route, r=(C.routes||[]).find(x=>x.id===rid);
+    if(!r&&!od.skip) return null;
+    const t=p&&p[dir], key='ci-'+dir, name=dir==='go'?'行き':'帰り', hasStay=r&&(r.legs||[]).some(l=>cmStay(l.kind)), stay=(od.stay!=null?od.stay:s.stay)!==false;
+    return el('div',{class:'cidir'},
+      el('p',{class:'small num'},el('b',{},name+'　'),od.skip?'なし':t?hmOf(t.leave)+' 出発 → '+hmOf(t.arrive)+' 着':'時刻が決まっていません',r&&!od.skip?el('span',{class:'xs muted'},'　'+r.name):null),
+      !od.skip&&hasStay?el('label',{class:'row',for:key+'-s',style:'min-height:40px'},el('input',{type:'checkbox',id:key+'-s',checked:stay,onchange:e=>cmDirSet(ds,dir,'stay',e.target.checked===(s.stay!==false)?undefined:e.target.checked)}),
+        el('span',{class:'small'},'立ち寄る（'+(r.legs||[]).filter(l=>cmStay(l.kind)).map(l=>l.name||'立ち寄り先').join('・')+'）')):null,
+      el('label',{class:'row',for:key+'-x',style:'min-height:40px'},el('input',{type:'checkbox',id:key+'-x',checked:!!od.skip,onchange:e=>cmDirSet(ds,dir,'skip',e.target.checked?1:undefined)}),el('span',{class:'small'},name+'の通勤はなし')));};
+  const rows=cmOn()&&!d.off&&!o.none?[dirRow('go'),dirRow('back')].filter(Boolean):[];
+  return el('div',{class:'card',id:'ci-tomorrow'},
+    el('div',{class:'between'},el('h2',{},'明日の予定'),el('span',{class:'small muted'},jpDate(ds))),
+    el('p',{class:'small'},dt?[el('b',{class:'dtl'},dtLetter(id,P)),' '+dt.name]:'時間割なし',d.off?'（お休みの日）':''),
+    cmOn()&&!d.off?[el('h3',{class:'sub'},'通勤'),
+      o.none?el('p',{class:'small muted'},'この日は通勤しません。'):rows.length?[p?el('p',{class:'xs muted'},cmDiaText(ds,p)):null,rows]:el('p',{class:'small muted'},'この日のタイプには通勤がありません。')]:null,
+    el('h3',{class:'sub'},'持ち物のお知らせ'),bringEditor(ds,'cib'),
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>{CIRET={id:c.id,label:ciTitle(c)};CAL.sel=ds;CAL.ym=ds.slice(0,7);CAL.focus=true;go('cal');}},'日のタイプや通勤の時刻は、カレンダーで変える ›'));
+}
+/* back to the check-in from the calendar: a button over the page while the calendar is open */
+function retOverlay(){
+  const old=document.getElementById('ciret');if(old) old.remove();
+  if(VIEW==='cal'&&CIRET){const r=CIRET;document.body.append(el('button',{type:'button',id:'ciret',class:'ciret',onclick:()=>{CIRET=null;CIFOCUS=true;go('checkin/'+r.id);}},'← '+r.label+'に戻る'));document.body.classList.add('has-ret');}
+  else{document.body.classList.remove('has-ret');if(VIEW!=='cal') CIRET=null;}
+  const f=VIEW==='cal'&&CAL.focus?'.daypanel':VIEW==='checkin'&&CIFOCUS?'#ci-tomorrow':null;CAL.focus=false;CIFOCUS=false;
+  if(f) requestAnimationFrame(()=>{const n=document.querySelector(f);if(n) n.scrollIntoView({block:'start'});});
+}
 /* stamps for the calendar: 花丸 = routines and tasks all done; マルチェック = the tasks all done; the 休 stamp = a day off */
 function dayTasks(ds){return (PLAN||planActive())?tasksFor(ds).filter(k=>k.kind==='study'||k.kind==='manga'):[];}
 function dayStamp(ds){
@@ -1775,6 +1816,7 @@ function dayPanel(ds){
         el('button',{type:'button',class:'btn sub sm',onclick:()=>{if(!addEv.s||!addEv.e){toast('はじまりとおわりの時刻を入れてください');return;}const before=act?adjSummary():null;
           setDay(ds,x=>{x.g=(Array.isArray(x.g)?x.g.filter(y=>y&&typeof y==='object'):[]).concat([{id:newId('ev'),s:addEv.s,e:addEv.e,t:addEv.t||'予定あり',src:'manual'}]);});render();if(before) toast(adjEffect(before,adjSummary()));}},'＋ 足す'))]:null,
     cmDayPanel(ds),
+    el('h3',{class:'sub'},'持ち物のお知らせ'),bringEditor(ds,'br'),
     el('h3',{class:'sub'},'この日の時間'),
     el('div',{class:'field'},'日のタイプ',el('div',{class:'dtchips'},(P.dayTypes||[]).map(t=>typeChip(P,t.id,id===t.id,()=>setDates(x=>{const def=x.mode==='dates'?x.dflt:(x.week||[])[parseYmd(ds).getDay()];if(t.id===def) delete x.dates[ds]; else x.dates[ds]=t.id;}))))),
     el('label',{class:'row',for:'off-'+ds,style:'min-height:40px'},el('input',{type:'checkbox',id:'off-'+ds,checked:!!d.off,onchange:e=>{const before=act?adjSummary():null;setDay(ds,x=>{x.off=e.target.checked?1:0;});render();if(before) toast(adjEffect(before,adjSummary()));}}),el('span',{class:'small'},'この日はお休み')),
@@ -1795,17 +1837,24 @@ function pushItems(){
   const L=life(), out=[], now=Date.now(), ds0=dayStartMin();
   // from yesterday: a trip of yesterday can run past the day boundary (its old notices are dropped below)
   for(let i=-1;i<14;i++){
-    const ds=addDays(today(),i), d=dayRec(ds);if(d.off) continue;
+    const ds=addDays(today(),i), d=dayRec(ds), br=bringOf(ds);
     const midnight=parseYmd(ds).getTime(), at=hm=>midnight+(ds0+sinceStart(toMin(hm)))*60000, leaveNoted={};
+    if(br&&br.at) out.push({id:'bring:'+ds,at:at(br.at),title:'🎒 持ち物',body:br.t,tag:'bring:'+ds,url:'#home'});
+    if(d.off) continue;
+    let brDone=!br||!!br.at;
     for(const r of routines()){
       const by=routineBy(ds,r), byM=routineByM(ds,r);
       if(r.kind==='sleep'||!by||!routineApplies(ds,r)||routineState(ds,r)!=null) continue;
       const t=byM!=null?midnight+(ds0+byM)*60000:at(by), name=(r.emoji?r.emoji+' ':'')+r.name, lv=r.byCm==='go-leave'?'go':r.byCm==='back-leave'?'back':null, trip=lv&&cmOn()?(cmDay(ds)||{})[lv]:null;
       const fr=trip&&trip.legs.find(x=>cmRide(x.l.kind)), extra=fr?'。'+hmOf(fr.dep)+(fr.dia&&(fr.dia!=='wd'||cmDay(ds).dias.length>1)?'（'+DIA[fr.dia]+'ダイヤ）':'')+' '+(fr.l.from||'')+(fr.l.plat?' '+fr.l.plat:'')+(fr.l.car?' '+fr.l.car:'')+'に乗ります':'';
-      if(r.before!=null){out.push({id:'b:'+r.id+':'+ds,at:t-r.before*60000,title:name,body:by+' まで、あと'+fmtMin(r.before)+'です'+extra,tag:'r:'+r.id+':'+ds,url:'#home'});if(lv) leaveNoted[lv]=true;}
+      const bt=lv==='go'&&!brDone?'持ち物：'+br.t+'。':'';if(bt) brDone=true;
+      if(r.before!=null){out.push({id:'b:'+r.id+':'+ds,at:t-r.before*60000,title:name,body:bt+by+' まで、あと'+fmtMin(r.before)+'です'+extra,tag:'r:'+r.id+':'+ds,url:'#home'});if(lv) leaveNoted[lv]=true;}
       if(r.at!==false) out.push({id:'a:'+r.id+':'+ds,at:t,title:name+'　できた？',body:by+' になりました',tag:'r:'+r.id+':'+ds,url:'#home',ds,rid:r.id,actions:[{action:'ok',title:'○ できた'},{action:'ng',title:'× できなかった'}]});
     }
-    out.push(...cmItems(ds,leaveNoted));
+    const cmi=cmItems(ds,leaveNoted);out.push(...cmi);
+    if(!brDone&&cmi.some(x=>x.id==='cmh:go:'+ds)) brDone=true;
+    // no leave-home notice to go with: 10 minutes before leaving, on its own
+    if(!brDone){const g=cmOn()?(cmDay(ds)||{}).go:null;if(g) out.push({id:'bring:'+ds,at:midnight+(ds0+g.leave-10)*60000,title:'🎒 持ち物',body:br.t,tag:'bring:'+ds,url:'#home'});}
     for(const c of L.checkins){
       if(!c.on||(d.ci||{})[c.id]) continue;
       out.push({id:'c:'+c.id+':'+ds,at:at(c.time),title:ciTitle(c)+'（'+c.time+'）',body:c.report?'今日の学習と制作をふり返りましょう':'ルーティンと生活の記録をつけましょう',tag:'c:'+c.id+':'+ds,url:'#checkin/'+c.id});
@@ -1813,6 +1862,24 @@ function pushItems(){
   }
   return out.filter(x=>x.at>now-30000).sort((a,b)=>a.at-b.at).slice(0,250);
 }
+/* 持ち物: a note for one day. Without a time of its own it goes with the leave-home notice of 行き (or 10 minutes
+   before leaving when there is none); with a time it comes by itself, also on a day off */
+function bringOf(ds){const b=dayRec(ds).bring, t=b?String(b.t||'').trim():'';return t?{t:t.slice(0,60),at:b.at||''}:null;}
+function bringSet(ds,k,v){setDay(ds,x=>{x.bring=Object.assign({},x.bring,{[k]:v});if(!String(x.bring.t||'').trim()&&!x.bring.at) delete x.bring;});render();schedulePush();}
+/* when the 持ち物 notice comes, in words */
+function bringWhen(ds){
+  const b=bringOf(ds), at=(dayRec(ds).bring||{}).at;if(at) return at+' にお知らせします';
+  const g=cmOn()&&!dayRec(ds).off?(cmDay(ds)||{}).go:null;
+  if(!g) return 'この日は行きの通勤がありません。お知らせする時刻を入れてください';
+  const r=routines().find(x=>x.byCm==='go-leave'&&x.before!=null&&routineApplies(ds,x)), N=cmNotify(g.route);
+  const m=r?g.leave-r.before:N.home!=null&&g.legs.some(x=>cmRide(x.l.kind))?g.leave-N.home:g.leave-10;
+  return '家を出る前（'+hmOf(m)+'）の通知でお知らせします';
+}
+function bringEditor(ds,id){const b=dayRec(ds).bring||{};
+  return el('div',{class:'bring'},
+    pfield(id+'-t','持ち物',el('input',{type:'text',id:id+'-t',value:b.t||'',maxlength:60,placeholder:'例：傘、会費',onchange:e=>bringSet(ds,'t',e.target.value.trim())})),
+    el('div',{class:'bring-at'},pfield(id+'-a','お知らせする時刻（任意）',ptime(id+'-a',b.at,v=>bringSet(ds,'at',v),'お知らせする時刻'))),
+    el('p',{class:'xs muted'},String(b.t||'').trim()?bringWhen(ds):'時刻を空けておくと、家を出る前の通知に添えます'));}
 /* the commute notices of one day (leave / board / before a transfer); rid carries the planned departure, so an old
    notice can be told apart from the current plan */
 function cmItems(ds,leaveNoted){
@@ -1821,7 +1888,8 @@ function cmItems(ds,leaveNoted){
     const cmd=cmDay(ds), atM=m=>midnight+(ds0+m)*60000, dl=x=>x&&x.dia&&(x.dia!=='wd'||cmd.dias.length>1)?'（'+DIA[x.dia]+'ダイヤ）':'';
     if(cmd) for(const dir of ['go','back']){const p=cmd[dir];if(!p) continue;const N=cmNotify(p.route), rides=p.legs.filter(x=>cmRide(x.l.kind));
       const first=rides[0], fl=first?first.l:null;
-      if(first&&N.home!=null&&!leaveNoted[dir]) out.push({id:'cmh:'+dir+':'+ds,at:atM(p.leave)-N.home*60000,title:(dir==='go'?'🏠 ':'🏢 ')+hmOf(p.leave)+' に出ます',body:hmOf(first.dep)+dl(first)+' '+(fl.from||'')+(fl.plat?' '+fl.plat:'')+(fl.car?' '+fl.car:'')+(fl.memo?'（'+fl.memo+'）':'')+'に乗ります。'+hmOf(p.arrive)+' 着の予定です',tag:'cm:'+ds+':'+dir+':h',url:'#home'});
+      const br=dir==='go'?bringOf(ds):null;
+      if(first&&N.home!=null&&!leaveNoted[dir]) out.push({id:'cmh:'+dir+':'+ds,at:atM(p.leave)-N.home*60000,title:(dir==='go'?'🏠 ':'🏢 ')+hmOf(p.leave)+' に出ます',body:(br&&!br.at?'持ち物：'+br.t+'。':'')+hmOf(first.dep)+dl(first)+' '+(fl.from||'')+(fl.plat?' '+fl.plat:'')+(fl.car?' '+fl.car:'')+(fl.memo?'（'+fl.memo+'）':'')+'に乗ります。'+hmOf(p.arrive)+' 着の予定です',tag:'cm:'+ds+':'+dir+':h',url:'#home'});
       rides.forEach((x,j)=>{const l=x.l;if(l.notify===false) return;const nx=nextDep(p,x.i), more={ds,rid:'cm:'+dir+':'+x.i+':'+x.dep,actions:nx?[{action:'next',title:'次の'+CM_KIND[l.kind]+'に乗る'}]:undefined};
         if(N.board!=null) out.push(Object.assign({id:'cmb:'+dir+':'+x.i+':'+ds,at:atM(x.dep)-N.board*60000,title:CM_ICON[l.kind]+' '+hmOf(x.dep)+' '+(l.from||'')+(l.plat?' '+l.plat:'')+(l.car?' '+l.car:''),
           body:(dl(x)?DIA[x.dia]+'ダイヤ・':'')+(l.memo?l.memo+'・':'')+'乗車'+(x.arr-x.dep)+'分（'+hmOf(x.arr)+' '+(l.to||'')+'着）。'+(nx?'次の'+CM_KIND[l.kind]+'は '+hmOf(nx.d)+' 発です':'次の'+CM_KIND[l.kind]+'は時刻表にありません'),tag:'cm:'+ds+':'+dir+':'+x.i,url:'#home'},more));
@@ -2057,23 +2125,28 @@ function cmLine(ds){
   const p=cmDay(ds);if(!p) return null;const s=x=>x?hmOf(x.leave)+'→'+hmOf(x.arrive):'—';
   return el('button',{type:'button',class:'cmline','aria-label':'今日の通勤の詳しい時刻を見る',onclick:()=>cmSheet(ds)},el('span',{'aria-hidden':'true'},'🚃'),el('span',{class:'small num'},'行き '+s(p.go)+'　帰り '+s(p.back)),el('span',{class:'xs muted'},cmDiaShort(p)+' ›'));
 }
+/* change one day's commute settings: the plan's shifts are told, and the notices are sent again */
+function cmDayEdit(ds,fn){const before=planActive()?adjSummary():null;setDay(ds,x=>{x.cm=Object.assign({},x.cm);fn(x.cm);});render();schedulePush();if(before){const m=adjEffect(before,adjSummary());if(m.indexOf('影響はありません')<0) toast(m);}}
+function cmDirSet(ds,dir,k,v){cmDayEdit(ds,c=>{c[dir]=Object.assign({},c[dir]);if(v===undefined||v==='') delete c[dir][k]; else c[dir][k]=v;if(!Object.keys(c[dir]).length) delete c[dir];delete c[dir+'Fix'];});}
 /* the calendar's day panel: that day's commute */
 function cmDayPanel(ds){
   if(!cmOn()) return null;const d=dayRec(ds), o=d.cm||{}, p=cmDay(ds), C=commute(), routes=C.routes||[], bt=(C.byType||{})[dayTypeOf(ds,plan2())]||{};
-  const setOn=(sd,fn)=>{const before=planActive()?adjSummary():null;setDay(sd,x=>{x.cm=Object.assign({},x.cm);fn(x.cm);});render();schedulePush();if(before){const m=adjEffect(before,adjSummary());if(m.indexOf('影響はありません')<0) toast(m);}}, set=fn=>setOn(ds,fn);
+  const setOn=cmDayEdit, set=fn=>setOn(ds,fn);
   // the diagram belongs to the date the trains run on, so a trip past midnight has a second one (of the next date)
   const sds=p&&p.sds.length?p.sds:[ds], multi=sds.length>1||sds[0]!==ds;
   const dirRow=dir=>{const s=bt[dir]||{}, od=o[dir]||{}, rid=od.route||s.route, r=routes.find(x=>x.id===rid), mode=od.mode||s.mode||'at', key=ds+dir, usual=routes.find(x=>x.id===s.route);
-    const upd=(k,v)=>set(c=>{c[dir]=Object.assign({},c[dir]);if(v===undefined||v==='') delete c[dir][k]; else c[dir][k]=v;delete c[dir+'Fix'];});
+    const upd=(k,v)=>cmDirSet(ds,dir,k,v);
     const hasStay=r&&(r.legs||[]).some(l=>cmStay(l.kind));
-    return el('div',{class:'bydir'},
+    const skipBox=usual||od.route?el('label',{class:'row',for:'cx-'+key,style:'min-height:40px'},el('input',{type:'checkbox',id:'cx-'+key,checked:!!od.skip,onchange:e=>upd('skip',e.target.checked?1:undefined)}),el('span',{class:'small'},(dir==='go'?'行き':'帰り')+'の通勤はなし')):null;
+    if(od.skip) return el('div',{class:'bydir'},skipBox);
+    return el('div',{class:'bydir'},skipBox,
       el('div',{class:'grid2'},pfield('cr-'+key,(dir==='go'?'行き':'帰り')+'の経路',pselect('cr-'+key,od.route||'',[['',usual?'いつもの（'+usual.name+'）':'（なし）'],...routes.map(x=>[x.id,x.name])],v=>upd('route',v||undefined))),
         r?pfield('cb-'+key,'基準',pselect('cb-'+key,mode,[['at',dir==='go'?'着きたい時刻':'出る時刻'],['train','乗る電車']],v=>upd('mode',v))):el('span',{})),
       r?(mode==='train'?pfield('ct-'+key,'乗る電車',pselect('ct-'+key,od.train||s.train||'',[['','（選ぶ）'],...firstTrainTimes(r).map(m=>[hmOf(m),hmOf(m)+' 発'])],v=>upd('train',v)))
         :pfield('ca-'+key,dir==='go'?'着きたい時刻':'出る時刻',ptime('ca-'+key,od.at||s.at,v=>upd('at',v),dir==='go'?'着きたい時刻':'出る時刻'))):null,
-      hasStay?el('label',{class:'row',for:'cs-'+key,style:'min-height:40px'},el('input',{type:'checkbox',id:'cs-'+key,checked:(od.stay!=null?od.stay:s.stay)!==false,onchange:e=>upd('stay',e.target.checked)}),el('span',{class:'small'},'立ち寄る')):null);};
+      hasStay?el('label',{class:'row',for:'cs-'+key,style:'min-height:40px'},el('input',{type:'checkbox',id:'cs-'+key,checked:(od.stay!=null?od.stay:s.stay)!==false,onchange:e=>upd('stay',e.target.checked===(s.stay!==false)?undefined:e.target.checked)}),el('span',{class:'small'},'立ち寄る')):null);};
   return [el('h3',{class:'sub'},'通勤'),
-    p?['go','back'].map(dir=>p[dir]?el('p',{class:'small num'},(dir==='go'?'行き ':'帰り ')+hmOf(p[dir].leave)+' 出発 → '+hmOf(p[dir].arrive)+' 着'):null):el('p',{class:'xs muted'},o.none?'この日は通勤しません。':'この日は通勤がありません。'),
+    p?['go','back'].map(dir=>p[dir]?el('p',{class:'small num'},(dir==='go'?'行き ':'帰り ')+hmOf(p[dir].leave)+' 出発 → '+hmOf(p[dir].arrive)+' 着'):(o[dir]||{}).skip?el('p',{class:'small muted'},(dir==='go'?'行き':'帰り')+' なし'):null):el('p',{class:'xs muted'},o.none?'この日は通勤しません。':'この日は通勤がありません。'),
     el('label',{class:'row',for:'cmn-'+ds,style:'min-height:40px'},el('input',{type:'checkbox',id:'cmn-'+ds,checked:!!o.none,onchange:e=>set(c=>{if(e.target.checked) c.none=1; else delete c.none;})}),el('span',{class:'small'},'この日は通勤しない')),
     o.none?null:[dirRow('go'),dirRow('back'),
       sds.map(sd=>pfield('cmd-'+sd,multi?'ダイヤ（'+md(sd)+'・'+WD[parseYmd(sd).getDay()]+'の電車）':'ダイヤ',pselect('cmd-'+sd,(dayRec(sd).cm||{}).dia||'',[['','自動（'+DIA[cmDiaBase(sd)]+'）'],['wd','平日'],['sa','土曜'],['ho','休日']],v=>setOn(sd,c=>{if(v) c.dia=v; else delete c.dia;})))),
@@ -2693,6 +2766,7 @@ function render(){
   slot.replaceChildren(...(VIEW==='home'?[el('div',{class:'tleft'},el('b',{class:'hdate'},jpDate(today())),statusNode(true))].filter(Boolean):[el('span',{class:'topname'},'芒学')]));
   const main=document.getElementById('main'); main.replaceChildren(); main.className='wrap v-'+VIEW;
   main.append(...[].concat(VIEWS[VIEW](arg)).flat(9).filter(x=>x!=null&&x!==false));
+  retOverlay();
 }
 let LASTHASH=location.hash||'#home';
 window.addEventListener('hashchange',()=>{
@@ -2769,6 +2843,7 @@ function viewHome(){
   return [
     comebackCard(t),notice,prog,ciRow,routineSec,
     cmLine(t),
+    bringOf(t)?el('p',{class:'small bringline'},'🎒 今日の持ち物：'+bringOf(t).t):null,
     el('div',{class:'between'},el('h2',{class:'sec'},'今日やること'),phaseLabel(t)?el('span',{class:'pill',style:'padding:2px 10px;font-size:12px'},phaseLabel(t)):null),
     PLAN||planActive()?taskList(t,{compact:true}):noPlan(),
     next?el('p',{class:'xs muted',style:'text-align:center'},'次の節目 '+md(next[0])+' '+next[1]+'（あと'+diffDays(t,next[0])+'日）'):null,
