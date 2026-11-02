@@ -141,9 +141,9 @@ dialog.menu::backdrop{background:rgba(10,14,20,.45)}
 .rbs{display:flex;gap:6px;flex:none}
 .rb{width:48px;height:44px;padding:0;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:20px;font-weight:700;cursor:pointer;color:var(--muted)}
 .rb.ok[aria-pressed="true"]{background:var(--good-soft);border-color:var(--good);color:var(--good);font-weight:700}
-.rb.ng[aria-pressed="true"]{background:var(--bad-soft);border-color:var(--bad);color:var(--bad);font-weight:700}
+.rb.ng[aria-pressed="true"]{background:color-mix(in srgb,var(--muted) 16%,var(--surface));border-color:var(--muted);color:var(--ink);font-weight:700}
 .auto{font-size:13px;font-weight:700;flex:none}
-.auto.ok{color:var(--good)}.auto.ng{color:var(--bad)}.auto.na{color:var(--muted);font-weight:400}
+.auto.ok{color:var(--good)}.auto.ng{color:var(--ink)}.auto.na{color:var(--muted);font-weight:400}
 .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:var(--muted);text-decoration:none;min-height:36px}
 .badge.on{background:var(--accent-soft);border-color:transparent;color:var(--accent-ink);font-weight:500}
 .dot{display:inline-block;width:.62em;height:.62em;border-radius:50%;flex:none}
@@ -316,7 +316,11 @@ h2.sec{font-size:14px;color:var(--muted);font-weight:700}
 .rcard .rn{font-size:13px;font-weight:500;line-height:1.3;min-height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .rcard .rtm{font-size:11px;color:var(--muted)}
 .rcard .rbs{margin-top:2px;gap:6px}.rcard .rb{flex:1;width:auto;height:36px;font-size:18px}
-.rcard.ok{border-color:var(--good);background:var(--good-soft)}.rcard.ng{border-color:var(--bad);background:var(--bad-soft)}
+.rcard{transition:opacity .25s,transform .25s}.rcard.leaving{opacity:0;transform:translateY(-8px) scale(.96)}
+.ansrow{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:2px 0}
+.achip{flex:none;display:inline-flex;align-items:center;gap:3px;min-height:36px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:15px;cursor:pointer}
+.achip b{font-size:13px;color:var(--muted)}
+.alldone{color:var(--good);font-weight:600}
 .rcard.sleep{cursor:pointer;border-style:dashed;border-color:var(--accent)}.rcard.sleep .rn{color:var(--accent-ink);font-weight:700}
 .qrow{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
 .qrow .chip{flex:none}
@@ -1286,6 +1290,21 @@ function routineRow(ds,r,first){
     el('span',{class:'xs muted num'},r.kind==='sleep'?'睡眠の記録から自動で判定':(r.by?r.by+' まで':'時刻の期限なし')));
   if(r.kind==='sleep') return el('div',{class:'rt'+(first?' first':'')},label,el('span',{class:'auto '+(s===1?'ok':s===0?'ng':'na')},s===1?'できた':s===0?'できなかった':'記録なし'));
   return el('div',{class:'rt'+(first?' first':'')},label,el('div',{class:'rbs'},rbtn(ds,r,1),rbtn(ds,r,0)));
+}
+function answerRoutine(ds,r,val,card){
+  setDay(ds,d=>{d.r[r.id]=val;});
+  toast(val?'できた！ 記録しました':'正直に答えてくれて、ありがとう');
+  const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(card&&!reduce){card.classList.add('leaving');setTimeout(render,260);} else render();
+}
+function answerSheet(ds,r){
+  const s=routineState(ds,r), close=()=>document.getElementById('sheet').close();
+  openSheet((r.emoji?r.emoji+' ':'')+r.name,
+    el('p',{class:'small muted'},'いまの答え：'+(s===1?'できた':'できなかった')),
+    el('div',{class:'grid2'},
+      el('button',{type:'button',class:'btn'+(s===1?'':' sub'),onclick:()=>{close();setDay(ds,d=>{d.r[r.id]=1;});render();}},'○ できた'),
+      el('button',{type:'button',class:'btn'+(s===0?'':' sub'),onclick:()=>{close();setDay(ds,d=>{d.r[r.id]=0;});render();}},'× できなかった')),
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>{close();setDay(ds,d=>{delete d.r[r.id];});render();}},'答えを取り消す（まだにもどす）'));
 }
 function rbtn(ds,r,val){
   const s=routineState(ds,r), text=val?'できた':'できなかった';
@@ -2280,16 +2299,22 @@ function viewHome(){
   // routines: a horizontal strip; the sleep goal shows a record button until sleep is recorded
   const rs=routines().filter(r=>routineApplies(t,r)), rate=dayRate(t);
   rs.sort((a,b)=>(a.kind==='sleep'?-1:0)-(b.kind==='sleep'?-1:0));   // sleep record first, then the order set in 習慣の設定
-  const cards=[];
+  // answering is what counts: a routine leaves the strip once answered, whether ○ or ×; the answers sit in a small row
+  const cards=[], answered=[];
   for(const r of rs){
-    if(r.kind==='sleep'){if(sleepMin(d.rec.sleep)==null) cards.push(el('button',{type:'button',class:'rcard sleep',role:'listitem',onclick:()=>sleepSheet(t)},el('span',{class:'rh'},el('span',{class:'re'},(L.items.find(i=>i.id==='sleep')||{}).emoji||'😴'),el('span',{class:'rtm'},'目標 '+fmtMin(L.sleepTarget))),el('span',{class:'rn'},'睡眠を記録する'),el('span',{class:'xs',style:'color:var(--accent-ink);margin-top:auto'},'寝た・起きた時刻 ›')));continue;}
-    const s=routineState(t,r);
-    cards.push(el('div',{class:'rcard'+(s===1?' ok':s===0?' ng':''),role:'listitem'},el('span',{class:'rh'},el('span',{class:'re'},r.emoji||'・'),el('span',{class:'rtm num'},r.by?r.by+' まで':'いつでも')),el('span',{class:'rn'},r.name),el('div',{class:'rbs'},rbtn(t,r,1),rbtn(t,r,0))));
+    if(r.kind==='sleep'&&sleepMin(d.rec.sleep)!=null){answered.push(r);continue;}
+    if(r.kind!=='sleep'&&routineState(t,r)!=null){answered.push(r);continue;}
+    if(r.kind==='sleep'){cards.push(el('button',{type:'button',class:'rcard sleep',role:'listitem',onclick:()=>sleepSheet(t)},el('span',{class:'rh'},el('span',{class:'re'},(L.items.find(i=>i.id==='sleep')||{}).emoji||'😴'),el('span',{class:'rtm'},'目標 '+fmtMin(L.sleepTarget))),el('span',{class:'rn'},'睡眠を記録する'),el('span',{class:'xs',style:'color:var(--accent-ink);margin-top:auto'},'寝た・起きた時刻 ›')));continue;}
+    const card=el('div',{class:'rcard',role:'listitem'},el('span',{class:'rh'},el('span',{class:'re'},r.emoji||'・'),el('span',{class:'rtm num'},r.by?r.by+' まで':'いつでも')),el('span',{class:'rn'},r.name),
+      el('div',{class:'rbs'},[1,0].map(v=>el('button',{type:'button',class:'rb '+(v?'ok':'ng'),'aria-label':r.name+'：'+(v?'できた':'できなかった'),title:v?'できた':'できなかった',onclick:()=>answerRoutine(t,r,v,card)},v?'○':'×'))));
+    cards.push(card);
   }
+  const ansRow=answered.length?el('div',{class:'ansrow'},el('span',{class:'xs muted',style:'flex:none'},'答えた'),
+    answered.map(r=>{const s=routineState(t,r);return el('button',{type:'button',class:'achip','aria-label':r.name+'：'+(s===1?'できた':s===0?'できなかった':'記録あり')+'（押すと変えられます）',onclick:()=>r.kind==='sleep'?sleepSheet(t):answerSheet(t,r)},el('span',{'aria-hidden':'true'},r.emoji||'・'),el('b',{'aria-hidden':'true'},s===1?'○':s===0?'×':'✓'));})):null;
   const sk=streak();
   const routineSec=[
-    el('div',{class:'between'},el('h2',{class:'sec'},'ルーティン'),el('span',{class:'xs muted num'},d.off?'':(rate?'できた '+rate.ok+' / '+rate.all:'')+(sk>=2?'　記録 '+sk+'日目':''))),
-    d.off?el('p',{class:'small muted'},'今日はお休みの日です。ゆっくり休んでください。'):(cards.length?el('div',{class:'rstrip',role:'list','aria-label':'今日のルーティン'},cards):null),
+    el('div',{class:'between'},el('h2',{class:'sec'},'ルーティン'),el('span',{class:'xs muted num'},d.off?'':(rs.length?'答えた '+answered.length+' / '+rs.length:'')+(sk>=2?'　記録 '+sk+'日目':''))),
+    d.off?el('p',{class:'small muted'},'今日はお休みの日です。ゆっくり休んでください。'):[cards.length?el('div',{class:'rstrip',role:'list','aria-label':'まだ答えていないルーティン'},cards):(rs.length?el('p',{class:'small alldone'},'今日のルーティンには、ぜんぶ答えました。'):null),ansRow],
     el('div',{class:'qrow'},el('button',{type:'button',class:'hrec',onclick:()=>{TABSTATE.day='life';go('day/'+t);}},'✎ 今日の習慣記録'),(L.quick||[]).slice(0,4).map(q=>el('button',{type:'button',class:'chip sm',onclick:()=>addQuick(q,t)},'＋'+quickLabel(q))))];
   const next=milestones().find(m=>m[0]>=t);
   return [
