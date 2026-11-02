@@ -1,4 +1,4 @@
-const CACHE='mangxue-v17';
+const CACHE='mangxue-v19';
 const SHELL=['./','index.html','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png','icons/apple-touch-icon.png','icons/badge-96.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith('mangxue-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
@@ -17,9 +17,22 @@ self.addEventListener('fetch',e=>{
 });
 
 /* notifications sent by the user's own sender (Cloudflare) */
+function idbGet(key){return new Promise(res=>{let r;try{r=indexedDB.open('mangxue',1);}catch(_){res(null);return;}
+  r.onupgradeneeded=()=>r.result.createObjectStore('kv');
+  r.onsuccess=()=>{try{const g=r.result.transaction('kv').objectStore('kv').get(key);g.onsuccess=()=>res(g.result||null);g.onerror=()=>res(null);}catch(_){res(null);}};
+  r.onerror=()=>res(null);});}
 self.addEventListener('push',e=>{
   let d={};try{d=e.data?e.data.json():{};}catch(_){d={title:'芒学 mángxué',body:e.data?e.data.text():''};}
-  e.waitUntil(self.registration.showNotification(d.title||'芒学 mángxué',{body:d.body||'',tag:d.tag||undefined,lang:'ja',icon:'icons/icon-192.png',badge:'icons/badge-96.png',data:d,actions:(d.actions||[]).slice(0,2)}));
+  e.waitUntil((async()=>{
+    let show=d, quiet=false;
+    // a commute notice made before the trip was worked out again (次の電車に乗る) shows the current plan instead, quietly
+    if(d.rid&&String(d.rid).indexOf('cm:')===0&&d.tag){
+      const notes=await idbGet('__cmnotes'), n=notes&&notes[d.tag];
+      if(n&&n.rid&&n.rid!==d.rid){show=Object.assign({},d,{title:'（組み直し後）'+n.title,body:n.body,rid:n.rid,actions:n.actions||d.actions});quiet=true;}
+      else if(notes&&!n&&(notes.__days||[]).includes(d.ds)){show=Object.assign({},d,{title:'通勤の予定は組み直し済みです',body:'アプリで最新の予定を確かめてください',actions:[]});quiet=true;}
+    }
+    return self.registration.showNotification(show.title||'芒学 mángxué',{body:show.body||'',tag:show.tag||undefined,lang:'ja',icon:'icons/icon-192.png',badge:'icons/badge-96.png',data:show,actions:(show.actions||[]).slice(0,2),silent:quiet});
+  })());
 });
 // ○ / × on the notification: keep the answer on this device; the app applies it next time it opens
 function saveAnswer(a){return new Promise(res=>{let r;try{r=indexedDB.open('mangxue',1);}catch(_){res();return;}
