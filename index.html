@@ -150,6 +150,10 @@ dialog.menu::backdrop{background:rgba(10,14,20,.45)}
 .dot{display:inline-block;width:.62em;height:.62em;border-radius:50%;flex:none}
 .entry{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px dashed var(--line);font-size:14px}
 .entry .x{margin-left:auto;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);cursor:pointer;color:var(--muted);flex:none}
+.addplus{width:100%;min-height:56px;border:1px dashed var(--line);border-radius:12px;background:var(--bg);color:var(--accent-ink);font:inherit;font-size:28px;font-weight:300;line-height:1;cursor:pointer}
+.stot{font-weight:700;font-size:15px;white-space:nowrap}
+.stot.zero{color:var(--muted);font-weight:500}
+.addrow[hidden]{display:none}
 .addrow{display:flex;flex-direction:column;gap:8px;padding-top:8px;border-top:1px solid var(--line)}
 .calhead{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px}
 .calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
@@ -376,6 +380,7 @@ body.has-ret .wrap{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 .cmline{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:6px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-align:left;cursor:pointer}
 .cmline .small{flex:1;min-width:0}
 .savebar{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:5;display:flex;flex-direction:column;gap:8px;padding:10px 14px;border-radius:14px;border:1px solid var(--line);background:var(--surface);box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.willsave{display:inline-block;margin-left:8px;padding:2px 10px;border-radius:999px;background:color-mix(in srgb,#E8590C 16%,var(--surface));border:1px solid #E8590C;color:#B5400A;font-weight:700}
 .savebar.on{border:2px solid #E8590C}
 .savebar.on>span{color:#E8590C;font-weight:700}
 .tsaved{gap:4px}
@@ -1558,13 +1563,13 @@ function sleepSheet(ds){
       el('label',{class:'field',for:'sh-wake'},'起きた時刻',el('input',{type:'time',id:'sh-wake',value:st.wake,onchange:e=>{st.wake=e.target.value;}}))),
     el('button',{type:'button',class:'btn',onclick:()=>{if(!st.bed||!st.wake){toast('寝た時刻と起きた時刻を入れてください');return;}setDay(ds,d=>{d.rec.sleep={bed:st.bed,wake:st.wake};});s.close();toast('睡眠 '+fmtMin(sleepMin(st))+' を記録しました');render();}},'記録する'));
 }
-function minChooser(st){
+function minChooser(st,cb){
   const chips=el('div',{class:'chips'});
   const hI=el('input',{type:'number',min:0,max:23,inputmode:'numeric',class:'num','aria-label':'時間（自由に入れる）',style:'width:68px'});
   const mI=el('input',{type:'number',min:0,max:59,inputmode:'numeric',class:'num','aria-label':'分（自由に入れる）',style:'width:68px'});
-  const upd=()=>{const v=(parseInt(hI.value,10)||0)*60+(parseInt(mI.value,10)||0);if(v>0){st.m=v;[...chips.children].forEach(b=>b.setAttribute('aria-pressed','false'));}};
+  const upd=()=>{const v=(parseInt(hI.value,10)||0)*60+(parseInt(mI.value,10)||0);if(v>0){st.m=v;[...chips.children].forEach(b=>b.setAttribute('aria-pressed','false'));}else if(!chips.querySelector('[aria-pressed="true"]')) st.m=null;if(cb) cb();};
   hI.addEventListener('input',upd);mI.addEventListener('input',upd);
-  chips.append(...[...new Set([st.m,...MIN_CHOICES])].sort((a,b)=>a-b).map(n=>el('button',{type:'button',class:'chip sm','aria-pressed':String(n===st.m),onclick:e=>{st.m=n;hI.value='';mI.value='';[...chips.children].forEach(b=>b.setAttribute('aria-pressed',String(b===e.currentTarget)));}},fmtMin(n))));
+  chips.append(...[...new Set([st.m,...MIN_CHOICES].filter(n=>n>0))].sort((a,b)=>a-b).map(n=>el('button',{type:'button',class:'chip sm','aria-pressed':String(n===st.m),onclick:e=>{st.m=n;hI.value='';mI.value='';[...chips.children].forEach(b=>b.setAttribute('aria-pressed',String(b===e.currentTarget)));if(cb) cb();}},fmtMin(n))));
   return el('div',{style:'display:flex;flex-direction:column;gap:8px'},chips,
     el('div',{class:'row',style:'gap:6px;flex-wrap:wrap'},el('span',{class:'xs muted'},'自由に入れる'),hI,el('span',{class:'small'},'時間'),mI,el('span',{class:'small'},'分')));
 }
@@ -1613,28 +1618,35 @@ function itemEditor(ds,it){
   return el('div',{class:'card'},el('label',{class:'row',for:'chk-'+uid},el('input',{type:'checkbox',id:'chk-'+uid,checked:!!v,onchange:e=>{setDay(ds,d=>{d.rec[it.id]=e.target.checked?1:0;});}}),badgeNode(it),el('b',{},it.name)));
 }
 function spanEditor(ds,key,name,badge,subs,list){
-  const uid=key.replace('@','_')+'-'+ds, st={sub:subs[0]?subs[0].id:'',mode:'min',a:'',b:'',m:30};
+  const uid=key.replace('@','_')+'-'+ds, st={sub:subs[0]?subs[0].id:'',mode:'min',a:'',b:'',m:null};
   const nm=id=>(subs.find(s=>s.id===id)||{}).name||'';
   const total=list.reduce((a,x)=>a+spanMin(x),0);
+  const ready=()=>st.mode==='time'?!!(st.a&&st.b):st.m>0;
+  const add=()=>{
+    if(!ready()) return;
+    const ent=st.mode==='time'?{s:st.sub,a:st.a,b:st.b}:{s:st.sub,m:st.m};
+    setDay(ds,d=>{d.rec[key]=(Array.isArray(d.rec[key])?d.rec[key]:[]).concat([ent]);});toast((nm(st.sub)||name)+'を記録しました');render();
+  };
+  // 記録する stays grey until a time is in, then takes the colour
+  const recBtn=el('button',{type:'button',class:'btn sub sm',disabled:true,onclick:add},'記録する');
+  const refresh=()=>{const r=ready();recBtn.disabled=!r;recBtn.className=r?'btn sm':'btn sub sm';};
   const pick=(attr)=>e=>{st[attr[0]]=attr[1];[...e.target.parentNode.children].forEach(b=>b.setAttribute('aria-pressed',String(b===e.target)));};
   const subChips=el('div',{class:'chips'},subs.map(s=>el('button',{type:'button',class:'chip','aria-pressed':String(st.sub===s.id),onclick:pick(['sub',s.id])},s.name)));
   const timeBox=el('div',{class:'grid2',hidden:true},
-    el('label',{class:'field',for:'a-'+uid},'はじめ',el('input',{type:'time',id:'a-'+uid,onchange:e=>{st.a=e.target.value;}})),
-    el('label',{class:'field',for:'b-'+uid},'おわり',el('input',{type:'time',id:'b-'+uid,onchange:e=>{st.b=e.target.value;}})));
-  const minBox=minChooser(st);
+    el('label',{class:'field',for:'a-'+uid},'はじめ',el('input',{type:'time',id:'a-'+uid,oninput:e=>{st.a=e.target.value;refresh();},onchange:e=>{st.a=e.target.value;refresh();}})),
+    el('label',{class:'field',for:'b-'+uid},'おわり',el('input',{type:'time',id:'b-'+uid,oninput:e=>{st.b=e.target.value;refresh();},onchange:e=>{st.b=e.target.value;refresh();}})));
+  const minBox=minChooser(st,refresh);
   const modeSeg=el('div',{class:'seg',style:'grid-template-columns:1fr 1fr'},
-    el('button',{type:'button','aria-pressed':'true',onclick:e=>{st.mode='min';minBox.hidden=false;timeBox.hidden=true;e.target.setAttribute('aria-pressed','true');e.target.nextSibling.setAttribute('aria-pressed','false');}},'分で入れる'),
-    el('button',{type:'button','aria-pressed':'false',onclick:e=>{st.mode='time';minBox.hidden=true;timeBox.hidden=false;e.target.setAttribute('aria-pressed','true');e.target.previousSibling.setAttribute('aria-pressed','false');}},'時刻で入れる'));
-  const add=()=>{
-    let ent;
-    if(st.mode==='time'){if(!st.a||!st.b){toast('はじめとおわりの時刻を入れてください');return;}ent={s:st.sub,a:st.a,b:st.b};}
-    else ent={s:st.sub,m:st.m};
-    setDay(ds,d=>{d.rec[key]=(Array.isArray(d.rec[key])?d.rec[key]:[]).concat([ent]);});toast((nm(st.sub)||name)+'を記録しました');render();
-  };
-  return el('div',{class:'card'},el('div',{class:'between'},el('h2',{class:'row',style:'gap:6px'},badge,name),total?el('span',{class:'small muted num'},'合計 '+fmtMin(total)):null),
+    el('button',{type:'button','aria-pressed':'true',onclick:e=>{st.mode='min';minBox.hidden=false;timeBox.hidden=true;e.target.setAttribute('aria-pressed','true');e.target.nextSibling.setAttribute('aria-pressed','false');refresh();}},'分で入れる'),
+    el('button',{type:'button','aria-pressed':'false',onclick:e=>{st.mode='time';minBox.hidden=true;timeBox.hidden=false;e.target.setAttribute('aria-pressed','true');e.target.previousSibling.setAttribute('aria-pressed','false');refresh();}},'時刻で入れる'));
+  // at first only a ＋; it opens the inputs, and 記録する (or やめる) brings the ＋ back
+  const addRow=el('div',{class:'addrow',hidden:true},subs.length?subChips:null,modeSeg,minBox,timeBox,
+    el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>{addRow.hidden=true;plus.hidden=false;}},'やめる'),recBtn));
+  const plus=el('button',{type:'button',class:'addplus','aria-label':name+'の時間を追加',onclick:()=>{plus.hidden=true;addRow.hidden=false;}},'＋');
+  return el('div',{class:'card'},el('div',{class:'between'},el('h2',{class:'row',style:'gap:6px'},badge,name),el('span',{class:'stot num'+(total?'':' zero'),'aria-label':'合計 '+(total?fmtMin(total):'0時間')},total?fmtMin(total):'0時間')),
     list.map((x,i)=>el('div',{class:'entry'},el('span',{},x.title||nm(x.s)||name),el('span',{class:'small muted num'},x.a?x.a+'〜'+x.b+'（'+fmtMin(spanMin(x))+'）':fmtMin(x.m)),
       el('button',{type:'button',class:'x','aria-label':(x.title||nm(x.s)||name)+'の記録を消す',onclick:()=>{setDay(ds,d=>{d.rec[key]=(d.rec[key]||[]).filter((_,j)=>j!==i);});render();}},'×'))),
-    el('div',{class:'addrow'},subs.length?subChips:null,modeSeg,minBox,timeBox,el('button',{type:'button',class:'btn sub sm',onclick:add},'記録する')));
+    plus,addRow);
 }
 function routineRow(ds,r,first){
   const s=routineState(ds,r);
@@ -1733,7 +1745,7 @@ function taskList(ds,opt){
 }
 function trackEditors(ds){
   const tr=tracks();
-  return PLAN?['study','manga'].filter(k=>tr[k]==='time'||trackEntries(ds,k).length).map(k=>spanEditor(ds,'@'+k,trackName(k)+'に使った時間',el('span',{'aria-hidden':'true'},k==='study'?P_().study.icon||'📖':P_().create.icon||'✏️'),[],trackEntries(ds,k))):null;
+  return (PLAN||planActive())?['study','manga'].filter(k=>tr[k]==='time'||trackEntries(ds,k).length).map(k=>spanEditor(ds,'@'+k,trackName(k)+'に使った時間',el('span',{'aria-hidden':'true'},k==='study'?P_().study.icon||'📖':P_().create.icon||'✏️'),[],trackEntries(ds,k))):null;
 }
 function lifePanel(ds){
   const L=life(), d=dayRec(ds), rs=routines().filter(r=>routineApplies(ds,r));
@@ -1798,7 +1810,7 @@ function viewCheckin(id){
   const again=(dayRec(ds).ci||{})[id];
   return [
     el('div',{},el('span',{class:'small muted'},jpDate(ds)+(again?'・'+hm(again)+'に記録済み（答え直せます）':'')),el('h1',{},ciTitle(c))),
-    c.report&&PLAN?[el('h2',{class:'sec'},'学習と制作'),el('p',{class:'xs muted'},'今日やったことにチェックを入れてください。'+(tracks().study==='time'||tracks().manga==='time'?'使った時間も一緒に記録します。':'')),taskList(ds),trackEditors(ds)]:null,
+    c.report&&(PLAN||planActive())?[el('h2',{class:'sec'},'学習と制作'),el('p',{class:'xs muted'},'今日やったことにチェックを入れてください。'+(tracks().study==='time'||tracks().manga==='time'?'使った時間も一緒に記録します。':'')),taskList(ds),trackEditors(ds)]:null,
     rs.length?el('div',{class:'card'},el('h2',{},'ルーティン'),rs.map((r,i)=>routineRow(ds,r,i===0))):null,
     its.length&&c.report?el('h2',{class:'sec'},'生活の記録'):null,
     its.map(it=>itemEditor(ds,it)),
@@ -2772,11 +2784,11 @@ function timeEditor(P,up,rr){
       el('input',{type:'number',id:'tg-'+tr+'-'+d.id,class:'num',min:0,step:15,inputmode:'numeric',value:(d.goal||{})[tr]??'',placeholder:'例：120',onchange:e=>upT(d.id,x=>{const v=e.target.value===''?null:Math.max(0,parseInt(e.target.value,10)||0);x.goal=Object.assign({},x.goal,{[tr]:v});})}))))),
     el('div',{class:'field'},el('span',{class:'row',style:'gap:6px'},'作業コマ（何時から何分、何に使うか）',slotHelp()),
       (d.slots||[]).map((s,si)=>slotRow(d,s,si))),
-    el('button',{type:'button',class:'btn sub sm',onclick:()=>upT(d.id,x=>{x.slots.push({id:newId('sl'),label:tname('study'),time:'',track:'study',min:60,use:'any'});})},'コマを追加'),
+    el('button',{type:'button',class:'btn sub sm',style:'align-self:stretch;width:100%',onclick:()=>upT(d.id,x=>{x.slots.push({id:newId('sl'),label:tname('study'),time:'',track:'study',min:60,use:'any'});})},'コマを追加'),
     typeCheckView(d,P),
     el('div',{class:'grid2',style:'margin-bottom:12px'},
       types.length>1?twoStepBtn('この時間割を消す',()=>up(x=>{x.dayTypes=x.dayTypes.filter(y=>y.id!==d.id);x.week=x.week.map(v=>v===d.id?x.dayTypes[0].id:v);for(const k of Object.keys(x.dates||{})) if(x.dates[k]===d.id) delete x.dates[k];if(x.dflt===d.id) x.dflt=x.dayTypes[0].id;})):el('span',{}),
-      up===tUp?el('button',{type:'button',class:'btn sub sm',onclick:()=>goCommuteType(d.id)},'この時間割の通勤を設定する'):el('span',{}))),{id:'tt-'+d.id});
+      up===tUp?el('button',{type:'button',class:'btn sub sm',onclick:()=>goCommuteType(d.id)},'通勤設定に移動'):el('span',{}))),{id:'tt-'+d.id});
   return [
     el('div',{class:'seg',style:'grid-template-columns:1fr 1fr'},
       el('button',{type:'button','aria-pressed':String(mode==='week'),onclick:()=>{if(mode==='week') return;up(x=>{for(const [ds,v] of Object.entries(x.dates||{})) if((x.week||[])[parseYmd(ds).getDay()]===v) delete x.dates[ds];x.mode='week';});}},'週ごと'),
@@ -2990,7 +3002,7 @@ function timeTab(){
   const saved=plan2(), P=TDRAFT||saved, dirty=!!TDRAFT, mode=m=>m==='dates'?'日ごと':'週ごと';
   return [
     el('div',{class:'card tsaved'},
-      el('p',{class:'small'},'保存されている設定：',el('b',{},mode(saved.mode)),dirty&&(P.mode||'week')!==(saved.mode||'week')?el('span',{},'　→ 保存すると ',el('b',{},mode(P.mode))):null),
+      el('p',{class:'small'},'保存されている設定：',el('b',{},mode(saved.mode)),dirty&&(P.mode||'week')!==(saved.mode||'week')?el('span',{class:'willsave'},'保存すると：',el('b',{},mode(P.mode))):null),
       el('p',{class:'xs muted'},'変えたあと「保存する」を押すまで、計画には反映しません。'+(planActive()?'保存すると、減った時間は同じ週の余りで吸収し、無理なら予備日が減ります。':'ここで決めた時間は、計画を組むときにも使われます。'))),
     timeEditor(P,tUp,render),
     el('div',{class:'savebar'+(dirty?' on':''),role:'region','aria-label':'保存'},
