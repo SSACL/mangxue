@@ -392,7 +392,20 @@ body.has-ret .wrap{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 .gbar .now{position:absolute;top:0;bottom:0;width:2px;background:var(--ink)}
 .stp{display:grid;grid-template-columns:minmax(0,1fr) 72px 104px;gap:6px;align-items:center;padding:6px 0;border-top:1px dashed var(--line)}
 .stpb{grid-column:1/-1;display:flex;gap:6px}
-.slot{display:grid;grid-template-columns:96px minmax(0,1fr) 64px;gap:6px;align-items:center;padding:6px 0;border-top:1px dashed var(--line)}
+.slot{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,.72fr);gap:8px;align-items:start;padding:10px;margin-top:6px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.slot .sf{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);min-width:0}
+.slot .sf input,.slot .sf select{width:100%;min-width:0;padding:8px 6px 8px 10px;font-size:15px;min-height:44px}
+.slot .sf input[type=number]{-moz-appearance:textfield}
+.slot .sf input[type=number]::-webkit-inner-spin-button,.slot .sf input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.slot .sdel{justify-self:end;align-self:end;width:44px;height:40px;font-size:16px}
+.slot .sf.wide{grid-column:span 2}
+details>summary .tn-view{flex:1 1 auto;min-width:0}
+details>summary .tn-edit{display:none}
+details[open]>summary .tn-view{display:none}
+details[open]>summary .tn-edit{display:block;flex:1 1 auto;min-width:0;font:inherit;font-weight:700;color:var(--ink);padding:6px 10px;min-height:40px;border:1px dashed var(--accent);border-radius:10px;background:var(--surface)}
+details[open]>summary .tsum{display:none}
+.btn.two{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;line-height:1.15;padding-top:4px;padding-bottom:4px}
+.btn.two .bsub{font-size:10.5px;font-weight:500;color:var(--muted)}
 .wadj{display:grid;grid-template-columns:56px minmax(0,1fr) minmax(0,1fr);gap:6px;align-items:center}
 .card.notice{background:#FFF1E6;border:1px solid #E8590C;gap:8px}
 .card.notice.good{background:var(--good-soft);border-color:var(--good)}
@@ -2139,6 +2152,21 @@ function cmSave(){const d=CDRAFT;if(!d) return;CDRAFT=null;const before=planActi
   const m=before?adjEffect(before,adjSummary()):'';toast(linked?'保存しました。「家を出る」「帰りの電車に乗る」のルーティンを、通勤の時刻に合わせました':m&&m.indexOf('影響はありません')<0?'保存しました。'+m:'保存しました');}
 function cmDiscard(){CDRAFT=null;CAPV++;render();}
 const TTTAB={};
+/* a card title that turns into a name box while the card is open: tapping it renames (it does not fold the card) */
+function titleName(name,label,onset){
+  return [el('span',{class:'tn-view'},name),
+    el('input',{type:'text',class:'tn-edit',value:name,'aria-label':label+'（タップして変更）',
+      onclick:e=>{e.preventDefault();e.stopPropagation();},
+      onkeydown:e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();e.target.blur();}},
+      onkeyup:e=>{e.preventDefault();e.stopPropagation();},
+      onchange:e=>{const v=e.target.value.trim();if(!v){e.target.value=name;return;}if(v!==name) onset(v,e.target);}})];
+}
+/* what the 作業コマ are for */
+function slotHelp(){return el('button',{type:'button',class:'help','aria-label':'作業コマについて',onclick:e=>{e.preventDefault();e.stopPropagation();openSheet('作業コマについて',
+  el('p',{class:'small'},'ここに登録したコマが、この時間割の日の「今日やること」になります。計画は、学習・制作のコマの時間に合わせて、テキストや問題集、制作の作業を割り振ります。'),
+  el('p',{class:'small'},'「アプリで演習」のコマには、読み終えた範囲の問題を「演習○問」として出します。'),
+  el('p',{class:'small'},'通勤の機能を使っている時間割では、電車の中と立ち寄り先のコマは通勤の設定から自動で入ります。その日は、ここの「アプリで演習」のコマは使いません。'),
+  el('p',{class:'small'},'「そのほか」のコマは、今日やることに予定として出ますが、学習・制作の作業は割り振りません。'));}},'?');}
 /* what skipping the commute does, and what to add when other plans fill the time too */
 function skipHelp(){return el('button',{type:'button',class:'help','aria-label':'スキップについての説明',onclick:e=>{e.preventDefault();e.stopPropagation();openSheet('通勤設定のスキップ',
   el('p',{class:'small'},'スキップすると、その日の通勤の時刻・通知・電車での演習のコマ・通勤に合わせたルーティンだけがなくなります。ほかの学習・制作のコマはそのまま残ります。'),
@@ -2232,9 +2260,8 @@ function viewCommuteBody(){
       full?null:el('button',{type:'button',class:'btn sub',onclick:()=>{sh();rReverse(r);}},'逆向きの経路を作る'),
       twoStepBtn('この経路を消す',()=>{sh();rDel(r);toast('「'+r.name+'」を消しました');}),
       used.length?el('p',{class:'xs muted'},'時間割 '+used.join('・')+' で使っています。消すと、その時間割のこの通勤は「使わない」になります。'):null));};
-  const rEdit=r=>{const N=r.notify||{}, hasStay=(r.legs||[]).some(l=>cmStay(l.kind));return det('r:'+r.id,[el('span',{style:'flex:1;min-width:0'},r.name),el('span',{class:'xs muted'},(r.legs||[]).map(l=>CM_ICON[l.kind]).join('')),
+  const rEdit=r=>{const N=r.notify||{}, hasStay=(r.legs||[]).some(l=>cmStay(l.kind));return det('r:'+r.id,[titleName(r.name,'経路の名前',v=>upR(r.id,x=>{x.name=v;})),el('span',{class:'xs muted tsum'},(r.legs||[]).map(l=>CM_ICON[l.kind]).join('')),
       el('button',{type:'button',class:'ordb rmenu','aria-label':'「'+r.name+'」の並べ替え・コピー・逆向き・削除',onclick:e=>{e.preventDefault();e.stopPropagation();rMenu(r);}},'⋯')],
-    lab('rn-'+r.id,'経路の名前*',txt('rn-'+r.id,r.name,v=>{if(v) upR(r.id,x=>{x.name=v;});},'例：帰り')),
     hasStay?el('p',{class:'xs muted'},'立ち寄るとき'):null,
     el('div',{class:'legs'},(r.legs||[]).map((l,i)=>legCard(r,l,i,'legs'))),
     addChips(r,'legs'),
@@ -2290,7 +2317,7 @@ function viewCommuteBody(){
       el('p',{class:'xs muted'},'0時〜3時の電車は、前の日のダイヤで数えます（金曜の終電は平日ダイヤ、土曜の始発は土曜ダイヤ）。')),
     el('div',{class:'savebar'+(dirty?' on':''),role:'region','aria-label':'保存'},
       el('span',{class:'small'},dirty?'保存していない変更があります':'変更はありません'),
-      el('div',{class:'grid3'},el('button',{type:'button',class:'btn sub sm',disabled:!dirty,onclick:cmDiscard},'元に戻す'),el('button',{type:'button',class:'btn sub sm',onclick:cmPreview},'確認する'),el('button',{type:'button',class:'btn sm',disabled:!dirty,onclick:cmSave},'保存する')))
+      el('div',{class:'grid3'},el('button',{type:'button',class:'btn sub sm',disabled:!dirty,onclick:cmDiscard},'元に戻す'),el('button',{type:'button',class:'btn sub sm two',onclick:cmPreview},el('span',{class:'bsub'},'特定の日付で'),el('span',{},'確認する')),el('button',{type:'button',class:'btn sm',disabled:!dirty,onclick:cmSave},'保存する')))
   ];
 }
 /* 確認する: the trips of a chosen day, worked out with the settings as they are on the page (saved or not) */
@@ -2732,22 +2759,24 @@ function timeEditor(P,up,rr){
     el('div',{class:'field'},'塗る時間割',el('div',{class:'dtchips'},types.map(d=>typeChip(P,d.id,TST.brush===d.id,()=>{TST.brush=d.id;rr();},true)),el('button',{type:'button',class:'dtc sm','aria-pressed':String(!TST.brush),onclick:()=>{TST.brush='';rr();}},'決めない'))),
     el('div',{class:'calhead'},navBtn('','前の月',-1,()=>{TST.ym=ymd(new Date(y,m-2,1)).slice(0,7);rr();}),el('h2',{style:'text-align:center'},y+'年'+m+'月'),navBtn('','次の月',1,()=>{TST.ym=ymd(new Date(y,m,1)).slice(0,7);rr();})),
     el('div',{class:'calgrid'},cells)];
-  const tEdit=d=>Object.assign(pdet('t:'+d.id,[el('b',{class:'dtl'},dtLetter(d.id,P)),el('span',{style:'flex:1 0 auto'},d.name),el('span',{class:'xs muted num',style:'flex:0 1 auto;text-align:right'},tnameS('study')+' '+fmtMin(sum(d,'study'))+'・'+tnameS('create')+' '+fmtMin(sum(d,'create')))],
-    pfield('tn-'+d.id,'名前',ptext('tn-'+d.id,d.name,v=>{if(!v) return;if(types.some(x=>x.id!==d.id&&x.name===v)){toast('同じ名前の時間割があります');rr();return;}upT(d.id,x=>{x.name=v;});})),
+  // one 作業コマ: いつ｜作業区分｜分 on the first line, 何をする｜(アプリで演習)｜× on the second
+  const slotRow=(d,s,si)=>el('div',{class:'slot'},
+    el('label',{class:'sf'},el('span',{},'いつ'),el('input',{type:'time',value:s.time||'',onchange:e=>upT(d.id,x=>{x.slots[si].time=e.target.value;})})),
+    el('label',{class:'sf'},el('span',{},'作業区分'),el('select',{onchange:e=>upT(d.id,x=>{x.slots[si].track=e.target.value;if(e.target.value==='study') x.slots[si].use=x.slots[si].use||'any';})},[['study',tname('study')],['create',tname('create')],['other','そのほか']].map(([v,l])=>el('option',{value:v,selected:s.track===v},l)))),
+    el('label',{class:'sf'},el('span',{},'分'),el('input',{type:'number',class:'num',min:0,step:5,inputmode:'numeric',value:s.min,onchange:e=>upT(d.id,x=>{x.slots[si].min=Math.max(0,parseInt(e.target.value,10)||0);})})),
+    el('label',{class:'sf'+(s.track==='study'?'':' wide')},el('span',{},'何をする'),el('input',{type:'text',value:s.label,onchange:e=>upT(d.id,x=>{x.slots[si].label=e.target.value.trim()||s.label;})})),
+    s.track==='study'?el('label',{class:'sf'},el('span',{},'使い方'),el('select',{onchange:e=>upT(d.id,x=>{x.slots[si].use=e.target.value;})},[['any','何でも'],['app','アプリで演習']].map(([v,l])=>el('option',{value:v,selected:(s.use||'any')===v},l)))):null,
+    el('button',{type:'button',class:'ordb sdel','aria-label':'このコマを消す',onclick:()=>upT(d.id,x=>{x.slots.splice(si,1);})},'×'));
+  const tEdit=d=>Object.assign(pdet('t:'+d.id,[el('b',{class:'dtl'},dtLetter(d.id,P)),titleName(d.name,'時間割の名前',(v,inp)=>{if(types.some(x=>x.id!==d.id&&x.name===v)){toast('同じ名前の時間割があります');inp.value=d.name;return;}upT(d.id,x=>{x.name=v;});}),el('span',{class:'xs muted num tsum',style:'flex:0 1 auto;text-align:right'},tnameS('study')+' '+fmtMin(sum(d,'study'))+'・'+tnameS('create')+' '+fmtMin(sum(d,'create')))],
     el('div',{class:'field'},'1日の目標（任意）',el('div',{class:'grid2'},['study','create'].map(tr=>pfield('tg-'+tr+'-'+d.id,tname(tr)+'（分）',
       el('input',{type:'number',id:'tg-'+tr+'-'+d.id,class:'num',min:0,step:15,inputmode:'numeric',value:(d.goal||{})[tr]??'',placeholder:'例：120',onchange:e=>upT(d.id,x=>{const v=e.target.value===''?null:Math.max(0,parseInt(e.target.value,10)||0);x.goal=Object.assign({},x.goal,{[tr]:v});})}))))),
+    el('div',{class:'field'},el('span',{class:'row',style:'gap:6px'},'作業コマ（何時から何分、何に使うか）',slotHelp()),
+      (d.slots||[]).map((s,si)=>slotRow(d,s,si))),
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>upT(d.id,x=>{x.slots.push({id:newId('sl'),label:tname('study'),time:'',track:'study',min:60,use:'any'});})},'コマを追加'),
     typeCheckView(d,P),
-    up===tUp?el('button',{type:'button',class:'btn sub sm',onclick:()=>goCommuteType(d.id)},'この時間割の通勤を設定する'):null,
-    el('div',{class:'field'},'コマ（何時から何分、何に使うか）',
-      (d.slots||[]).map((s,si)=>el('div',{class:'slot'},
-        el('input',{type:'time','aria-label':'はじめる時刻',value:s.time||'',onchange:e=>upT(d.id,x=>{x.slots[si].time=e.target.value;})}),
-        el('input',{type:'text','aria-label':'コマの名前',value:s.label,onchange:e=>upT(d.id,x=>{x.slots[si].label=e.target.value.trim()||s.label;})}),
-        el('input',{type:'number','aria-label':'分',class:'num',min:0,step:5,value:s.min,onchange:e=>upT(d.id,x=>{x.slots[si].min=Math.max(0,parseInt(e.target.value,10)||0);})}),
-        el('select',{'aria-label':'何に使うか',onchange:e=>upT(d.id,x=>{x.slots[si].track=e.target.value;if(e.target.value==='study') x.slots[si].use=x.slots[si].use||'any';})},[['study',tname('study')],['create',tname('create')],['other','そのほか']].map(([v,l])=>el('option',{value:v,selected:s.track===v},l))),
-        s.track==='study'?el('select',{'aria-label':'使い方',onchange:e=>upT(d.id,x=>{x.slots[si].use=e.target.value;})},[['any','何でも'],['app','アプリで演習']].map(([v,l])=>el('option',{value:v,selected:(s.use||'any')===v},l))):el('span',{}),
-        el('button',{type:'button',class:'ordb','aria-label':'このコマを消す',onclick:()=>upT(d.id,x=>{x.slots.splice(si,1);})},'×')))),
-    el('button',{type:'button',class:'btn sub sm',onclick:()=>upT(d.id,x=>{x.slots.push({id:newId('sl'),label:tname('study'),time:'',track:'study',min:60,use:'any'});})},'＋ コマを足す'),
-    types.length>1?twoStepBtn('この時間割を消す',()=>up(x=>{x.dayTypes=x.dayTypes.filter(y=>y.id!==d.id);x.week=x.week.map(v=>v===d.id?x.dayTypes[0].id:v);for(const k of Object.keys(x.dates||{})) if(x.dates[k]===d.id) delete x.dates[k];if(x.dflt===d.id) x.dflt=x.dayTypes[0].id;})):null),{id:'tt-'+d.id});
+    el('div',{class:'grid2',style:'margin-bottom:12px'},
+      types.length>1?twoStepBtn('この時間割を消す',()=>up(x=>{x.dayTypes=x.dayTypes.filter(y=>y.id!==d.id);x.week=x.week.map(v=>v===d.id?x.dayTypes[0].id:v);for(const k of Object.keys(x.dates||{})) if(x.dates[k]===d.id) delete x.dates[k];if(x.dflt===d.id) x.dflt=x.dayTypes[0].id;})):el('span',{}),
+      up===tUp?el('button',{type:'button',class:'btn sub sm',onclick:()=>goCommuteType(d.id)},'この時間割の通勤を設定する'):el('span',{}))),{id:'tt-'+d.id});
   return [
     el('div',{class:'seg',style:'grid-template-columns:1fr 1fr'},
       el('button',{type:'button','aria-pressed':String(mode==='week'),onclick:()=>{if(mode==='week') return;up(x=>{for(const [ds,v] of Object.entries(x.dates||{})) if((x.week||[])[parseYmd(ds).getDay()]===v) delete x.dates[ds];x.mode='week';});}},'週ごと'),
@@ -2757,7 +2786,6 @@ function timeEditor(P,up,rr){
     legend,
     mode==='week'?weekTab:dateTab,
     el('h2',{class:'sec'},'時間割ごとのコマと1日の目標'),
-    el('p',{class:'xs muted'},'「アプリで演習」のコマ（通勤など）には、読んだ範囲の問題を「演習○問」として出します。'),
     types.map(tEdit),
     types.length>=7?null:el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id=newId('t');up(x=>{if(x.dayTypes.length>=7) return;let nm='新しい時間割',k=2;while(x.dayTypes.some(y=>y.name===nm)) nm='新しい時間割'+(k++);x.dayTypes.push({id,name:nm,slots:[]});});POPEN.add('t:'+id);}},'＋ 時間割を足す')];
 }
