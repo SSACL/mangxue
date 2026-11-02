@@ -934,6 +934,12 @@ function weekStartOf(ds,P){const ws=+((P||plan2()).weekStart??1);return addDays(
 function privEvents(ds){const g=dayRec(ds).g;return Array.isArray(g)?g.filter(e=>e&&typeof e==='object'):[];}
 function ivl(a,b){const s=sinceStart(toMin(a)), e=sinceStart(toMin(b));return [s,e<=s?e+1440:e];}
 function overlapMin(a0,a1,b0,b1){return Math.max(0,Math.min(a1,b1)-Math.max(a0,b0));}
+/* 乗り換え待ち as 演習: set on each transfer (a ride right after a ride); only the time on the platform counts — the
+   wait less the 乗り換え minutes it takes to change — and only when it is more than 2 minutes; 一括 off stops all of it.
+   (Before this was per leg, a single switch turned every wait on: that is still the default for a leg not set.) */
+function cmWaitOn(C,l){return !C.waitOff&&(l.waitStudy!=null?!!l.waitStudy:C.waitStudy===true);}
+function cmWaitStudy(C,t,x){if(!cmWaitOn(C,x.l)) return 0;let j=x.i-1;while(j>=0&&t.legs[j].skip) j--;if(j<0||!cmRide(t.legs[j].l.kind)) return 0;
+  const w=Math.max(0,(x.wait||0)-Math.max(0,+x.l.xfer||0));return w>2?w:0;}
 /* the commute's part of the コマ: with trips, the 時間割's own アプリ演習 コマ give way to the rides (演習) and the
    stopovers (学習・制作); cmBlocks is the time the trips take, which the other コマ lose where they overlap */
 function cmSlotsOf(base,cmd,usual){
@@ -941,7 +947,7 @@ function cmSlotsOf(base,cmd,usual){
   if(cmd||usual) base=base.filter(s=>!(s.track==='study'&&s.use==='app'));
   if(cmd){const C=commute();
     for(const dir of ['go','back']){const t=cmd[dir];if(!t) continue;
-      for(const x of t.legs){if(x.skip) continue;const w=C.waitStudy&&cmRide(x.l.kind)?(x.wait||0):0;cmBlocks.push([x.dep-(x.wait||0),x.arr]);
+      for(const x of t.legs){if(x.skip) continue;const w=cmRide(x.l.kind)?cmWaitStudy(C,t,x):0;cmBlocks.push([x.dep-(x.wait||0),x.arr]);
         if(cmRide(x.l.kind)&&C.study!==false&&x.l.study!==false) base=base.concat([{id:'cm:'+dir+':'+x.i,label:(x.l.from||'')+'→'+(x.l.to||''),time:hmOf(x.dep-w),track:'study',min:x.arr-x.dep+w,use:'app',cm:true}]);
         if(cmStay(x.l.kind)){const parts=stayParts(x.l, x.arr-x.dep);let t0=x.dep;for(const [tr,m] of parts){base=base.concat([{id:'cms:'+dir+':'+x.i+':'+tr,label:x.l.name||'立ち寄り',time:hmOf(t0),track:tr,min:m,use:'any',cm:true}]);t0+=m;}}}}}
   return {base,cmBlocks};
@@ -2284,6 +2290,9 @@ function viewCommuteBody(){
       ride?[
         el('div',{class:'grid2'},lab('lf-'+l.id,'乗る'+(bus?'停留所':'駅')+'*',txt('lf-'+l.id,l.from,v=>upL(x=>{x.from=v;}),bus?'例：Sバス停':'例：S駅'),key==='legs'&&i===list.findIndex(y=>cmRide(y.kind))?privacyHelp():null),lab('lt-'+l.id,'降りる'+(bus?'停留所':'駅')+'*',txt('lt-'+l.id,l.to,v=>upL(x=>{x.to=v;}),bus?'例：Kバス停':'例：K駅'))),
         el('div',{class:'grid2'},lab('lr-'+l.id,'乗車時間（分）*',num('lr-'+l.id,l.ride,v=>upL(x=>{x.ride=v;}),'例：18')),prevRide?lab('lx-'+l.id,'乗り換え（分）',num('lx-'+l.id,l.xfer,v=>upL(x=>{x.xfer=v;}),'例：3')):el('span',{})),
+        // per transfer: the wait on the platform as 演習 (off for all of them by the switch at the top)
+        prevRide?el('label',{class:'row',for:'lw-'+l.id},el('input',{type:'checkbox',id:'lw-'+l.id,checked:l.waitStudy!=null?!!l.waitStudy:C.waitStudy===true,disabled:!!C.waitOff||C.study===false,onchange:e=>upL(x=>{x.waitStudy=e.target.checked;})}),
+          el('span',{class:'small'},'乗り換え待ちも演習に入れる',el('br'),el('span',{class:'xs muted'},C.waitOff?'いまは上の設定で、どの区間も入れないことになっています':'乗り換えにかかる分のあと電車を待つ時間だけ。待ちが2分以内の日は入れません'))):null,
         el('div',{class:'field'},el('span',{class:'flab'},'時刻表*'),
           el('div',{class:'seg tttabs',role:'tablist'},['wd','sa','ho'].map(k=>el('button',{type:'button',role:'tab','aria-selected':String(tab===k),'aria-pressed':String(tab===k),onclick:()=>{TTTAB[l.id]=k;render();}},DIA[k]+(cnt(k)?' '+cnt(k):'')))),
           el('textarea',{rows:2,'aria-label':DIA[tab]+'ダイヤの時刻表',value:(l.tt||{})[tab]||'',placeholder:'例：7:32 7:41 7:52-8:10 8:01',onchange:e=>upL(x=>{x.tt=Object.assign({},x.tt,{[tab]:e.target.value.trim()});})})),
@@ -2384,7 +2393,7 @@ function viewCommuteBody(){
       el('div',{class:'grid3'},lab('gn-h','出る前（分）',num('gn-h',(C.notify||{}).home,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{home:v??10});}))),lab('gn-b','乗る前（分）',num('gn-b',(C.notify||{}).board,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{board:v??5});}))),lab('gn-x','乗り換えの前（分）',num('gn-x',(C.notify||{}).xfer,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{xfer:v??2});}))))),
     el('div',{class:'card'},el('h2',{},'演習と円グラフ'),
       el('label',{class:'row',for:'cm-s'},el('input',{type:'checkbox',id:'cm-s',checked:C.study!==false,onchange:e=>cmLive(x=>{x.study=e.target.checked;})}),el('span',{class:'small'},'通勤中にアプリで演習する')),
-      el('label',{class:'row',for:'cm-w'},el('input',{type:'checkbox',id:'cm-w',checked:!!C.waitStudy,onchange:e=>cmLive(x=>{x.waitStudy=e.target.checked;})}),el('span',{class:'small'},'乗り換え待ちの時間も演習に入れる')),
+      el('label',{class:'row',for:'cm-w'},el('input',{type:'checkbox',id:'cm-w',checked:!!C.waitOff,onchange:e=>cmLive(x=>{x.waitOff=e.target.checked;})}),el('span',{class:'small'},'乗り換え待ちの時間は、どの区間も演習に入れない',el('br'),el('span',{class:'xs muted'},'区間ごとの「乗り換え待ちも演習に入れる」より、こちらが優先されます'))),
       el('label',{class:'row',for:'cm-m'},el('input',{type:'checkbox',id:'cm-m',checked:!!C.moveSplit,onchange:e=>cmLive(x=>{x.moveSplit=e.target.checked;})}),el('span',{class:'small'},'徒歩・自転車を「通勤（運動）」として別に数える'))),
     el('h2',{class:'sec'},'経路'),
     routes.map(rEdit),
