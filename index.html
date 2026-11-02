@@ -1797,7 +1797,9 @@ function viewCheckin(id){
 
 /* the 〆 report: tomorrow at a glance. 立ち寄る and 行き/帰りなし can be chosen here, and 持ち物 set; anything else
    (the day type, routes, times) is changed in the calendar, with a button there to come back */
-let CIRET=null, CIFOCUS=false;
+let CIRET=null, CIFOCUS=false, FOCUS=null;
+function goCommuteType(id){CMOPEN.add('bt:'+id);FOCUS='#cmbt-'+id;go('commute');}
+function goPlanType(id){TABSTATE.plan='time';POPEN.add('t:'+id);FOCUS='#tt-'+id;go('plan');}
 function ciTomorrow(c){
   const ds=addDays(today(),1), d=dayRec(ds), P=plan2(), id=dayTypeOf(ds,P), dt=dtById(id,P), o=d.cm||{}, C=commute(), bt=(C.byType||{})[id]||{}, p=cmDay(ds);
   const dirRow=dir=>{const s=bt[dir]||{}, od=o[dir]||{}, rid=od.route||s.route, r=(C.routes||[]).find(x=>x.id===rid);
@@ -1822,7 +1824,7 @@ function retOverlay(){
   const old=document.getElementById('ciret');if(old) old.remove();
   if(VIEW==='cal'&&CIRET){const r=CIRET;document.body.append(el('button',{type:'button',id:'ciret',class:'ciret',onclick:()=>{CIRET=null;CIFOCUS=true;go('checkin/'+r.id);}},'← '+r.label+'に戻る'));document.body.classList.add('has-ret');}
   else{document.body.classList.remove('has-ret');if(VIEW!=='cal') CIRET=null;}
-  const f=VIEW==='cal'&&CAL.focus?'.daypanel':VIEW==='checkin'&&CIFOCUS?'#ci-tomorrow':null;CAL.focus=false;CIFOCUS=false;
+  const f=VIEW==='cal'&&CAL.focus?'.daypanel':VIEW==='checkin'&&CIFOCUS?'#ci-tomorrow':FOCUS;CAL.focus=false;CIFOCUS=false;FOCUS=null;
   if(f) requestAnimationFrame(()=>{const n=document.querySelector(f);if(n) n.scrollIntoView({block:'start'});});
 }
 /* stamps for the calendar: 花丸 = routines and tasks all done; マルチェック = the tasks all done; the 休 stamp = a day off */
@@ -2255,13 +2257,23 @@ function viewCommuteBody(){
       r?(mode==='train'?lab('bt-'+key,'ふだん乗る電車',pselect('bt-'+key,b.train||'',[['','（選ぶ）'],...times.map(m=>[hmOf(m),hmOf(m)+' 発'])],v=>up('train',v)))
         :lab('ba-'+key,cmAtLabel(dir,mode),ptime('ba-'+key,b.at,v=>up('at',v),cmAtLabel(dir,mode)))):null,
       hasStay?el('label',{class:'row',for:'bs-'+key},el('input',{type:'checkbox',id:'bs-'+key,checked:b.stay!==false,onchange:e=>up('stay',e.target.checked)}),el('span',{class:'small'},'立ち寄る（'+(r.legs.filter(l=>cmStay(l.kind)).map(l=>l.name||'立ち寄り').join('・'))+'）')):null);};
-  const byT=d=>el('div',{class:'bytype'},el('div',{class:'small'},el('b',{class:'dtl'},dtLetter(d.id,P)),' '+d.name),byDir(d,'go'),byDir(d,'back'));
-  if(!CMP.ds) CMP.ds=today();
-  const pv=cmDay(CMP.ds), nSa=cmDates(C.spSa).length, nHo=cmDates(C.spHo).length;
+  const brief=d=>{const b=(C.byType||{})[d.id]||{}, one=(dir,nm)=>{const x=b[dir]||{};if(!routes.some(r=>r.id===x.route)) return null;return nm+' '+(x.mode==='train'?(x.train||'')+'の電車':(x.at||'').replace(/^0(\d):/,'$1:')+(dir==='go'&&x.mode!=='leave'?'着':'発'));};
+    const t=[one('go','行き'),one('back','帰り')].filter(Boolean);return t.length?t.join('・'):'通勤なし';};
+  const byT=d=>el('details',{class:'set bytblock',id:'cmbt-'+d.id,open:CMOPEN.has('bt:'+d.id),ontoggle:e=>{if(e.target.open) CMOPEN.add('bt:'+d.id); else CMOPEN.delete('bt:'+d.id);}},
+    el('summary',{},el('b',{class:'dtl'},dtLetter(d.id,P)),el('span',{style:'flex:1 0 auto'},d.name),el('span',{class:'xs muted num',style:'flex:0 1 auto;text-align:right'},brief(d))),
+    byDir(d,'go'),byDir(d,'back'),
+    el('button',{type:'button',class:'btn sub sm',style:'margin-bottom:12px',onclick:()=>goPlanType(d.id)},'この時間割のコマと目標を設定する'));
+  const nSa=cmDates(C.spSa).length, nHo=cmDates(C.spHo).length;
   return [
     el('h1',{},'通勤経路の設定'),
     el('label',{class:'card row',for:'cm-on',style:'flex-direction:row'},el('input',{type:'checkbox',id:'cm-on',checked:!!C.on,onchange:e=>{const on=e.target.checked;cmLive(x=>{x.on=on;});}}),
       el('span',{},'通勤の機能を使う',el('br'),el('span',{class:'xs muted'},'オフにすると、通知・計画・円グラフ・ルーティンに通勤を使いません'))),
+    el('div',{class:'card'},el('h2',{},'通知のタイミング'),
+      el('div',{class:'grid3'},lab('gn-h','出る前（分）',num('gn-h',(C.notify||{}).home,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{home:v??10});}))),lab('gn-b','乗る前（分）',num('gn-b',(C.notify||{}).board,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{board:v??5});}))),lab('gn-x','乗り換えの前（分）',num('gn-x',(C.notify||{}).xfer,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{xfer:v??2});}))))),
+    el('div',{class:'card'},el('h2',{},'演習と円グラフ'),
+      el('label',{class:'row',for:'cm-s'},el('input',{type:'checkbox',id:'cm-s',checked:C.study!==false,onchange:e=>cmLive(x=>{x.study=e.target.checked;})}),el('span',{class:'small'},'通勤中にアプリで演習する')),
+      el('label',{class:'row',for:'cm-w'},el('input',{type:'checkbox',id:'cm-w',checked:!!C.waitStudy,onchange:e=>cmLive(x=>{x.waitStudy=e.target.checked;})}),el('span',{class:'small'},'乗り換え待ちの時間も演習に入れる')),
+      el('label',{class:'row',for:'cm-m'},el('input',{type:'checkbox',id:'cm-m',checked:!!C.moveSplit,onchange:e=>cmLive(x=>{x.moveSplit=e.target.checked;})}),el('span',{class:'small'},'徒歩・自転車を「通勤（運動）」として別に数える'))),
     el('h2',{class:'sec'},'経路'),
     routes.map(rEdit),
     el('p',{class:'xs muted'},'並べ替え・コピー・逆向きの経路・削除は、各経路の右の ⋯ から。'),
@@ -2269,28 +2281,29 @@ function viewCommuteBody(){
       routes.length>=CM_MAX?null:el('button',{type:'button',class:'btn sub sm',style:'grid-column:1/-1',onclick:()=>{const id=newId('cr');cmLive(x=>{x.routes=x.routes||[];x.routes.push({id,name:'行き',legs:[{id:newId('l'),kind:'walk',min:10},{id:newId('l'),kind:'train',ride:20,xfer:3,tt:{},notify:true},{id:newId('l'),kind:'walk',min:8}]});});CMOPEN.add('r:'+id);}},'＋ 経路を足す'),
       null),
     el('h2',{class:'sec'},'時間割ごとの通勤'),
-    el('div',{class:'card'},(P.dayTypes||[]).map(byT)),
-    el('div',{class:'card'},el('h2',{},'通知のタイミング'),
-      el('div',{class:'grid3'},lab('gn-h','出る前（分）',num('gn-h',(C.notify||{}).home,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{home:v??10});}))),lab('gn-b','乗る前（分）',num('gn-b',(C.notify||{}).board,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{board:v??5});}))),lab('gn-x','乗り換えの前（分）',num('gn-x',(C.notify||{}).xfer,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{xfer:v??2});}))))),
-    el('div',{class:'card'},el('h2',{},'演習と円グラフ'),
-      el('label',{class:'row',for:'cm-s'},el('input',{type:'checkbox',id:'cm-s',checked:C.study!==false,onchange:e=>cmLive(x=>{x.study=e.target.checked;})}),el('span',{class:'small'},'通勤中にアプリで演習する')),
-      el('label',{class:'row',for:'cm-w'},el('input',{type:'checkbox',id:'cm-w',checked:!!C.waitStudy,onchange:e=>cmLive(x=>{x.waitStudy=e.target.checked;})}),el('span',{class:'small'},'乗り換え待ちの時間も演習に入れる')),
-      el('label',{class:'row',for:'cm-m'},el('input',{type:'checkbox',id:'cm-m',checked:!!C.moveSplit,onchange:e=>cmLive(x=>{x.moveSplit=e.target.checked;})}),el('span',{class:'small'},'徒歩・自転車を「通勤（運動）」として別に数える'))),
+    (P.dayTypes||[]).map(byT),
     el('div',{class:'card'},el('h2',{},'ダイヤ'),
       el('label',{class:'row',for:'cm-j'},el('input',{type:'checkbox',id:'cm-j',checked:C.jpHol!==false,onchange:e=>cmLive(x=>{x.jpHol=e.target.checked;})}),el('span',{class:'small'},'日本の祝日・振替休日を休日ダイヤにする')),
       lab('cm-sa','土曜ダイヤの日'+(nSa?'（'+nSa+'日）':''),txt('cm-sa',C.spSa,v=>cmLive(x=>{x.spSa=v;}),'例：2026-12-29 2026-12-30')),
       lab('cm-ho','休日ダイヤの日'+(nHo?'（'+nHo+'日）':''),txt('cm-ho',C.spHo,v=>cmLive(x=>{x.spHo=v;}),'例：12/31 1/2 1/3')),
       el('p',{class:'xs muted'},'日付をスペースで区切って並べます。年を書かない日は毎年です。'),
       el('p',{class:'xs muted'},'0時〜3時の電車は、前の日のダイヤで数えます（金曜の終電は平日ダイヤ、土曜の始発は土曜ダイヤ）。')),
-    el('div',{class:'card'},el('h2',{},'ためしに見る'),
-      dirty?el('p',{class:'xs muted'},'保存していない変更も入れて計算しています。'):null,
-      lab('cm-pv','日付',pdate('cm-pv',CMP.ds,v=>{CMP.ds=v||today();render();})),
-      el('p',{class:'small'},cmDiaText(CMP.ds,pv)),
-      pv?['go','back'].map(dir=>pv[dir]?tripView(pv[dir],null):null):el('p',{class:'small muted'},C.on?'この日は通勤がありません。':'通勤の機能がオフです。')),
     el('div',{class:'savebar'+(dirty?' on':''),role:'region','aria-label':'保存'},
       el('span',{class:'small'},dirty?'保存していない変更があります':'変更はありません'),
-      el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',disabled:!dirty,onclick:cmDiscard},'元に戻す'),el('button',{type:'button',class:'btn sm',disabled:!dirty,onclick:cmSave},'保存する')))
+      el('div',{class:'grid3'},el('button',{type:'button',class:'btn sub sm',disabled:!dirty,onclick:cmDiscard},'元に戻す'),el('button',{type:'button',class:'btn sub sm',onclick:cmPreview},'確認する'),el('button',{type:'button',class:'btn sm',disabled:!dirty,onclick:cmSave},'保存する')))
   ];
+}
+/* 確認する: the trips of a chosen day, worked out with the settings as they are on the page (saved or not) */
+function cmPreview(){
+  if(!CMP.ds) CMP.ds=today();let kids;
+  CMDV=true;
+  try{const C=commute(), pv=cmDay(CMP.ds);
+    kids=[CDRAFT?el('p',{class:'xs muted'},'保存していない変更も入れて計算しています。'):null,
+      pfield('cm-pv','日付',pdate('cm-pv',CMP.ds,v=>{CMP.ds=v||today();cmPreview();})),
+      el('p',{class:'small'},cmDiaText(CMP.ds,pv)),
+      pv?['go','back'].map(dir=>pv[dir]?tripView(pv[dir],null):null):el('p',{class:'small muted'},C.on?'この日は通勤がありません。':'通勤の機能がオフです。')];}
+  finally{CMDV=false;}
+  openSheet('通勤を確認する',...kids.flat().filter(Boolean));
 }
 
 /* one trip, step by step; with ds, upcoming trains get a 次の電車に乗る button */
@@ -2719,11 +2732,12 @@ function timeEditor(P,up,rr){
     el('div',{class:'field'},'塗る時間割',el('div',{class:'dtchips'},types.map(d=>typeChip(P,d.id,TST.brush===d.id,()=>{TST.brush=d.id;rr();},true)),el('button',{type:'button',class:'dtc sm','aria-pressed':String(!TST.brush),onclick:()=>{TST.brush='';rr();}},'決めない'))),
     el('div',{class:'calhead'},navBtn('','前の月',-1,()=>{TST.ym=ymd(new Date(y,m-2,1)).slice(0,7);rr();}),el('h2',{style:'text-align:center'},y+'年'+m+'月'),navBtn('','次の月',1,()=>{TST.ym=ymd(new Date(y,m,1)).slice(0,7);rr();})),
     el('div',{class:'calgrid'},cells)];
-  const tEdit=d=>pdet('t:'+d.id,[el('b',{class:'dtl'},dtLetter(d.id,P)),el('span',{style:'flex:1 0 auto'},d.name),el('span',{class:'xs muted num',style:'flex:0 1 auto;text-align:right'},tnameS('study')+' '+fmtMin(sum(d,'study'))+'・'+tnameS('create')+' '+fmtMin(sum(d,'create')))],
+  const tEdit=d=>Object.assign(pdet('t:'+d.id,[el('b',{class:'dtl'},dtLetter(d.id,P)),el('span',{style:'flex:1 0 auto'},d.name),el('span',{class:'xs muted num',style:'flex:0 1 auto;text-align:right'},tnameS('study')+' '+fmtMin(sum(d,'study'))+'・'+tnameS('create')+' '+fmtMin(sum(d,'create')))],
     pfield('tn-'+d.id,'名前',ptext('tn-'+d.id,d.name,v=>{if(!v) return;if(types.some(x=>x.id!==d.id&&x.name===v)){toast('同じ名前の時間割があります');rr();return;}upT(d.id,x=>{x.name=v;});})),
     el('div',{class:'field'},'1日の目標（任意）',el('div',{class:'grid2'},['study','create'].map(tr=>pfield('tg-'+tr+'-'+d.id,tname(tr)+'（分）',
       el('input',{type:'number',id:'tg-'+tr+'-'+d.id,class:'num',min:0,step:15,inputmode:'numeric',value:(d.goal||{})[tr]??'',placeholder:'例：120',onchange:e=>upT(d.id,x=>{const v=e.target.value===''?null:Math.max(0,parseInt(e.target.value,10)||0);x.goal=Object.assign({},x.goal,{[tr]:v});})}))))),
     typeCheckView(d,P),
+    up===tUp?el('button',{type:'button',class:'btn sub sm',onclick:()=>goCommuteType(d.id)},'この時間割の通勤を設定する'):null,
     el('div',{class:'field'},'コマ（何時から何分、何に使うか）',
       (d.slots||[]).map((s,si)=>el('div',{class:'slot'},
         el('input',{type:'time','aria-label':'はじめる時刻',value:s.time||'',onchange:e=>upT(d.id,x=>{x.slots[si].time=e.target.value;})}),
@@ -2733,7 +2747,7 @@ function timeEditor(P,up,rr){
         s.track==='study'?el('select',{'aria-label':'使い方',onchange:e=>upT(d.id,x=>{x.slots[si].use=e.target.value;})},[['any','何でも'],['app','アプリで演習']].map(([v,l])=>el('option',{value:v,selected:(s.use||'any')===v},l))):el('span',{}),
         el('button',{type:'button',class:'ordb','aria-label':'このコマを消す',onclick:()=>upT(d.id,x=>{x.slots.splice(si,1);})},'×')))),
     el('button',{type:'button',class:'btn sub sm',onclick:()=>upT(d.id,x=>{x.slots.push({id:newId('sl'),label:tname('study'),time:'',track:'study',min:60,use:'any'});})},'＋ コマを足す'),
-    types.length>1?twoStepBtn('この時間割を消す',()=>up(x=>{x.dayTypes=x.dayTypes.filter(y=>y.id!==d.id);x.week=x.week.map(v=>v===d.id?x.dayTypes[0].id:v);for(const k of Object.keys(x.dates||{})) if(x.dates[k]===d.id) delete x.dates[k];if(x.dflt===d.id) x.dflt=x.dayTypes[0].id;})):null);
+    types.length>1?twoStepBtn('この時間割を消す',()=>up(x=>{x.dayTypes=x.dayTypes.filter(y=>y.id!==d.id);x.week=x.week.map(v=>v===d.id?x.dayTypes[0].id:v);for(const k of Object.keys(x.dates||{})) if(x.dates[k]===d.id) delete x.dates[k];if(x.dflt===d.id) x.dflt=x.dayTypes[0].id;})):null),{id:'tt-'+d.id});
   return [
     el('div',{class:'seg',style:'grid-template-columns:1fr 1fr'},
       el('button',{type:'button','aria-pressed':String(mode==='week'),onclick:()=>{if(mode==='week') return;up(x=>{for(const [ds,v] of Object.entries(x.dates||{})) if((x.week||[])[parseYmd(ds).getDay()]===v) delete x.dates[ds];x.mode='week';});}},'週ごと'),
