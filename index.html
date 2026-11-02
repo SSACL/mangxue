@@ -411,6 +411,7 @@ body.has-ret .wrap{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 .slot .sf input[type=number]::-webkit-inner-spin-button,.slot .sf input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .slot .sdel{justify-self:end;align-self:end;width:44px;height:40px;font-size:16px}
 .slot .sf.wide{grid-column:span 2}
+.slot .send{margin-left:2px;color:var(--ink);font-weight:700}
 details>summary .tn-view{flex:1 1 auto;min-width:0}
 details>summary .tn-edit{display:none}
 details[open]>summary .tn-view{display:none}
@@ -2877,13 +2878,18 @@ function timeEditor(P,up,rr){
     el('div',{class:'calhead'},navBtn('','前の月',-1,()=>{TST.ym=ymd(new Date(y,m-2,1)).slice(0,7);rr();}),el('h2',{style:'text-align:center'},y+'年'+m+'月'),navBtn('','次の月',1,()=>{TST.ym=ymd(new Date(y,m,1)).slice(0,7);rr();})),
     el('div',{class:'calgrid'},cells)];
   // one 作業コマ: いつ｜作業区分｜分 on the first line, 何をする｜(アプリで演習)｜× on the second
-  const slotRow=(d,s,si)=>el('div',{class:'slot'},
-    el('label',{class:'sf'},el('span',{},'いつ'),el('input',{type:'time',value:s.time||'',onchange:e=>upT(d.id,x=>{x.slots[si].time=e.target.value;})})),
+  // the end of the コマ is shown with いつ (〜8:30), worked out again as the time or the minutes are typed
+  const endOf=(t,m)=>{if(!t) return '';const e=toMin(t)+(+m||0), c=((e%1440)+1440)%1440;return '（〜'+(e>=1440?'翌':'')+Math.floor(c/60)+':'+String(c%60).padStart(2,'0')+'）';};
+  const slotRow=(d,s,si)=>{const endEl=el('span',{class:'send num'},endOf(s.time,s.min));
+    const tI=el('input',{type:'time',value:s.time||'',oninput:e=>{endEl.textContent=endOf(e.target.value,mI.value);},onchange:e=>upT(d.id,x=>{x.slots[si].time=e.target.value;})});
+    const mI=el('input',{type:'number',class:'num',min:0,step:5,inputmode:'numeric',value:s.min,oninput:e=>{endEl.textContent=endOf(tI.value,e.target.value);},onchange:e=>upT(d.id,x=>{x.slots[si].min=Math.max(0,parseInt(e.target.value,10)||0);})});
+    return el('div',{class:'slot'},
+    el('label',{class:'sf'},el('span',{},'いつ',endEl),tI),
     el('label',{class:'sf'},el('span',{},'作業区分'),el('select',{onchange:e=>upT(d.id,x=>{x.slots[si].track=e.target.value;if(e.target.value==='study') x.slots[si].use=x.slots[si].use||'any';})},[['study',tname('study')],['create',tname('create')],['other','そのほか']].map(([v,l])=>el('option',{value:v,selected:s.track===v},l)))),
-    el('label',{class:'sf'},el('span',{},'分'),el('input',{type:'number',class:'num',min:0,step:5,inputmode:'numeric',value:s.min,onchange:e=>upT(d.id,x=>{x.slots[si].min=Math.max(0,parseInt(e.target.value,10)||0);})})),
+    el('label',{class:'sf'},el('span',{},'分'),mI),
     el('label',{class:'sf'+(s.track==='study'?'':' wide')},el('span',{},'何をする'),el('input',{type:'text',value:s.label,onchange:e=>upT(d.id,x=>{x.slots[si].label=e.target.value.trim()||s.label;})})),
     s.track==='study'?el('label',{class:'sf'},el('span',{},'使い方'),el('select',{onchange:e=>upT(d.id,x=>{x.slots[si].use=e.target.value;})},[['any','何でも'],['app','アプリで演習']].map(([v,l])=>el('option',{value:v,selected:(s.use||'any')===v},l)))):null,
-    el('button',{type:'button',class:'ordb sdel','aria-label':'このコマを消す',onclick:()=>upT(d.id,x=>{x.slots.splice(si,1);})},'×'));
+    el('button',{type:'button',class:'ordb sdel','aria-label':'このコマを消す',onclick:()=>upT(d.id,x=>{x.slots.splice(si,1);})},'×'));};
   const tEdit=d=>Object.assign(pdet('t:'+d.id,[el('b',{class:'dtl'},dtLetter(d.id,P)),titleName(d.name,'時間割の名前',(v,inp)=>{if(types.some(x=>x.id!==d.id&&x.name===v)){toast('同じ名前の時間割があります');inp.value=d.name;return;}upT(d.id,x=>{x.name=v;});}),el('span',{class:'xs muted num tsum',style:'flex:0 1 auto;text-align:right'},typeSummary(d,P))],
     el('div',{class:'field'},'1日の目標（任意）',el('div',{class:'grid2'},['study','create'].map(tr=>pfield('tg-'+tr+'-'+d.id,tname(tr)+'（分）',
       el('input',{type:'number',id:'tg-'+tr+'-'+d.id,class:'num',min:0,step:15,inputmode:'numeric',value:(d.goal||{})[tr]??'',placeholder:'例：120',onchange:e=>upT(d.id,x=>{const v=e.target.value===''?null:Math.max(0,parseInt(e.target.value,10)||0);x.goal=Object.assign({},x.goal,{[tr]:v});})}))))),
