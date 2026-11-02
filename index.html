@@ -267,6 +267,7 @@ button.cc{border:0;font:inherit;text-align:left;cursor:pointer;align-items:stret
 .dset>.dpart+.dpart{border-top:1px dashed var(--line);padding-top:12px}
 .dsetfold>summary{color:var(--muted)}
 .tcheck{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.tcstops{display:flex;flex-direction:column;gap:0;padding:4px 0 6px;border-bottom:1px dashed var(--line)}
 .tcrow{display:flex;flex-direction:column;gap:1px;padding:4px 0}
 .tcrow+.tcrow{border-top:1px dashed var(--line)}
 .overlist{display:flex;flex-direction:column;gap:2px;max-height:40vh;overflow:auto;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
@@ -938,19 +939,27 @@ function typeCheck(d,P){
   const C=commute(), bt=cmOn()?(C.byType||{})[d.id]||{}:{}, usual=!!((bt.go&&bt.go.route)||(bt.back&&bt.back.route));
   let ds=today();for(let i=0;i<70;i++){const x=addDays(today(),i);if(dayTypeOf(x,P)===d.id){ds=x;break;}}
   const route=dir=>(C.routes||[]).find(x=>x.id===(bt[dir]||{}).route);
-  const trips=stay=>{const one=dir=>{const s=bt[dir]||{}, r=route(dir);if(!r||!(r.legs||[]).length) return null;const mode=s.mode||'at';if(mode==='train'?!s.train:!s.at) return null;
-      return cmPlan(r,dir,ds,{mode,at:s.at?sinceStart(toMin(s.at)):null,train:s.train?sinceStart(toMin(s.train)):null,stay:stay==null?s.stay:stay});};
+  // the stopovers to work out with: the 時間割's usual ones, or what was ticked here (TCOFF, not saved)
+  const offOf=dir=>{const r=route(dir), ids=cmStayIds(r), t=(TCOFF[d.id]||{})[dir];return t?t.filter(id=>ids.includes(id)):(cmOffOf(bt[dir],ids)??[]);};
+  const trips=()=>{const one=dir=>{const s=bt[dir]||{}, r=route(dir);if(!r||!(r.legs||[]).length) return null;const mode=s.mode||'at';if(mode==='train'?!s.train:!s.at) return null;
+      const ids=cmStayIds(r), off=offOf(dir);
+      return cmPlan(r,dir,ds,{mode,at:s.at?sinceStart(toMin(s.at)):null,train:s.train?sinceStart(toMin(s.train)):null,stay:!(ids.length&&off.length===ids.length),off});};
     const go=one('go'),back=one('back');return go||back?{go,back}:null;};
-  const hasStay=usual&&['go','back'].some(dir=>{const r=route(dir);return r&&(r.legs||[]).some(l=>cmStay(l.kind));});
+  const stops=usual?['go','back'].flatMap(dir=>{const r=route(dir);return r?(r.legs||[]).filter(l=>cmStay(l.kind)).map(l=>({dir,l,on:!offOf(dir).includes(l.id)})):[];}):[];
   const calc=cmd=>{const {base,cmBlocks}=cmSlotsOf(d.slots||[],cmd,usual), r={cm:{study:0,create:0},other:{study:0,create:0},cuts:[]};
     for(const s of base){if(s.track!=='study'&&s.track!=='create') continue;if(s.cm){r.cm[s.track]+=+s.min||0;continue;}
       const c=cutBy(s,cmBlocks), m=Math.max(0,(+s.min||0)-c);r.other[s.track]+=m;if(c>0) r.cuts.push({s,m});}
     return r;};
-  const cases=!usual?[{name:'',r:calc(null)}]:hasStay?[{name:'立ち寄る日',r:calc(trips(true))},{name:'立ち寄らない日',r:calc(trips(false))}]:[{name:'',r:calc(trips(null))}];
-  return {ds,usual,cases};
+  return {ds,usual,stops,cases:[{name:'',r:calc(usual?trips():null)}],off:dir=>offOf(dir)};
 }
-function typeCheckView(d,P){
+const TCOFF={};
+function typeCheckView(d,P,rr){
   const k=typeCheck(d,P), g=d.goal||{};
+  // tick the stopovers to work out with; every combination can be tried (this is not saved)
+  const tog=(dir,id,on)=>{const cur=k.off(dir);TCOFF[d.id]=Object.assign({go:k.off('go'),back:k.off('back')},TCOFF[d.id]);TCOFF[d.id][dir]=on?cur.filter(x=>x!==id):cur.concat([id]);(rr||render)();};
+  const stopBox=k.stops.length?el('div',{class:'tcstops'},el('p',{class:'xs muted'},'試算する立ち寄り（ここでの選択は保存されません）'),
+    k.stops.map(x=>el('label',{class:'row',for:'tcs-'+d.id+'-'+x.dir+'-'+x.l.id,style:'min-height:36px'},el('input',{type:'checkbox',id:'tcs-'+d.id+'-'+x.dir+'-'+x.l.id,checked:x.on,onchange:e=>tog(x.dir,x.l.id,e.target.checked)}),
+      el('span',{class:'small'},(x.dir==='go'?'行き':'帰り')+'：'+(x.l.name||'立ち寄り先'))))):null;
   const row=(tr,r)=>{const goal=g[tr], cm=r.cm[tr], ot=r.other[tr];if(goal==null&&!cm&&!ot) return null;
     const need=goal!=null?Math.max(0,goal-cm):null, diff=need!=null?ot-need:null;
     return el('div',{class:'tcrow'},el('p',{class:'small'},el('b',{},tname(tr)),goal!=null?' 目標 '+fmtMin(goal):''),
@@ -962,7 +971,7 @@ function typeCheckView(d,P){
     c.r.cuts.length?el('p',{class:'xs muted'},'通勤と重なって短くなるコマ：'+c.r.cuts.map(x=>(x.s.time||'')+' '+x.s.label+' '+fmtMin(+x.s.min)+'→'+fmtMin(x.m)).join('、')):null);
   if(!k.usual&&g.study==null&&g.create==null) return null;
   return el('div',{class:'tcheck'},el('p',{class:'xs muted'},k.usual?'いつもの通勤で計算（'+md(k.ds)+'（'+WD[parseYmd(k.ds).getDay()]+'）の時刻表）':'通勤なしで計算'),
-    el('div',{class:'dgrid'+(k.cases.length===1?' one':'')},k.cases.map(col)));
+    stopBox,el('div',{class:'dgrid'+(k.cases.length===1?' one':'')},k.cases.map(col)));
 }
 function cutBy(s,blocks){const min=+s.min||0;let cut=0;if(s.time&&blocks.length){const a=sinceStart(toMin(s.time));for(const [x,y] of blocks) cut+=overlapMin(a,a+min,x,y);}return cut;}
 /* the day's コマ, after private events and mock exams take their hours, and after 配分 moves time between study and 制作 */
@@ -1447,16 +1456,28 @@ function rideMin(l,e){return e&&e.a!=null?e.a-e.d:Math.max(1,+l.ride||1);}
    stopovers or not), fix:{k,dep} (次の電車に乗る)}. 'at' means: arrive by it (行き) or leave at it (帰り); 'train' means:
    take the first train of the route at that time (or the first one after it on that day's diagram). */
 function cmPlan(route,dir,ds,o){
-  const legs=o.stay===false&&(route.direct||[]).length?directLegs(route):(route.legs||[]), n=legs.length, dia=cmDia(ds), tt=legs.map(l=>cmRide(l.kind)?ttList(l,ds):null);let miss=false;
-  const stayOn=o.stay!==false, dur=l=>(cmStay(l.kind)||l.stayOnly)?(stayOn?Math.max(0,+l.min||0):0):Math.max(0,+l.min||0);
-  const xferBefore=i=>i>0&&cmRide(legs[i-1].kind)?Math.max(0,+legs[i].xfer||0):0;
+  // 立ち寄り: none (stay:false, or every one in off) takes 立ち寄らないとき when there is one. One skipped on its own
+  // (案A): the stay goes, and when it sits between two rides the way to it and back goes too, so the rides follow
+  // each other as a transfer
+  const ids=(route.legs||[]).filter(l=>cmStay(l.kind)).map(l=>l.id), off=new Set((o.off||[]).filter(id=>ids.includes(id)));
+  const allOff=o.stay===false||(ids.length>0&&off.size===ids.length), stayOn=!allOff;
+  const legs=allOff&&(route.direct||[]).length?directLegs(route):(route.legs||[]), n=legs.length, dia=cmDia(ds), tt=legs.map(l=>cmRide(l.kind)?ttList(l,ds):null);let miss=false;
+  // without 立ち寄らないとき, every skipped stopover is dropped the same way, one by one
+  const offL=l=>cmStay(l.kind)&&(allOff||off.has(l.id));
+  const skipL=legs.map(l=>offL(l)||(!!l.stayOnly&&allOff));
+  legs.forEach((l,k)=>{if(!offL(l)) return;
+    let p=k-1;while(p>=0&&!cmRide(legs[p].kind)) p--;let q=k+1;while(q<n&&!cmRide(legs[q].kind)) q++;
+    if(p<0||q>=n||legs.slice(p+1,q).some(x=>cmStay(x.kind)&&!offL(x))) return;
+    for(let j=p+1;j<q;j++) skipL[j]=true;});
+  const dur=i=>skipL[i]?0:Math.max(0,+legs[i].min||0);
+  const xferBefore=i=>{let j=i-1;while(j>=0&&skipL[j]) j--;return j>=0&&cmRide(legs[j].kind)?Math.max(0,+legs[i].xfer||0):0;};
   const fixes={};
   const f=legs.findIndex(l=>cmRide(l.kind));
   let start;
-  if(o.mode==='train'&&f>=0){const e=tt[f].find(x=>x.d>=o.train);const dep=e?e.d:o.train;if(!e) miss=true;fixes[f]=dep;let t=dep;for(let i=0;i<f;i++) t-=dur(legs[i]);start=t;}
+  if(o.mode==='train'&&f>=0){const e=tt[f].find(x=>x.d>=o.train);const dep=e?e.d:o.train;if(!e) miss=true;fixes[f]=dep;let t=dep;for(let i=0;i<f;i++) t-=dur(i);start=t;}
   else if(dir==='go'&&o.mode!=='leave'){let t=o.at;
     for(let i=n-1;i>=0;i--){const l=legs[i];
-      if(!cmRide(l.kind)){t-=dur(l);continue;}
+      if(!cmRide(l.kind)){t-=dur(i);continue;}
       let best=null;for(const e of tt[i]){const a=e.a!=null?e.a:e.d+Math.max(1,+l.ride||1);if(a<=t&&(!best||e.d>best.d)) best=e;}
       // a train of the night before that gets there hours early is not a way to arrive: the timetable has none
       if(best&&best.sd<svcDate(ds,t)&&t-(best.a!=null?best.a:best.d+Math.max(1,+l.ride||1))>180) best=null;
@@ -1467,10 +1488,10 @@ function cmPlan(route,dir,ds,o){
   if(o.fix) fixes[o.fix.k]=o.fix.dep;
   const R=[];let t=start;
   for(let i=0;i<n;i++){const l=legs[i];
-    if(!cmRide(l.kind)){let m=dur(l);const cut=!!(o.cut&&o.cut.k===i&&cmStay(l.kind)&&stayOn);
+    if(!cmRide(l.kind)){let m=dur(i);const cut=!!(o.cut&&o.cut.k===i&&cmStay(l.kind)&&!skipL[i]);
       // 切り上げ: the stopover ends at that time (not before it starts), and the rest of the way is worked out from there
       if(cut) m=Math.max(0,Math.min(m,o.cut.at-t));
-      R.push({dep:t,arr:t+m,wait:0,skip:(cmStay(l.kind)||l.stayOnly)&&!stayOn,cut});t+=m;continue;}
+      R.push({dep:t,arr:t+m,wait:0,skip:skipL[i],cut});t+=m;continue;}
     const ready=t+xferBefore(i), list=tt[i];
     let e=fixes[i]!=null?(list.find(x=>x.d===fixes[i])||{d:Math.max(fixes[i],ready),a:null,none:!list.length}):list.find(x=>x.d>=ready);
     if(!e){miss=true;e={d:ready,a:null,none:true};}
@@ -1478,12 +1499,27 @@ function cmPlan(route,dir,ds,o){
     // first: the last train of that date has gone, so this is the first one of the next date
     R.push({dep:e.d,arr,wait:e.d-t,entry:e.none?null:e,sd,dia:e.dia||cmDia(sd),used:e.used||null,first:!e.none&&!!e.sd&&e.sd>svcDate(ds,ready)});t=arr;}
   const rideR=R.filter((x,i)=>cmRide(legs[i].kind));
-  const out={route,dir,ds,dia,dias:[...new Set(rideR.map(x=>x.dia))],sds:[...new Set(rideR.map(x=>x.sd))].sort(),first:rideR.some(x=>x.first),used:[...new Set(rideR.map(x=>x.used).filter(Boolean))],legs:legs.map((l,i)=>Object.assign({l,i},R[i])),miss,fix:o.fix||null,cut:o.cut||null,o,mode:o.mode||'at',stayOn};
+  const out={route,dir,ds,dia,dias:[...new Set(rideR.map(x=>x.dia))],sds:[...new Set(rideR.map(x=>x.sd))].sort(),first:rideR.some(x=>x.first),used:[...new Set(rideR.map(x=>x.used).filter(Boolean))],legs:legs.map((l,i)=>Object.assign({l,i},R[i])),miss,fix:o.fix||null,cut:o.cut||null,o,mode:o.mode||'at',stayOn,off:[...off]};
   out.leave=n?R[0].dep:start;out.arrive=n?R[n-1].arr:start;
   out.ride=0;out.wait=0;out.move=0;out.drive=0;out.stay=0;
   for(const x of out.legs){if(x.skip) continue;const m=x.arr-x.dep;if(cmRide(x.l.kind)){out.ride+=m;out.wait+=x.wait||0;}else if(cmMove(x.l.kind)) out.move+=m; else if(cmStay(x.l.kind)) out.stay+=m; else out.drive+=m;}
   return out;
 }
+/* which stopovers a trip makes. A setting holds stay:false (none) or noStay (the ones skipped); the day's choice wins
+   over the 時間割's */
+function cmOffOf(x,ids){if(!x) return null;if(x.stay===false) return ids.slice();if(Array.isArray(x.noStay)) return x.noStay.filter(id=>ids.includes(id));if(x.stay===true) return [];return null;}
+function cmStayIds(r){return (r&&r.legs||[]).filter(l=>cmStay(l.kind)).map(l=>l.id);}
+function cmStaySel(s,od,r){const ids=cmStayIds(r), off=cmOffOf(od,ids)??cmOffOf(s,ids)??[];return {ids,off,stay:!(ids.length&&off.length===ids.length)};}
+function sameSet(a,b){return a.length===b.length&&a.every(x=>b.includes(x));}
+/* one checkbox per stopover: 立ち寄る（自習室） */
+function stayBoxes(r,off,key,onSet){
+  return (r.legs||[]).filter(l=>cmStay(l.kind)).map(l=>el('label',{class:'row',for:key+'-'+l.id,style:'min-height:40px'},
+    el('input',{type:'checkbox',id:key+'-'+l.id,checked:!off.includes(l.id),onchange:e=>onSet(e.target.checked?off.filter(x=>x!==l.id):off.concat([l.id]))}),
+    el('span',{class:'small'},'立ち寄る（'+(l.name||'立ち寄り先')+'）')));
+}
+/* the day's choice: back to nothing when it is the same as the 時間割's */
+function cmDaySetOff(ds,dir,s,r,nx){const ids=cmStayIds(r), base=cmOffOf(s,ids)??[];
+  cmDayEdit(ds,c=>{c[dir]=Object.assign({},c[dir]);delete c[dir].stay;if(sameSet(nx,base)) delete c[dir].noStay; else c[dir].noStay=nx;if(!Object.keys(c[dir]).length) delete c[dir];delete c[dir+'Fix'];delete c[dir+'Cut'];});}
 /* 立ち寄らないとき: entries with ref take everything from that leg of the stopover route (so a change there carries over) */
 function directLegs(route){return (route.direct||[]).map(l=>{if(!l.ref) return l;const src=(route.legs||[]).find(x=>x.id===l.ref);return src?Object.assign(clone(src),{id:l.id,ref:l.ref}):null;}).filter(Boolean);}
 /* the departures of a route's first train or bus, from all diagrams (for choosing the standard train) */
@@ -1496,9 +1532,9 @@ function cmDay(ds){
   if(d.off||o.none) return c.cm[ds]=null;
   const bt=(C.byType||{})[dayTypeOf(ds,plan2())]||{};
   const one=dir=>{const s=bt[dir]||{}, od=o[dir]||{}, rid=od.route||s.route, r=(C.routes||[]).find(x=>x.id===rid);if(od.skip||!r||!(r.legs||[]).length) return null;
-    const mode=od.mode||s.mode||'at', at=od.at||s.at, train=od.train||s.train, stay=od.stay!=null?od.stay:s.stay;
+    const mode=od.mode||s.mode||'at', at=od.at||s.at, train=od.train||s.train, sel=cmStaySel(s,od,r), stay=sel.stay, off=sel.off;
     if(mode==='train'?!train:!at) return null;
-    return cmPlan(r,dir,ds,{mode,at:at?sinceStart(toMin(at)):null,train:train?sinceStart(toMin(train)):null,stay,fix:o[dir+'Fix']||null,cut:o[dir+'Cut']||null});};
+    return cmPlan(r,dir,ds,{mode,at:at?sinceStart(toMin(at)):null,train:train?sinceStart(toMin(train)):null,stay,off,fix:o[dir+'Fix']||null,cut:o[dir+'Cut']||null});};
   const res={go:one('go'),back:one('back'),dia:cmDia(ds),hol:cmHolName(ds)};
   const T=[res.go,res.back].filter(Boolean);res.dias=[...new Set(T.flatMap(x=>x.dias))];res.sds=[...new Set(T.flatMap(x=>x.sds))].sort();
   return c.cm[ds]=(res.go||res.back)?res:null;
@@ -1832,8 +1868,7 @@ function ciTomorrow(c){
     const t=p&&p[dir], key='ci-'+dir, name=dir==='go'?'行き':'帰り', hasStay=r&&(r.legs||[]).some(l=>cmStay(l.kind)), stay=(od.stay!=null?od.stay:s.stay)!==false;
     return el('div',{class:'cidir'},
       el('p',{class:'small num'},el('b',{},name+'　'),od.skip?'スキップ':t?hmOf(t.leave)+' 出発 → '+hmOf(t.arrive)+' 着':'時刻が決まっていません',r&&!od.skip?el('span',{class:'xs muted'},'　'+r.name):null),
-      !od.skip&&hasStay?el('label',{class:'row',for:key+'-s',style:'min-height:40px'},el('input',{type:'checkbox',id:key+'-s',checked:stay,onchange:e=>cmDirSet(ds,dir,'stay',e.target.checked===(s.stay!==false)?undefined:e.target.checked)}),
-        el('span',{class:'small'},'立ち寄る（'+(r.legs||[]).filter(l=>cmStay(l.kind)).map(l=>l.name||'立ち寄り先').join('・')+'）')):null,
+      !od.skip&&hasStay?stayBoxes(r,cmStaySel(s,od,r).off,key+'-s',nx=>cmDaySetOff(ds,dir,s,r,nx)):null,
       el('label',{class:'row',for:key+'-x',style:'min-height:40px'},el('input',{type:'checkbox',id:key+'-x',checked:!!od.skip,onchange:e=>cmDirSet(ds,dir,'skip',e.target.checked?1:undefined)}),el('span',{class:'small'},name+'の通勤設定をスキップする'),skipHelp()));};
   const rows=cmOn()&&!d.off&&!o.none?[dirRow('go'),dirRow('back')].filter(Boolean):[];
   return el('div',{class:'card',id:'ci-tomorrow'},
@@ -1912,7 +1947,7 @@ function viewCal(){
       bs.length?el('span',{class:'bs'},bs.slice(0,3).map(badgeNode)):null,
       ms[ds]?el('i',{class:'ms'}):null));
   }
-  const tog=(k,l)=>{const on=k==='stamp'?SH.stamp!==false:!!SH[k];return el('button',{type:'button',class:'chip sm tog '+k,'aria-pressed':String(on),onclick:()=>{SH[k]=!on;calShowSave();render();}},el('span',{class:'tick','aria-hidden':'true'},on?'✓':''),l);};
+  const tog=(k,l)=>{const on=k==='stamp'?SH.stamp!==false:!!SH[k];return el('button',{type:'button',class:'chip sm tog '+(k==='stamp'?'stamps':k),'aria-pressed':String(on),onclick:()=>{SH[k]=!on;calShowSave();render();}},el('span',{class:'tick','aria-hidden':'true'},on?'✓':''),l);};
   const days=[];for(let i=1;i<=n;i++){const ds=CAL.ym+'-'+String(i).padStart(2,'0');if(ds<=t) days.push(ds);}
   const rows=RS.map(r=>{let ok=0,ans=0,app=0;for(const ds of days){if(!routineApplies(ds,r)||dayRec(ds).off) continue;app++;const s=routineState(ds,r);if(s!=null){ans++;if(s) ok++;}}return {r,ok,ans,app};});
   return [
@@ -2295,7 +2330,7 @@ function viewCommuteBody(){
         r?lab('bm-'+key,'基準',pselect('bm-'+key,mode,CM_MODES(dir),v=>up('mode',v))):el('span',{})),
       r?(mode==='train'?lab('bt-'+key,'ふだん乗る電車',pselect('bt-'+key,b.train||'',[['','（選ぶ）'],...times.map(m=>[hmOf(m),hmOf(m)+' 発'])],v=>up('train',v)))
         :lab('ba-'+key,cmAtLabel(dir,mode),ptime('ba-'+key,b.at,v=>up('at',v),cmAtLabel(dir,mode)))):null,
-      hasStay?el('label',{class:'row',for:'bs-'+key},el('input',{type:'checkbox',id:'bs-'+key,checked:b.stay!==false,onchange:e=>up('stay',e.target.checked)}),el('span',{class:'small'},'立ち寄る（'+(r.legs.filter(l=>cmStay(l.kind)).map(l=>l.name||'立ち寄り').join('・'))+'）')):null);};
+      hasStay?stayBoxes(r,cmOffOf(b,cmStayIds(r))??[],'bs-'+key,nx=>cmLive(x=>{x.byType=x.byType||{};const o=x.byType[d.id]=Object.assign({},x.byType[d.id]);o[dir]=Object.assign({},o[dir],{noStay:nx});delete o[dir].stay;})):null);};
   const brief=d=>{const b=(C.byType||{})[d.id]||{}, one=(dir,nm)=>{const x=b[dir]||{};if(!routes.some(r=>r.id===x.route)) return null;return nm+' '+(x.mode==='train'?(x.train||'')+'の電車':(x.at||'').replace(/^0(\d):/,'$1:')+(dir==='go'&&x.mode!=='leave'?'着':'発'));};
     const t=[one('go','行き'),one('back','帰り')].filter(Boolean);return t.length?t.join('・'):'通勤なし';};
   const byT=d=>el('details',{class:'set bytblock',id:'cmbt-'+d.id,open:CMOPEN.has('bt:'+d.id),ontoggle:e=>{if(e.target.open) CMOPEN.add('bt:'+d.id); else CMOPEN.delete('bt:'+d.id);}},
@@ -2405,7 +2440,7 @@ function cmDayPanel(ds){
         r?pfield('cb-'+key,'基準',pselect('cb-'+key,mode,CM_MODES(dir),v=>upd('mode',v))):null,
         r?(mode==='train'?pfield('ct-'+key,'乗る電車',pselect('ct-'+key,od.train||s.train||'',[['','（選ぶ）'],...firstTrainTimes(r).map(m=>[hmOf(m),hmOf(m)+' 発'])],v=>upd('train',v)))
           :pfield('ca-'+key,cmAtLabel(dir,mode),ptime('ca-'+key,od.at||s.at,v=>upd('at',v),cmAtLabel(dir,mode)))):null,
-        hasStay?el('label',{class:'row',for:'cs-'+key,style:'min-height:40px'},el('input',{type:'checkbox',id:'cs-'+key,checked:(od.stay!=null?od.stay:s.stay)!==false,onchange:e=>upd('stay',e.target.checked===(s.stay!==false)?undefined:e.target.checked)}),el('span',{class:'small'},'立ち寄る')):null]);};
+        hasStay?stayBoxes(r,cmStaySel(s,od,r).off,'cs-'+key,nx=>cmDaySetOff(ds,dir,s,r,nx)):null]);};
   const dias=sds.map(sd=>pfield('cmd-'+sd,multi?'ダイヤ（'+md(sd)+'・'+WD[parseYmd(sd).getDay()]+'の電車）':'ダイヤ',pselect('cmd-'+sd,(dayRec(sd).cm||{}).dia||'',[['','自動（'+DIA[cmDiaBase(sd)]+'）'],['wd','平日'],['sa','土曜'],['ho','休日']],v=>setOn(sd,c=>{if(v) c.dia=v; else delete c.dia;}))));
   return el('section',{class:'dpart'},
     el('div',{class:'between'},el('h4',{},'通勤'),p?el('button',{type:'button',class:'chip sm',onclick:()=>cmSheet(ds)},'乗る電車を見る'):null),
@@ -2785,7 +2820,7 @@ function timeEditor(P,up,rr){
     el('div',{class:'field'},el('span',{class:'row',style:'gap:6px'},'作業コマ（何時から何分、何に使うか）',slotHelp()),
       (d.slots||[]).map((s,si)=>slotRow(d,s,si))),
     el('button',{type:'button',class:'btn sub sm',style:'align-self:stretch;width:100%',onclick:()=>upT(d.id,x=>{x.slots.push({id:newId('sl'),label:tname('study'),time:'',track:'study',min:60,use:'any'});})},'コマを追加'),
-    typeCheckView(d,P),
+    typeCheckView(d,P,rr),
     el('div',{class:'grid2',style:'margin-bottom:12px'},
       types.length>1?twoStepBtn('この時間割を消す',()=>up(x=>{x.dayTypes=x.dayTypes.filter(y=>y.id!==d.id);x.week=x.week.map(v=>v===d.id?x.dayTypes[0].id:v);for(const k of Object.keys(x.dates||{})) if(x.dates[k]===d.id) delete x.dates[k];if(x.dflt===d.id) x.dflt=x.dayTypes[0].id;})):el('span',{}),
       up===tUp?el('button',{type:'button',class:'btn sub sm',onclick:()=>goCommuteType(d.id)},'通勤設定に移動'):el('span',{}))),{id:'tt-'+d.id});
