@@ -1299,22 +1299,39 @@ function ttParse(txt){
   return out.sort((x,y)=>x.d-y.d);
 }
 function ttFor(leg,dia){const t=leg.tt||{};const k=[dia,dia==='sa'?'ho':dia==='ho'?'sa':null,'wd','sa','ho'].filter(Boolean).find(x=>String(t[x]||'').trim());return {list:k?ttParse(t[k]):[],used:k||dia};}
+/* Trains keep the date they started from until the night is over: a departure before 3:00 runs on the previous
+   date's diagram (Friday's 0:20 last train is 平日, Saturday's 5:00 first train is 土曜). m = minutes since the start
+   of the user's day ds, so the calendar date is worked out from the user's day boundary first. */
+const SVC_CUT=180;
+function svcDate(ds,m){const abs=dayStartMin()+m, cal=addDays(ds,Math.floor(abs/1440)), clock=((abs%1440)+1440)%1440;return clock<SVC_CUT?addDays(cal,-1):cal;}
+/* the departures of one leg around the user's day ds; each one is taken from the timetable of its own date's diagram
+   (an empty 土曜 / 休日 timetable borrows the other, then 平日), so a trip that crosses midnight or the user's day
+   boundary changes diagram on the way when the date does. Neighbouring days are included for such trips. */
+function ttList(leg,ds){
+  const t=leg.tt||{}, src={};for(const k of ['wd','sa','ho']) if(String(t[k]||'').trim()) src[k]=ttParse(t[k]);
+  const memo={}, of=sd=>memo[sd]||(memo[sd]=(()=>{const dia=cmDia(sd);return {dia,used:ttFor(leg,dia).used};})());
+  const out=[];
+  for(const k of Object.keys(src)) for(const e of src[k]) for(const sh of [-1440,0,1440]){const d=e.d+sh, sd=svcDate(ds,d), w=of(sd);if(w.used===k) out.push({d,a:e.a!=null?e.a+sh:null,dia:w.dia,used:k,sd});}
+  return out.sort((x,y)=>x.d-y.d);
+}
 function rideMin(l,e){return e&&e.a!=null?e.a-e.d:Math.max(1,+l.ride||1);}
 /* a trip on one route. o = {mode:'at'|'train', at, train (minutes since the start of the day), stay (stop at the
    stopovers or not), fix:{k,dep} (次の電車に乗る)}. 'at' means: arrive by it (行き) or leave at it (帰り); 'train' means:
    take the first train of the route at that time (or the first one after it on that day's diagram). */
 function cmPlan(route,dir,ds,o){
-  const legs=o.stay===false&&(route.direct||[]).length?directLegs(route):(route.legs||[]), n=legs.length, dia=cmDia(ds), tt=legs.map(l=>cmRide(l.kind)?ttFor(l,dia):null);let miss=false;
+  const legs=o.stay===false&&(route.direct||[]).length?directLegs(route):(route.legs||[]), n=legs.length, dia=cmDia(ds), tt=legs.map(l=>cmRide(l.kind)?ttList(l,ds):null);let miss=false;
   const stayOn=o.stay!==false, dur=l=>(cmStay(l.kind)||l.stayOnly)?(stayOn?Math.max(0,+l.min||0):0):Math.max(0,+l.min||0);
   const xferBefore=i=>i>0&&cmRide(legs[i-1].kind)?Math.max(0,+legs[i].xfer||0):0;
   const fixes={};
   const f=legs.findIndex(l=>cmRide(l.kind));
   let start;
-  if(o.mode==='train'&&f>=0){const e=tt[f].list.find(x=>x.d>=o.train);const dep=e?e.d:o.train;if(!e) miss=true;fixes[f]=dep;let t=dep;for(let i=0;i<f;i++) t-=dur(legs[i]);start=t;}
+  if(o.mode==='train'&&f>=0){const e=tt[f].find(x=>x.d>=o.train);const dep=e?e.d:o.train;if(!e) miss=true;fixes[f]=dep;let t=dep;for(let i=0;i<f;i++) t-=dur(legs[i]);start=t;}
   else if(dir==='go'){let t=o.at;
     for(let i=n-1;i>=0;i--){const l=legs[i];
       if(!cmRide(l.kind)){t-=dur(l);continue;}
-      let best=null;for(const e of tt[i].list){const a=e.a!=null?e.a:e.d+Math.max(1,+l.ride||1);if(a<=t&&(!best||e.d>best.d)) best=e;}
+      let best=null;for(const e of tt[i]){const a=e.a!=null?e.a:e.d+Math.max(1,+l.ride||1);if(a<=t&&(!best||e.d>best.d)) best=e;}
+      // a train of the night before that gets there hours early is not a way to arrive: the timetable has none
+      if(best&&best.sd<svcDate(ds,t)&&t-(best.a!=null?best.a:best.d+Math.max(1,+l.ride||1))>180) best=null;
       if(!best){miss=true;t-=Math.max(1,+l.ride||1);} else t=best.d;
       t-=xferBefore(i);}
     start=t;
@@ -1323,11 +1340,14 @@ function cmPlan(route,dir,ds,o){
   const R=[];let t=start;
   for(let i=0;i<n;i++){const l=legs[i];
     if(!cmRide(l.kind)){const m=dur(l);R.push({dep:t,arr:t+m,wait:0,skip:(cmStay(l.kind)||l.stayOnly)&&!stayOn});t+=m;continue;}
-    const ready=t+xferBefore(i), list=tt[i].list;
+    const ready=t+xferBefore(i), list=tt[i];
     let e=fixes[i]!=null?(list.find(x=>x.d===fixes[i])||{d:Math.max(fixes[i],ready),a:null,none:!list.length}):list.find(x=>x.d>=ready);
     if(!e){miss=true;e={d:ready,a:null,none:true};}
-    const arr=e.d+rideMin(l,e.none?null:e);R.push({dep:e.d,arr,wait:e.d-t,entry:e.none?null:e});t=arr;}
-  const out={route,dir,dia,used:[...new Set(tt.filter(Boolean).map(x=>x.used))],legs:legs.map((l,i)=>Object.assign({l,i},R[i])),miss,fix:o.fix||null,mode:o.mode||'at',stayOn};
+    const arr=e.d+rideMin(l,e.none?null:e), sd=e.sd||svcDate(ds,e.d);
+    // first: the last train of that date has gone, so this is the first one of the next date
+    R.push({dep:e.d,arr,wait:e.d-t,entry:e.none?null:e,sd,dia:e.dia||cmDia(sd),used:e.used||null,first:!e.none&&!!e.sd&&e.sd>svcDate(ds,ready)});t=arr;}
+  const rideR=R.filter((x,i)=>cmRide(legs[i].kind));
+  const out={route,dir,ds,dia,dias:[...new Set(rideR.map(x=>x.dia))],sds:[...new Set(rideR.map(x=>x.sd))].sort(),first:rideR.some(x=>x.first),used:[...new Set(rideR.map(x=>x.used).filter(Boolean))],legs:legs.map((l,i)=>Object.assign({l,i},R[i])),miss,fix:o.fix||null,mode:o.mode||'at',stayOn};
   out.leave=n?R[0].dep:start;out.arrive=n?R[n-1].arr:start;
   out.ride=0;out.wait=0;out.move=0;out.drive=0;out.stay=0;
   for(const x of out.legs){if(x.skip) continue;const m=x.arr-x.dep;if(cmRide(x.l.kind)){out.ride+=m;out.wait+=x.wait||0;}else if(cmMove(x.l.kind)) out.move+=m; else if(cmStay(x.l.kind)) out.stay+=m; else out.drive+=m;}
@@ -1349,10 +1369,14 @@ function cmDay(ds){
     if(mode==='train'?!train:!at) return null;
     return cmPlan(r,dir,ds,{mode,at:at?sinceStart(toMin(at)):null,train:train?sinceStart(toMin(train)):null,stay,fix:o[dir+'Fix']||null});};
   const res={go:one('go'),back:one('back'),dia:cmDia(ds),hol:cmHolName(ds)};
+  const T=[res.go,res.back].filter(Boolean);res.dias=[...new Set(T.flatMap(x=>x.dias))];res.sds=[...new Set(T.flatMap(x=>x.sds))].sort();
   return c.cm[ds]=(res.go||res.back)?res:null;
 }
 function cmNotify(route){const g=commute().notify||{}, r=(route&&route.notify)||{};const v=k=>r[k]!=null&&r[k]!==''?+r[k]:(g[k]!=null?+g[k]:{home:10,board:5,xfer:2}[k]);return {home:v('home'),board:v('board'),xfer:v('xfer')};}
-function nextDep(p,k){const x=p.legs[k];if(!x||!cmRide(x.l.kind)) return null;return ttFor(x.l,p.dia).list.find(e=>e.d>x.dep)||null;}
+/* the next departure after the planned one, within 3 hours: the timetable holds only the hours that matter, so the
+   next entry can be the evening's train or, after the last train, the next morning's first one, and neither is
+   "the next train" */
+function nextDep(p,k){const x=p.legs[k];if(!x||!cmRide(x.l.kind)) return null;const e=ttList(x.l,p.ds).find(y=>y.d>x.dep);return e&&e.d-x.dep<=180?e:null;}
 /* 次の電車に乗る: take the next train on leg k; the rest of the trip is worked out again */
 function cmTakeNext(ds,dir,k,quiet){
   const day=cmDay(ds), p=day&&day[dir];if(!p) return false;const nx=nextDep(p,k);
@@ -1374,13 +1398,18 @@ function cmUse(ds){
 }
 /* routines whose time follows the commute */
 const CM_BY={'go-leave':'通勤：家を出る時刻','back-board':'通勤：帰りの最初の電車の時刻','back-leave':'通勤：帰りに出る時刻','go-stay':'通勤：行きの立ち寄り先に着く時刻','back-stay':'通勤：帰りの立ち寄り先に着く時刻'};
+/* the commute time a routine follows, in minutes since the start of the day (it may fall outside the day when the
+   trip crosses the user's day boundary, so notices use this rather than the clock text) */
+function routineByM(ds,r){
+  if(!r.byCm||!cmOn()) return null;const p=cmDay(ds);if(!p) return null;
+  if(r.byCm==='go-leave') return p.go?p.go.leave:null;
+  if(r.byCm==='back-leave') return p.back?p.back.leave:null;
+  if(r.byCm==='back-board'){const x=p.back&&p.back.legs.find(y=>cmRide(y.l.kind));return x?x.dep:null;}
+  if(r.byCm==='go-stay'||r.byCm==='back-stay'){const t=p[r.byCm==='go-stay'?'go':'back'], x=t&&t.legs.find(y=>cmStay(y.l.kind)&&!y.skip);return x?x.dep:null;}
+  return null;
+}
 function routineBy(ds,r){
-  if(!r.byCm||!cmOn()) return r.by||'';const p=cmDay(ds);if(!p) return '';
-  if(r.byCm==='go-leave') return p.go?hmOf(p.go.leave):'';
-  if(r.byCm==='back-leave') return p.back?hmOf(p.back.leave):'';
-  if(r.byCm==='back-board'){const x=p.back&&p.back.legs.find(y=>cmRide(y.l.kind));return x?hmOf(x.dep):'';}
-  if(r.byCm==='go-stay'||r.byCm==='back-stay'){const t=p[r.byCm==='go-stay'?'go':'back'], x=t&&t.legs.find(y=>cmStay(y.l.kind)&&!y.skip);return x?hmOf(x.dep):'';}
-  return r.by||'';
+  if(!r.byCm||!cmOn()) return r.by||'';if(!CM_BY[r.byCm]) return r.by||'';const m=routineByM(ds,r);return m==null?'':hmOf(m);
 }
 
 
@@ -1764,14 +1793,15 @@ function ub64u(str){const t=String(str).replace(/-/g,'+').replace(/_/g,'/');cons
 function b64uBytes(buf){let s='';for(const c of new Uint8Array(buf)) s+=String.fromCharCode(c);return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function pushItems(){
   const L=life(), out=[], now=Date.now(), ds0=dayStartMin();
-  for(let i=0;i<14;i++){
+  // from yesterday: a trip of yesterday can run past the day boundary (its old notices are dropped below)
+  for(let i=-1;i<14;i++){
     const ds=addDays(today(),i), d=dayRec(ds);if(d.off) continue;
     const midnight=parseYmd(ds).getTime(), at=hm=>midnight+(ds0+sinceStart(toMin(hm)))*60000, leaveNoted={};
     for(const r of routines()){
-      const by=routineBy(ds,r);
+      const by=routineBy(ds,r), byM=routineByM(ds,r);
       if(r.kind==='sleep'||!by||!routineApplies(ds,r)||routineState(ds,r)!=null) continue;
-      const t=at(by), name=(r.emoji?r.emoji+' ':'')+r.name, lv=r.byCm==='go-leave'?'go':r.byCm==='back-leave'?'back':null, trip=lv&&cmOn()?(cmDay(ds)||{})[lv]:null;
-      const fr=trip&&trip.legs.find(x=>cmRide(x.l.kind)), extra=fr?'。'+hmOf(fr.dep)+' '+(fr.l.from||'')+(fr.l.plat?' '+fr.l.plat:'')+(fr.l.car?' '+fr.l.car:'')+'に乗ります':'';
+      const t=byM!=null?midnight+(ds0+byM)*60000:at(by), name=(r.emoji?r.emoji+' ':'')+r.name, lv=r.byCm==='go-leave'?'go':r.byCm==='back-leave'?'back':null, trip=lv&&cmOn()?(cmDay(ds)||{})[lv]:null;
+      const fr=trip&&trip.legs.find(x=>cmRide(x.l.kind)), extra=fr?'。'+hmOf(fr.dep)+(fr.dia&&(fr.dia!=='wd'||cmDay(ds).dias.length>1)?'（'+DIA[fr.dia]+'ダイヤ）':'')+' '+(fr.l.from||'')+(fr.l.plat?' '+fr.l.plat:'')+(fr.l.car?' '+fr.l.car:'')+'に乗ります':'';
       if(r.before!=null){out.push({id:'b:'+r.id+':'+ds,at:t-r.before*60000,title:name,body:by+' まで、あと'+fmtMin(r.before)+'です'+extra,tag:'r:'+r.id+':'+ds,url:'#home'});if(lv) leaveNoted[lv]=true;}
       if(r.at!==false) out.push({id:'a:'+r.id+':'+ds,at:t,title:name+'　できた？',body:by+' になりました',tag:'r:'+r.id+':'+ds,url:'#home',ds,rid:r.id,actions:[{action:'ok',title:'○ できた'},{action:'ng',title:'× できなかった'}]});
     }
@@ -1788,26 +1818,26 @@ function pushItems(){
 function cmItems(ds,leaveNoted){
   const out=[], ds0=dayStartMin(), midnight=parseYmd(ds).getTime();
   if(!leaveNoted){leaveNoted={};for(const r of routines()){const lv=r.byCm==='go-leave'?'go':r.byCm==='back-leave'?'back':null;if(lv&&r.before!=null&&routineApplies(ds,r)&&routineState(ds,r)==null) leaveNoted[lv]=true;}}
-    const cmd=cmDay(ds), atM=m=>midnight+(ds0+m)*60000;
+    const cmd=cmDay(ds), atM=m=>midnight+(ds0+m)*60000, dl=x=>x&&x.dia&&(x.dia!=='wd'||cmd.dias.length>1)?'（'+DIA[x.dia]+'ダイヤ）':'';
     if(cmd) for(const dir of ['go','back']){const p=cmd[dir];if(!p) continue;const N=cmNotify(p.route), rides=p.legs.filter(x=>cmRide(x.l.kind));
       const first=rides[0], fl=first?first.l:null;
-      if(first&&N.home!=null&&!leaveNoted[dir]) out.push({id:'cmh:'+dir+':'+ds,at:atM(p.leave)-N.home*60000,title:(dir==='go'?'🏠 ':'🏢 ')+hmOf(p.leave)+' に出ます',body:hmOf(first.dep)+' '+(fl.from||'')+(fl.plat?' '+fl.plat:'')+(fl.car?' '+fl.car:'')+(fl.memo?'（'+fl.memo+'）':'')+'に乗ります。'+hmOf(p.arrive)+' 着の予定です',tag:'cm:'+ds+':'+dir+':h',url:'#home'});
+      if(first&&N.home!=null&&!leaveNoted[dir]) out.push({id:'cmh:'+dir+':'+ds,at:atM(p.leave)-N.home*60000,title:(dir==='go'?'🏠 ':'🏢 ')+hmOf(p.leave)+' に出ます',body:hmOf(first.dep)+dl(first)+' '+(fl.from||'')+(fl.plat?' '+fl.plat:'')+(fl.car?' '+fl.car:'')+(fl.memo?'（'+fl.memo+'）':'')+'に乗ります。'+hmOf(p.arrive)+' 着の予定です',tag:'cm:'+ds+':'+dir+':h',url:'#home'});
       rides.forEach((x,j)=>{const l=x.l;if(l.notify===false) return;const nx=nextDep(p,x.i), more={ds,rid:'cm:'+dir+':'+x.i+':'+x.dep,actions:nx?[{action:'next',title:'次の'+CM_KIND[l.kind]+'に乗る'}]:undefined};
         if(N.board!=null) out.push(Object.assign({id:'cmb:'+dir+':'+x.i+':'+ds,at:atM(x.dep)-N.board*60000,title:CM_ICON[l.kind]+' '+hmOf(x.dep)+' '+(l.from||'')+(l.plat?' '+l.plat:'')+(l.car?' '+l.car:''),
-          body:(l.memo?l.memo+'・':'')+'乗車'+(x.arr-x.dep)+'分（'+hmOf(x.arr)+' '+(l.to||'')+'着）。'+(nx?'次の'+CM_KIND[l.kind]+'は '+hmOf(nx.d)+' 発です':'次の'+CM_KIND[l.kind]+'は時刻表にありません'),tag:'cm:'+ds+':'+dir+':'+x.i,url:'#home'},more));
+          body:(dl(x)?DIA[x.dia]+'ダイヤ・':'')+(l.memo?l.memo+'・':'')+'乗車'+(x.arr-x.dep)+'分（'+hmOf(x.arr)+' '+(l.to||'')+'着）。'+(nx?'次の'+CM_KIND[l.kind]+'は '+hmOf(nx.d)+' 発です':'次の'+CM_KIND[l.kind]+'は時刻表にありません'),tag:'cm:'+ds+':'+dir+':'+x.i,url:'#home'},more));
         const prev=rides[j-1], st=prev&&p.legs.slice(prev.i+1,x.i).find(y=>cmStay(y.l.kind)&&!y.skip);
         if(st&&N.xfer!=null){out.push({id:'cmx:'+dir+':'+x.i+':'+ds,at:atM(prev.arr)-N.xfer*60000,title:'⏰ まもなく '+(prev.l.to||'')+'（'+hmOf(prev.arr)+' 着）',body:'ここで降りて '+(st.l.name||'立ち寄り先')+' へ（'+hmOf(st.arr)+' まで）',tag:'cm:'+ds+':'+dir+':x'+x.i,url:'#home',ds,rid:'cm:'+dir+':'+x.i+':'+x.dep});
-          if(N.home!=null) out.push(Object.assign({id:'cms:'+dir+':'+x.i+':'+ds,at:atM(st.arr)-N.home*60000,title:'📍 '+hmOf(st.arr)+' に'+(st.l.name||'立ち寄り先')+'を出ます',body:hmOf(x.dep)+' '+(l.from||'')+(l.plat?' '+l.plat:'')+(l.car?' '+l.car:'')+'に乗ります。'+hmOf(p.arrive)+' 着の予定です',tag:'cm:'+ds+':'+dir+':s'+x.i,url:'#home'},more));
+          if(N.home!=null) out.push(Object.assign({id:'cms:'+dir+':'+x.i+':'+ds,at:atM(st.arr)-N.home*60000,title:'📍 '+hmOf(st.arr)+' に'+(st.l.name||'立ち寄り先')+'を出ます',body:hmOf(x.dep)+dl(x)+' '+(l.from||'')+(l.plat?' '+l.plat:'')+(l.car?' '+l.car:'')+'に乗ります。'+hmOf(p.arrive)+' 着の予定です',tag:'cm:'+ds+':'+dir+':s'+x.i,url:'#home'},more));
           return;}
         if(prev&&N.xfer!=null) out.push(Object.assign({id:'cmx:'+dir+':'+x.i+':'+ds,at:atM(prev.arr)-N.xfer*60000,title:'⏰ まもなく '+(prev.l.to||'')+'（'+hmOf(prev.arr)+' 着）',
-          body:'乗り換え '+hmOf(x.dep)+' 発 '+(l.plat||'')+(l.car?' '+l.car:'')+(l.memo?'（'+l.memo+'）':'')+(x.dep-prev.arr>0?'・待ち'+(x.dep-prev.arr)+'分':'')+(nx?'。次は '+hmOf(nx.d)+' 発':''),tag:'cm:'+ds+':'+dir+':x'+x.i,url:'#home'},more));});}
+          body:'乗り換え '+hmOf(x.dep)+' 発'+dl(x)+' '+(l.plat||'')+(l.car?' '+l.car:'')+(l.memo?'（'+l.memo+'）':'')+(x.dep-prev.arr>0?'・待ち'+(x.dep-prev.arr)+'分':'')+(nx?'。次は '+hmOf(nx.d)+' 発':''),tag:'cm:'+ds+':'+dir+':x'+x.i,url:'#home'},more));});}
   return out;
 }
 const CMSHOWN=new Set();
 /* copies for the service worker: if a notice arrives for a train that is no longer in the plan, it shows the current one */
 function cmNotesSave(){
   if(!cmOn()){IDB.put('__cmnotes',{});return;}
-  const notes={__days:[today(),addDays(today(),1)]};for(const ds of notes.__days) for(const it of cmItems(ds)) notes[it.tag]={title:it.title,body:it.body,rid:it.rid||'',ds:it.ds||ds,at:it.at,actions:it.actions||null};
+  const notes={__days:[addDays(today(),-1),today(),addDays(today(),1)]};for(const ds of notes.__days) for(const it of cmItems(ds)) notes[it.tag]={title:it.title,body:it.body,rid:it.rid||'',ds:it.ds||ds,at:it.at,actions:it.actions||null};
   IDB.put('__cmnotes',notes);
 }
 /* while the app is open (for example during 演習 on the train), it shows the commute notices by itself, so they come
@@ -1815,7 +1845,8 @@ function cmNotesSave(){
 async function cmLocalTick(){
   if(!cmOn()||!('serviceWorker' in navigator)||typeof Notification==='undefined'||Notification.permission!=='granted') return;
   const now=Date.now();
-  for(const it of cmItems(today())){
+  // yesterday and tomorrow too: a trip can cross the user's day boundary (an early train before it, a late one after it)
+  for(const it of [-1,0,1].flatMap(i=>cmItems(addDays(today(),i)))){
     if(it.at>now||it.at<now-90000||CMSHOWN.has(it.id)) continue;CMSHOWN.add(it.id);
     try{const reg=await navigator.serviceWorker.ready;await reg.showNotification(it.title,{body:it.body,tag:it.tag,lang:'ja',icon:'icons/icon-192.png',badge:'icons/badge-96.png',data:{ds:it.ds,rid:it.rid,url:'#home'},actions:(it.actions||[]).slice(0,2)});}catch(_){}
     if(document.visibilityState==='visible'){toast(it.title);if(navigator.vibrate) navigator.vibrate([200,100,200]);}
@@ -1920,15 +1951,15 @@ function viewCommute(){
         el('div',{class:'field'},el('span',{class:'flab'},'時刻表*'),
           el('div',{class:'seg tttabs',role:'tablist'},['wd','sa','ho'].map(k=>el('button',{type:'button',role:'tab','aria-selected':String(tab===k),'aria-pressed':String(tab===k),onclick:()=>{TTTAB[l.id]=k;render();}},DIA[k]+(cnt(k)?' '+cnt(k):'')))),
           el('textarea',{rows:2,'aria-label':DIA[tab]+'ダイヤの時刻表',value:(l.tt||{})[tab]||'',placeholder:'例：7:32 7:41 7:52-8:10 8:01',onchange:e=>upL(x=>{x.tt=Object.assign({},x.tt,{[tab]:e.target.value.trim()});})})),
-        more('lm:'+l.id,'詳細（'+(bus?'のりば':'番線・号車')+'・メモ・通知・演習）',
+        el('label',{class:'row',for:'ln-'+l.id},el('input',{type:'checkbox',id:'ln-'+l.id,checked:l.notify!==false,onchange:e=>upL(x=>{x.notify=e.target.checked;})}),el('span',{class:'small'},'通知する（乗る前・乗り換えの前）')),
+        el('label',{class:'row',for:'ls-'+l.id},el('input',{type:'checkbox',id:'ls-'+l.id,checked:l.study!==false,disabled:C.study===false,onchange:e=>upL(x=>{x.study=e.target.checked;})}),el('span',{class:'small'},'ここでアプリ演習をする')),
+        more('lm:'+l.id,'詳細（'+(bus?'のりば':'番線・号車')+'・メモ）',
           el('div',{class:'grid2'},lab('lp-'+l.id,bus?'のりば':'番線',txt('lp-'+l.id,l.plat,v=>upL(x=>{x.plat=v;}),bus?'例：3番のりば':'例：2番線')),l.kind==='train'?lab('lc-'+l.id,'号車',txt('lc-'+l.id,l.car,v=>upL(x=>{x.car=v;}),'例：4号車')):el('span',{})),
-          lab('lm-'+l.id,'メモ',txt('lm-'+l.id,l.memo,v=>upL(x=>{x.memo=v;}),'例：K駅行き 各停')),
-          el('label',{class:'row',for:'ls-'+l.id},el('input',{type:'checkbox',id:'ls-'+l.id,checked:l.study!==false,disabled:C.study===false,onchange:e=>upL(x=>{x.study=e.target.checked;})}),el('span',{class:'small'},'ここでアプリ演習をする')),
-          el('label',{class:'row',for:'ln-'+l.id},el('input',{type:'checkbox',id:'ln-'+l.id,checked:l.notify!==false,onchange:e=>upL(x=>{x.notify=e.target.checked;})}),el('span',{class:'small'},'通知する（乗る前・乗り換えの前）')))]
+          lab('lm-'+l.id,'メモ',txt('lm-'+l.id,l.memo,v=>upL(x=>{x.memo=v;}),'例：K駅行き 各停')))]
       :stay?[
-        el('div',{class:'grid2'},lab('sn-'+l.id,'立ち寄り先*',txt('sn-'+l.id,l.name,v=>upL(x=>{x.name=v;}),'例：自習室')),lab('sm-'+l.id,'いる時間（分）*',num('sm-'+l.id,l.min,v=>upL(x=>{x.min=v;}),'例：180'))),
+        el('div',{class:'grid2'},lab('sn-'+l.id,'立ち寄り先*',txt('sn-'+l.id,l.name,v=>upL(x=>{x.name=v;}),'例：自習室')),lab('sm-'+l.id,'滞在時間（分）*',num('sm-'+l.id,l.min,v=>upL(x=>{x.min=v;}),'例：180'))),
         el('div',{class:'grid2'},lab('sst-'+l.id,'このうち'+tname('study')+'（分）',num('sst-'+l.id,l.study,v=>upL(x=>{x.study=v;}),'例：60')),lab('scr-'+l.id,'このうち'+tname('create')+'（分）',num('scr-'+l.id,l.create,v=>upL(x=>{x.create=v;}),'例：120'))),
-        (+l.study||0)+(+l.create||0)>(+l.min||0)?el('p',{class:'xs',style:'color:#E8590C'},tname('study')+'と'+tname('create')+'の合計が、いる時間を超えています。'):null,
+        (+l.study||0)+(+l.create||0)>(+l.min||0)?el('p',{class:'xs',style:'color:#E8590C'},tname('study')+'と'+tname('create')+'の合計が、滞在時間を超えています。'):null,
         (+l.study||0)&&(+l.create||0)?lab('so-'+l.id,'順番',pselect('so-'+l.id,l.order||'study',[['study',tname('study')+' → '+tname('create')],['create',tname('create')+' → '+tname('study')]],v=>upL(x=>{x.order=v;}))):null,
         more('lm:'+l.id,'詳細（メモ）',lab('lm-'+l.id,'メモ',txt('lm-'+l.id,l.memo,v=>upL(x=>{x.memo=v;}),'')))]
       :[el('div',{class:'grid2'},lab('ld-'+l.id,'かかる時間（分）*',num('ld-'+l.id,l.min,v=>upL(x=>{x.min=v;}),'例：10')),el('span',{})),
@@ -1993,36 +2024,45 @@ function viewCommute(){
       el('label',{class:'row',for:'cm-j'},el('input',{type:'checkbox',id:'cm-j',checked:C.jpHol!==false,onchange:e=>cmLive(x=>{x.jpHol=e.target.checked;})}),el('span',{class:'small'},'日本の祝日・振替休日を休日ダイヤにする')),
       lab('cm-sa','土曜ダイヤの日'+(nSa?'（'+nSa+'日）':''),txt('cm-sa',C.spSa,v=>cmLive(x=>{x.spSa=v;}),'例：2026-12-29 2026-12-30')),
       lab('cm-ho','休日ダイヤの日'+(nHo?'（'+nHo+'日）':''),txt('cm-ho',C.spHo,v=>cmLive(x=>{x.spHo=v;}),'例：12/31 1/2 1/3')),
-      el('p',{class:'xs muted'},'日付をスペースで区切って並べます。年を書かない日は毎年です。')),
+      el('p',{class:'xs muted'},'日付をスペースで区切って並べます。年を書かない日は毎年です。'),
+      el('p',{class:'xs muted'},'0時〜3時の電車は、前の日のダイヤで数えます（金曜の終電は平日ダイヤ、土曜の始発は土曜ダイヤ）。')),
     el('div',{class:'card'},el('h2',{},'ためしに見る'),
       lab('cm-pv','日付',pdate('cm-pv',CMP.ds,v=>{CMP.ds=v||today();render();})),
-      el('p',{class:'small'},md(CMP.ds)+'（'+WD[parseYmd(CMP.ds).getDay()]+'）は'+DIA[cmDia(CMP.ds)]+'ダイヤ'+(cmHolName(CMP.ds)?'（'+cmHolName(CMP.ds)+'）':'')),
+      el('p',{class:'small'},cmDiaText(CMP.ds,pv)),
       pv?['go','back'].map(dir=>pv[dir]?tripView(pv[dir],null):null):el('p',{class:'small muted'},C.on?'この日は通勤がありません。':'通勤の機能がオフです。'))
   ];
 }
 
 /* one trip, step by step; with ds, upcoming trains get a 次の電車に乗る button */
 function tripView(p,ds){
-  const now=ds===today()?nowSinceStart():-1;
+  const now=ds===today()?nowSinceStart():-1, showDia=p.dias.length>1||(p.dias.length===1&&p.dias[0]!==p.dia);
   return el('div',{class:'trip'},
     el('p',{class:'small'},el('b',{},/行き|帰り/.test(p.route.name)?p.route.name:(p.dir==='go'?'行き':'帰り')+'（'+p.route.name+'）'),'　'+hmOf(p.leave)+' 出発 → '+hmOf(p.arrive)+' 着'),
     p.legs.filter(x=>!x.skip).map(x=>el('div',{class:'tleg'+(cmStay(x.l.kind)?' stay':'')},
       el('span',{class:'small'},legText(x)),
+      cmRide(x.l.kind)&&(showDia||(x.used&&x.used!==x.dia))?el('span',{class:'xs muted'},(showDia?md(x.sd)+'の'+DIA[x.dia]+'ダイヤ':'')+(x.used&&x.used!==x.dia?(showDia?'・':'')+DIA[x.dia]+'の時刻表が空欄なので、'+DIA[x.used]+'の時刻表で計算しています':'')):null,
+      x.first?el('span',{class:'xs',style:'color:#E8590C'},'終電のあとなので、次の日の始発で計算しています'):null,
       x.wait&&cmRide(x.l.kind)&&x.i>0?el('span',{class:'xs muted'},'待ち'+x.wait+'分'):null,
       ds&&cmRide(x.l.kind)&&x.dep>=now-1&&nextDep(p,x.i)?el('button',{type:'button',class:'chip sm',onclick:()=>{if(cmTakeNext(ds,p.dir,x.i)){render();const sh=document.getElementById('sheet');if(sh.open) cmSheet(ds);schedulePush();}}},'次の'+CM_KIND[x.l.kind]+'に乗る（'+hmOf(nextDep(p,x.i).d)+'発）'):null)),
     el('p',{class:'xs muted num'},'乗車'+p.ride+'分'+(p.wait?'・待ち'+p.wait+'分':'')+(p.move?'・徒歩/自転車'+p.move+'分':'')+(p.drive?'・運転'+p.drive+'分':'')+(p.stay?'・立ち寄り'+fmtMin(p.stay):'')),
     p.miss?el('p',{class:'xs',style:'color:#E8590C'},'時刻表の範囲外の区間があります（ふだんの乗車時間で計算しています）。'):null,
     ds&&p.fix?el('button',{type:'button',class:'chip sm',onclick:()=>{setDay(ds,d=>{d.cm=Object.assign({},d.cm);delete d.cm[p.dir+'Fix'];});render();const sh=document.getElementById('sheet');if(sh.open) cmSheet(ds);schedulePush();}},'もとの予定に戻す'):null);
 }
-function cmSheet(ds){const p=cmDay(ds);if(!p) return;openSheet('通勤（'+md(ds)+'・'+DIA[p.dia]+'ダイヤ）',['go','back'].map(dir=>p[dir]?tripView(p[dir],ds):null));}
+/* which diagram the day's trains run on, date by date (trips that cross midnight can have two) */
+function cmDiaText(ds,day){const sds=day&&day.sds&&day.sds.length?day.sds:[ds], multi=sds.length>1||sds[0]!==ds;
+  return sds.map(sd=>md(sd)+'（'+WD[parseYmd(sd).getDay()]+'）'+(multi?'の電車':'')+'は'+DIA[cmDia(sd)]+'ダイヤ'+(cmHolName(sd)?'（'+cmHolName(sd)+'）':'')).join('、');}
+function cmDiaShort(day){const d=day&&day.dias&&day.dias.length?day.dias:[day.dia];return d.map(k=>DIA[k]).join('→');}
+function cmSheet(ds){const p=cmDay(ds);if(!p) return;openSheet('通勤（'+md(ds)+'）',[el('p',{class:'small'},cmDiaText(ds,p))].concat(['go','back'].map(dir=>p[dir]?tripView(p[dir],ds):null)));}
 function cmLine(ds){
   const p=cmDay(ds);if(!p) return null;const s=x=>x?hmOf(x.leave)+'→'+hmOf(x.arrive):'—';
-  return el('button',{type:'button',class:'cmline','aria-label':'今日の通勤の詳しい時刻を見る',onclick:()=>cmSheet(ds)},el('span',{'aria-hidden':'true'},'🚃'),el('span',{class:'small num'},'行き '+s(p.go)+'　帰り '+s(p.back)),el('span',{class:'xs muted'},DIA[p.dia]+' ›'));
+  return el('button',{type:'button',class:'cmline','aria-label':'今日の通勤の詳しい時刻を見る',onclick:()=>cmSheet(ds)},el('span',{'aria-hidden':'true'},'🚃'),el('span',{class:'small num'},'行き '+s(p.go)+'　帰り '+s(p.back)),el('span',{class:'xs muted'},cmDiaShort(p)+' ›'));
 }
 /* the calendar's day panel: that day's commute */
 function cmDayPanel(ds){
   if(!cmOn()) return null;const d=dayRec(ds), o=d.cm||{}, p=cmDay(ds), C=commute(), routes=C.routes||[], bt=(C.byType||{})[dayTypeOf(ds,plan2())]||{};
-  const set=fn=>{const before=planActive()?adjSummary():null;setDay(ds,x=>{x.cm=Object.assign({},x.cm);fn(x.cm);});render();schedulePush();if(before){const m=adjEffect(before,adjSummary());if(m.indexOf('影響はありません')<0) toast(m);}};
+  const setOn=(sd,fn)=>{const before=planActive()?adjSummary():null;setDay(sd,x=>{x.cm=Object.assign({},x.cm);fn(x.cm);});render();schedulePush();if(before){const m=adjEffect(before,adjSummary());if(m.indexOf('影響はありません')<0) toast(m);}}, set=fn=>setOn(ds,fn);
+  // the diagram belongs to the date the trains run on, so a trip past midnight has a second one (of the next date)
+  const sds=p&&p.sds.length?p.sds:[ds], multi=sds.length>1||sds[0]!==ds;
   const dirRow=dir=>{const s=bt[dir]||{}, od=o[dir]||{}, rid=od.route||s.route, r=routes.find(x=>x.id===rid), mode=od.mode||s.mode||'at', key=ds+dir, usual=routes.find(x=>x.id===s.route);
     const upd=(k,v)=>set(c=>{c[dir]=Object.assign({},c[dir]);if(v===undefined||v==='') delete c[dir][k]; else c[dir][k]=v;delete c[dir+'Fix'];});
     const hasStay=r&&(r.legs||[]).some(l=>cmStay(l.kind));
@@ -2036,7 +2076,7 @@ function cmDayPanel(ds){
     p?['go','back'].map(dir=>p[dir]?el('p',{class:'small num'},(dir==='go'?'行き ':'帰り ')+hmOf(p[dir].leave)+' 出発 → '+hmOf(p[dir].arrive)+' 着'):null):el('p',{class:'xs muted'},o.none?'この日は通勤しません。':'この日は通勤がありません。'),
     el('label',{class:'row',for:'cmn-'+ds,style:'min-height:40px'},el('input',{type:'checkbox',id:'cmn-'+ds,checked:!!o.none,onchange:e=>set(c=>{if(e.target.checked) c.none=1; else delete c.none;})}),el('span',{class:'small'},'この日は通勤しない')),
     o.none?null:[dirRow('go'),dirRow('back'),
-      pfield('cmd-'+ds,'ダイヤ',pselect('cmd-'+ds,o.dia||'',[['','自動（'+DIA[cmDiaBase(ds)]+'）'],['wd','平日'],['sa','土曜'],['ho','休日']],v=>set(c=>{if(v) c.dia=v; else delete c.dia;}))),
+      sds.map(sd=>pfield('cmd-'+sd,multi?'ダイヤ（'+md(sd)+'・'+WD[parseYmd(sd).getDay()]+'の電車）':'ダイヤ',pselect('cmd-'+sd,(dayRec(sd).cm||{}).dia||'',[['','自動（'+DIA[cmDiaBase(sd)]+'）'],['wd','平日'],['sa','土曜'],['ho','休日']],v=>setOn(sd,c=>{if(v) c.dia=v; else delete c.dia;})))),
       p?el('button',{type:'button',class:'chip sm',style:'align-self:flex-start',onclick:()=>cmSheet(ds)},'乗る電車を見る ›'):null]];
 }
 
@@ -2184,7 +2224,7 @@ function ptext(id,val,onset,ph){return el('input',{type:'text',id,value:val==nul
 function pnum(id,val,onset,step,min){return el('input',{type:'number',id,value:val==null?'':val,step:step||'any',min:min==null?0:min,inputmode:'decimal',class:'num',onchange:e=>{const v=parseFloat(e.target.value);onset(isNaN(v)?0:v);}});}
 function pselect(id,val,opts,onset){return el('select',{id,onchange:e=>onset(e.target.value)},opts.map(([v,l])=>el('option',{value:v,selected:String(v)===String(val)},l)));}
 function pdate(id,val,onset){return el('input',{type:'date',id,value:val||'',onchange:e=>onset(e.target.value||'')});}
-function ptime(id,val,onset,label){return el('input',{type:'time',id,value:val||'','aria-label':label||'時刻',onchange:e=>onset(e.target.value||'')});}
+function ptime(id,val,onset,label){return el('input',{type:'time',id,value:val?String(val).replace(/^(\d):/,'0$1:'):'','aria-label':label||'時刻',onchange:e=>onset(e.target.value||'')});}
 function upP(fn){setPlan2(fn);render();}
 function twoStepBtn(label,act){let armed=false;return el('button',{type:'button',class:'btn sub sm',style:'color:var(--bad)',onclick:e=>{if(!armed){armed=true;e.target.textContent='もう一度押すと消えます';setTimeout(()=>{armed=false;if(e.target.isConnected) e.target.textContent=label;},4000);return;}act();}},label);}
 function upDown(list,id,dir){const i=list.findIndex(x=>x.id===id),j=i+dir;if(i<0||j<0||j>=list.length) return;[list[i],list[j]]=[list[j],list[i]];}
