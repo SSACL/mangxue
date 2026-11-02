@@ -362,6 +362,8 @@ details.more[open]{display:flex;flex-direction:column;gap:8px}
 .bydir{display:flex;flex-direction:column;gap:6px;padding:6px 0}
 .tleg.stay{color:var(--accent-ink)}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.gtag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:8px;background:var(--chip);color:var(--chip-ink);font-size:10px;vertical-align:1px}
+ol.steps{margin:6px 0 8px;padding-left:1.4em;display:grid;gap:6px}
 .leg{display:flex;flex-direction:column;gap:8px;padding:10px 0;border-top:1px dashed var(--line)}
 .leg>.between select{max-width:60%}
 .bytype{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-top:1px solid var(--line)}
@@ -1961,6 +1963,17 @@ const EVOPEN=new Set();
 const CAL={ym:'',sel:'',show:{study:true,create:true,habit:true,priv:true,stamp:true},range:'day',until:''};
 function calShowSave(){try{IDB.put('__calshow',CAL.show);}catch(e){}}
 function plannedOn(ds){const o={study:0,create:0};if(!planActive()) return o;for(const k of planTasks(ds)){if(k.review) continue;if(k.kind==='study') o.study+=k.plan||0; else if(k.kind==='manga') o.create+=k.plan||0;}return o;}
+/* the calendar page's Google buttons: open it, and (once the client ID is set) import and export by hand */
+function gcalCalRow(){
+  const cfg=gcalCfg(), on=!!cfg.clientId;gisPreload();
+  const open=el('a',{href:gcalUrl(CAL.ym+'-01',true),target:'_blank',rel:'noopener',class:'btn sub sm'},'Googleで開く');
+  if(!on) return el('div',{class:'card'},el('div',{class:'grid2'},open,el('button',{type:'button',class:'btn sub sm',onclick:()=>{FOCUS='#gcal-card';go('import');}},'Googleとの連携を設定する')),
+    el('p',{class:'xs muted'},'連携すると、Googleカレンダーの予定を取り込んだり、節目・期日を書き出したりできます。それまでは、日の欄からプライベートの予定を手で追加できます。'));
+  return el('div',{class:'card'},el('h2',{},'Googleカレンダー'),el('div',{class:'grid2'},
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>gRun('取り込んでいます',gcalImport)},'予定を取り込む'),
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>gRun('書き出しています',gcalExport)},'節目を書き出す')),open,
+    el('p',{class:'xs muted'},'取り込み：今日から8週間の、時刻のある予定。前に取り込んだ分は入れ替わり、手で追加した予定は残ります。'+(cfg.lastImport?'前回 '+md(ymd(new Date(cfg.lastImport)))+' '+hm(cfg.lastImport)+'。':'')));
+}
 function viewCal(){
   const t=today();if(!CAL.ym) CAL.ym=t.slice(0,7);if(!CAL.sel) CAL.sel=t;
   const [y,m]=CAL.ym.split('-').map(Number), first=new Date(y,m-1,1), n=new Date(y,m,0).getDate();
@@ -2002,9 +2015,7 @@ function viewCal(){
     SH.habit?el('div',{class:'card'},el('div',{class:'between'},el('h2',{},m+'月のルーティン'),el('span',{class:'small muted num'},'記録した日 '+days.filter(hasActivity).length+' / '+days.length+'日')),
       el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'ルーティン'),el('th',{},'できた'),el('th',{},'記録した日'))),
         el('tbody',{},rows.map(x=>el('tr',{},el('td',{},(x.r.emoji||'')+' '+x.r.name),el('td',{class:'num'},x.ans?x.ok+'日（'+Math.round(x.ok/x.ans*100)+'%）':'—'),el('td',{class:'num muted'},x.ans+' / '+x.app+'日'))))))):null,
-    el('div',{class:'grid2'},el('a',{href:gcalUrl(CAL.ym+'-01',true),target:'_blank',rel:'noopener',class:'btn sub sm'},'Googleで開く'),
-      el('button',{type:'button',class:'btn sub sm',disabled:true},'Googleから取り込む')),
-    el('p',{class:'xs muted'},'「Googleから取り込む」は、Googleとの連携（クライアントIDの設定）が済むと使えます。それまでは、下の日の欄からプライベートの予定を手で追加できます。')
+    gcalCalRow()
   ];
 }
 /* the tapped day: what is planned, the habits, private events, and the day's type and 配分 */
@@ -2047,7 +2058,7 @@ function dayPanel(ds){
       el('span',{class:'fs','aria-label':r.st==='ok'?'できた':r.st==='ng'?'できなかった':r.st==='none'?'記録なし':null},mark[r.st]||''))))
     :el('p',{class:'small muted'},d.off?'お休みの日です。':'この日の予定はありません。');
   // 3) changing the day: kept apart; for a day gone by it is folded away
-  const evList=pe.map(e=>el('div',{class:'between'},el('span',{class:'small num'},(e.s||'')+'〜'+(e.e||'')+'　'+(e.t||'予定あり')),el('button',{type:'button',class:'ordb','aria-label':'この予定を消す',onclick:()=>withEffect(()=>setDay(ds,x=>{x.g=(Array.isArray(x.g)?x.g:[]).filter(y=>!(y&&y.id===e.id));}))},'×')));
+  const evList=pe.map(e=>el('div',{class:'between'},el('span',{class:'small num'},(e.s||'')+'〜'+(e.e||'')+'　'+(e.t||'予定あり'),e.src==='gcal'?el('span',{class:'gtag',title:'Googleから取り込んだ予定（もう一度取り込むと、Googleの内容に戻ります）'},'Google'):null),el('button',{type:'button',class:'ordb','aria-label':'この予定を消す',onclick:()=>withEffect(()=>setDay(ds,x=>{x.g=(Array.isArray(x.g)?x.g:[]).filter(y=>!(y&&y.id===e.id));}))},'×')));
   const evAdd=el('details',{class:'more evfold',open:EVOPEN.has(ds),ontoggle:e=>{if(e.target.open) EVOPEN.add(ds); else EVOPEN.delete(ds);}},el('summary',{},'予定を追加'),
     el('div',{class:'evadd'},ptime('ev-s',addEv.s,v=>{addEv.s=v;},'はじまり'),el('span',{},'〜'),ptime('ev-e',addEv.e,v=>{addEv.e=v;},'おわり'),
       el('input',{type:'text',id:'ev-t',placeholder:'メモ（任意）','aria-label':'メモ',onchange:e=>{addEv.t=e.target.value.trim();}}),
@@ -2227,6 +2238,134 @@ function pushCard(){
     el('p',{class:'small muted'},msg),
     st==='off'?el('button',{type:'button',class:'btn',onclick:pushEnable},'この端末で通知を受け取る'):null,
     st==='on'?el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:pushTest},'テスト通知を送る'),el('button',{type:'button',class:'btn sub sm',onclick:pushDisable},'この端末の通知を止める')):null);
+}
+
+/* ---------- Googleカレンダー：each user registers their own Google project and pastes its client ID (not a secret).
+   The sign-in token stays in this page's memory only; nothing runs by itself — import and export are button presses. ---------- */
+const GSCOPE=['https://www.googleapis.com/auth/calendar.calendarlist.readonly','https://www.googleapis.com/auth/calendar.events.readonly','https://www.googleapis.com/auth/calendar.app.created'].join(' ');
+const GDAYS=56;   // how far ahead the import reaches (8 weeks)
+let GTOK=null, GCLIENT=null, GPEND=null, GCALS=null, GBUSY=false;
+function gcalCfg(){return S.meta.gcal||{};}
+function setGcal(fn){const x=clone(S.meta.gcal||{});fn(x);x.t=Date.now();S.meta.gcal=x;save('meta/gcal');}
+/* Google's sign-in script, loaded ahead (when a page with the buttons is shown) so that a press opens the window at once */
+function gisLoad(){
+  if(window.google&&google.accounts&&google.accounts.oauth2) return Promise.resolve();
+  if(gisLoad.p) return gisLoad.p;
+  return gisLoad.p=new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;s.onload=()=>res();s.onerror=()=>{gisLoad.p=null;rej({code:'net'});};document.head.append(s);});
+}
+function gisPreload(){if(gcalCfg().clientId) gisLoad().catch(()=>{});}
+function gClient(){const id=gcalCfg().clientId;if(GCLIENT&&GCLIENT.id===id) return GCLIENT.c;
+  const c=google.accounts.oauth2.initTokenClient({client_id:id,scope:GSCOPE,
+    callback:r=>{const pd=GPEND;GPEND=null;if(!pd) return;if(r&&r.access_token){GTOK={token:r.access_token,exp:Date.now()+(+r.expires_in||3600)*1000};pd.res(r.access_token);} else pd.rej({code:'denied',detail:r&&r.error});},
+    error_callback:e=>{const pd=GPEND;GPEND=null;if(pd) pd.rej({code:e&&e.type==='popup_closed'?'closed':'popup',detail:e&&e.type});}});
+  GCLIENT={id,c};return c;}
+/* a sign-in token: the one in memory while it lasts, else Google's sign-in window (call it first in a button press) */
+async function gToken(){
+  if(GTOK&&GTOK.exp>Date.now()+60000) return GTOK.token;
+  if(!gcalCfg().clientId) throw {code:'noid'};
+  if(!(window.google&&google.accounts&&google.accounts.oauth2)){await gisLoad();}
+  return new Promise((res,rej)=>{GPEND={res,rej};try{gClient().requestAccessToken();}catch(e){GPEND=null;rej({code:'popup'});}});
+}
+async function gapi(method,path,body){
+  const tok=await gToken();let r;
+  try{r=await fetch('https://www.googleapis.com/calendar/v3'+path,{method,headers:Object.assign({'Authorization':'Bearer '+tok},body?{'Content-Type':'application/json'}:{}),body:body?JSON.stringify(body):undefined});}
+  catch(e){throw {code:'net'};}
+  if(r.status===401){GTOK=null;throw {code:'auth'};}
+  if(r.status===204) return null;
+  if(!r.ok){let d='';try{d=(await r.json()).error.message;}catch(_){}throw {code:'http',status:r.status,detail:d};}
+  return r.json();
+}
+function gErr(e){const c=e&&e.code;return c==='noid'?'GoogleのクライアントIDを設定してください':c==='closed'?'Googleのログイン画面が閉じられました':c==='popup'?'Googleのログイン画面を開けませんでした。ポップアップを許可してから、もう一度押してください':
+  c==='denied'?'Googleへのアクセスが許可されませんでした':c==='auth'?'ログインの期限が切れました。もう一度押してください':c==='net'?'Googleと通信できませんでした。電波を確かめてください':
+  c==='http'&&e.status===403?'Googleに断られました。Calendar API が有効か、ご自分がテストユーザーに入っているかを確かめてください':c==='http'?'Googleでエラーが起きました（'+e.status+(e.detail?'：'+e.detail:'')+'）':'うまくいきませんでした';}
+async function gRun(label,fn){if(GBUSY) return;GBUSY=true;toast(label+'…');try{await fn();}catch(e){toast(gErr(e));}finally{GBUSY=false;render();}}
+/* the calendars to choose from (after signing in) */
+async function gcalLoadCalendars(){
+  const out=[];let pt='';
+  do{const j=await gapi('GET','/users/me/calendarList?maxResults=250'+(pt?'&pageToken='+encodeURIComponent(pt):''));for(const c of j.items||[]) out.push({id:c.id,name:c.summaryOverride||c.summary||c.id,primary:!!c.primary});pt=j.nextPageToken||'';}while(pt);
+  const ex=gcalCfg().exportCal;GCALS=out.filter(c=>c.id!==ex);
+  if(!(gcalCfg().cals||[]).length){const pr=GCALS.find(c=>c.primary);if(pr) setGcal(x=>{x.cals=[{id:pr.id,name:pr.name}];});}
+}
+/* 取り込む: the timed events of the chosen calendars, from today for 8 weeks, become プライベートの予定 (split at the user's
+   day boundary). All-day events, events marked 予定なし (free), declined ones and the app's own calendar are left out.
+   Each import replaces the ones imported before in that range; the ones added by hand stay. */
+async function gcalImport(){
+  const cfg=gcalCfg(), cals=cfg.cals||[];if(!cals.length){toast('取り込むカレンダーを、設定で選んでください');return;}
+  await gToken();
+  const from=today(), to=addDays(from,GDAYS), ds0=dayStartMin()*60000;
+  const tMin=new Date(parseYmd(from).getTime()+ds0).toISOString(), tMax=new Date(parseYmd(to).getTime()+ds0).toISOString();
+  const evs=[];
+  for(const c of cals){if(c.id===cfg.exportCal) continue;let pt='';
+    do{const j=await gapi('GET','/calendars/'+encodeURIComponent(c.id)+'/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin='+encodeURIComponent(tMin)+'&timeMax='+encodeURIComponent(tMax)+(pt?'&pageToken='+encodeURIComponent(pt):''));
+      for(const e of j.items||[]) evs.push(e);pt=j.nextPageToken||'';}while(pt);}
+  const byDay={};let n=0;
+  for(const e of evs){
+    if(e.status==='cancelled'||!e.start||!e.start.dateTime||!e.end||!e.end.dateTime||e.transparency==='transparent') continue;
+    if((e.attendees||[]).some(a=>a.self&&a.responseStatus==='declined')) continue;
+    let a=new Date(e.start.dateTime).getTime(), b=new Date(e.end.dateTime).getTime();if(!(b>a)) continue;n++;
+    while(a<b){const ds=ymd(new Date(a-ds0)), end=parseYmd(ds).getTime()+ds0+864e5, pe=Math.min(b,end);
+      if(ds>=from&&ds<to) (byDay[ds]=byDay[ds]||[]).push({id:'gc:'+e.id+':'+ds,s:hm(a),e:hm(pe),t:cfg.hideTitle?'予定あり':String(e.summary||'予定あり').slice(0,40),src:'gcal'});
+      a=pe;}
+  }
+  const before=planActive()?adjSummary():null;
+  for(let ds=from;ds<to;ds=addDays(ds,1)){const cur=dayRec(ds).g, had=Array.isArray(cur)&&cur.some(x=>x&&x.src==='gcal'), add=byDay[ds]||[];if(!had&&!add.length) continue;
+    setDay(ds,x=>{x.g=(Array.isArray(x.g)?x.g.filter(y=>y&&typeof y==='object'&&y.src!=='gcal'):[]).concat(add);});}
+  setGcal(x=>{x.lastImport=Date.now();});
+  const eff=before?adjEffect(before,adjSummary()):'';
+  toast('Googleの予定を '+n+' 件取り込みました'+(eff&&eff.indexOf('影響はありません')<0?'。'+eff:''));
+}
+/* 書き出す: 節目・期日 (the plan's dated goals) as events in the app's own calendar 「芒学」, made on the first export;
+   later exports update them and remove the ones no longer in the plan. Nothing else of the user's calendars is touched. */
+async function gcalExport(){
+  await gToken();
+  let cid=gcalCfg().exportCal;
+  if(cid){try{await gapi('GET','/calendars/'+encodeURIComponent(cid));}catch(e){if(e.code==='http'&&(e.status===404||e.status===403||e.status===410)) cid=''; else throw e;}}
+  if(!cid){const tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||'Asia/Tokyo';const c=await gapi('POST','/calendars',{summary:'芒学',description:'芒学 mángxué の節目・期日',timeZone:tz});cid=c.id;setGcal(x=>{x.exportCal=cid;x.ev={};});}
+  const tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||'Asia/Tokyo';
+  const goals=(plan2().goals||[]).filter(g=>g.date&&g.gcal!==false), ev=Object.assign({},gcalCfg().ev);let n=0;
+  for(const g of goals){
+    const hh=t=>String(t).replace(/^(\d):/,'0$1:');
+    const body={summary:g.name||GKIND[g.kind]||'節目',description:'芒学の'+(GKIND[g.kind]||'節目')+(g.track==='study'?'（'+tname('study')+'）':g.track==='create'?'（'+tname('create')+'）':''),
+      start:g.kind==='mock'&&g.from&&g.to?{dateTime:g.date+'T'+hh(g.from)+':00',timeZone:tz}:{date:g.date},
+      end:g.kind==='mock'&&g.from&&g.to?{dateTime:g.date+'T'+hh(g.to)+':00',timeZone:tz}:{date:addDays(g.date,1)}};
+    if(ev[g.id]){try{await gapi('PUT','/calendars/'+encodeURIComponent(cid)+'/events/'+encodeURIComponent(ev[g.id]),body);n++;continue;}catch(e){if(!(e.code==='http'&&(e.status===404||e.status===410))) throw e;}}
+    const r=await gapi('POST','/calendars/'+encodeURIComponent(cid)+'/events',body);ev[g.id]=r.id;n++;
+  }
+  let rm=0;for(const [gid,eid] of Object.entries(ev)) if(!goals.some(g=>g.id===gid)){try{await gapi('DELETE','/calendars/'+encodeURIComponent(cid)+'/events/'+encodeURIComponent(eid));}catch(e){if(!(e.code==='http'&&(e.status===404||e.status===410))) throw e;}delete ev[gid];rm++;}
+  setGcal(x=>{x.ev=ev;x.lastExport=Date.now();});
+  toast('Googleの「芒学」カレンダーに節目を '+n+' 件書き出しました'+(rm?'（'+rm+' 件消しました）':''));
+}
+function gcalHelp(){return el('button',{type:'button',class:'help','aria-label':'Googleとの連携の準備',onclick:e=>{e.preventDefault();e.stopPropagation();openSheet('Googleとの連携の準備',
+  el('p',{class:'small'},'ご自分のGoogleアカウントで、Google Cloud Console（console.cloud.google.com）に次を登録します。費用はかかりません。'),
+  el('ol',{class:'small steps'},
+    el('li',{},'新しいプロジェクトを作る（名前は自由）'),
+    el('li',{},'「APIライブラリ」で「Google Calendar API」を選び、有効にする'),
+    el('li',{},'メニューの「Google Auth Platform」を開き、はじめての設定（Get Started）で、アプリ名・サポート用のメール・ユーザーの種類「外部（External）」・連絡先のメールを入れて作成'),
+    el('li',{},'「対象（Audience）」のテストユーザー（Test users）に、ご自分のGoogleアカウントを追加（テストのままで使えます。公開の手続きはいりません）'),
+    el('li',{},'「データアクセス（Data Access）」のスコープの追加で、次の3つを選んで保存：calendar.calendarlist.readonly、calendar.events.readonly、calendar.app.created'),
+    el('li',{},'「クライアント」→「クライアントを作成」：種類「ウェブ アプリケーション」、「承認済みの JavaScript 生成元」に ',el('b',{class:'num'},location.origin),' を追加'),
+    el('li',{},'できたクライアントID（…apps.googleusercontent.com）を、この画面に貼る')),
+  el('p',{class:'xs muted'},'画面の表記は、Googleの更新で変わることがあります。かっこ内は英語表示のときの名前です。'),
+  el('p',{class:'xs muted'},'クライアントIDは公開されても困らない番号です。一緒に出る「クライアントシークレット」は使いません。どこにも貼らないでください。ログインのとき「このアプリは確認されていません」と出ますが、ご自分で登録したものなので、そのまま進めます。'));}},'?');}
+function gcalCard(){
+  const cfg=gcalCfg(), id=cfg.clientId||'', chosen=new Set((cfg.cals||[]).map(c=>c.id));let idv=id;
+  gisPreload();
+  return el('div',{class:'card',id:'gcal-card'},
+    el('div',{class:'between'},el('h2',{class:'row',style:'gap:6px'},'Googleカレンダー',gcalHelp()),el('span',{class:'pill'+(id?'':' gray')},id?'設定済み':'未設定')),
+    el('p',{class:'small muted'},'プライベートの予定の取り込みと、節目・期日の書き出しができます。どちらもボタンを押したときだけ動きます。'),
+    pfield('gc-id','GoogleのクライアントID',el('input',{type:'text',id:'gc-id',value:id,placeholder:'例：1234-abcd.apps.googleusercontent.com',autocomplete:'off',spellcheck:false,oninput:e=>{idv=e.target.value.trim();}})),
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>{if(idv&&!/\.apps\.googleusercontent\.com$/.test(idv)){toast('「…apps.googleusercontent.com」で終わる番号を貼ってください');return;}setGcal(x=>{x.clientId=idv;});GTOK=null;GCLIENT=null;GCALS=null;toast(idv?'クライアントIDを保存しました':'クライアントIDを消しました');render();}},'クライアントIDを保存'),
+    id?[el('h3',{class:'sub'},'取り込むカレンダー'),
+      GCALS?(GCALS.length?GCALS.map(c=>el('label',{class:'row',for:'gcc-'+c.id},el('input',{type:'checkbox',id:'gcc-'+c.id,checked:chosen.has(c.id),onchange:e=>setGcal(x=>{const l=(x.cals||[]).filter(y=>y.id!==c.id);if(e.target.checked) l.push({id:c.id,name:c.name});x.cals=l;})}),el('span',{class:'small'},c.name+(c.primary?'（メイン）':'')))):el('p',{class:'xs muted'},'カレンダーが見つかりませんでした。'))
+        :[(cfg.cals||[]).length?el('p',{class:'small'},(cfg.cals||[]).map(c=>c.name).join('、')):el('p',{class:'xs muted'},'まだ選んでいません。'),
+          el('button',{type:'button',class:'btn sub sm',onclick:()=>gRun('Googleにつないでいます',gcalLoadCalendars)},'Googleにログインして、カレンダーを選ぶ')],
+      el('label',{class:'row',for:'gc-ht',style:'margin-top:10px'},el('input',{type:'checkbox',id:'gc-ht',checked:!!cfg.hideTitle,onchange:e=>setGcal(x=>{x.hideTitle=e.target.checked;})}),el('span',{class:'small'},'予定の名前は取り込まず、「予定あり」にする')),
+      el('p',{class:'xs muted'},'取り込むのは、時刻のある予定（今日から8週間）。終日の予定・「予定なし」にした予定・辞退した予定は取り込みません。'+(cfg.lastImport?'前回の取り込み：'+md(ymd(new Date(cfg.lastImport)))+' '+hm(cfg.lastImport)+'。':'')),
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>gRun('取り込んでいます',gcalImport)},'Googleから予定を取り込む'),
+      el('h3',{class:'sub'},'書き出し'),
+      el('p',{class:'xs muted'},cfg.exportCal?'Googleの「芒学」カレンダーに、節目・期日を '+Object.keys(cfg.ev||{}).length+' 件書き出しています'+(cfg.lastExport?'（'+md(ymd(new Date(cfg.lastExport)))+' '+hm(cfg.lastExport)+'）':'')+'。':'はじめて書き出すとき、Googleに「芒学」というカレンダーを作ります。ほかのカレンダーには書き込みません。'),
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>gRun('書き出しています',gcalExport)},'Googleに節目を書き出す'),
+      GTOK?el('button',{type:'button',class:'chip sm',style:'align-self:flex-start',onclick:()=>{try{google.accounts.oauth2.revoke(GTOK.token,()=>{});}catch(_){}GTOK=null;toast('この端末のGoogleのログインを取り消しました');render();}},'この端末のログインを取り消す'):null]:null);
 }
 
 /* ---------- 通勤経路の設定 ---------- */
@@ -3619,7 +3758,7 @@ function viewImport(){
     r.readAsText(f);
   };
   return [
-    el('h1',{},'取り込み'),statusNode(),syncCard(),
+    el('h1',{},'取り込み'),statusNode(),syncCard(),gcalCard(),
     nextB?el('div',{class:'card between',style:'flex-direction:row'},el('span',{class:'small muted'},'次の撮影'),el('span',{class:'small',style:'font-weight:500;text-align:right'},md(nextB)+'（'+WD[parseYmd(nextB).getDay()]+'）'+(BT[nextB].time?' '+BT[nextB].time:'')+' '+BT[nextB].title)):null,
     el('div',{class:'card'},el('h2',{},'取り込み済みの問題'),
       docs.length?el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'問題集'),el('th',{},'科目'),el('th',{},'問題数'),el('th',{},'要確認'),el('th',{},'番号の抜け'))),
