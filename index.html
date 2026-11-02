@@ -267,6 +267,9 @@ button.cc{border:0;font:inherit;text-align:left;cursor:pointer;align-items:stret
 .dset>.dpart+.dpart{border-top:1px dashed var(--line);padding-top:12px}
 .dsetfold>summary{color:var(--muted)}
 .tcheck{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.trainmap{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
+.trainmap.warn{background:color-mix(in srgb,#E8590C 10%,var(--surface));border-color:#E8590C}
+.trainmap .shift{color:#B5400A;font-weight:700}
 .tcstops{display:flex;flex-direction:column;gap:0;padding:4px 0 6px;border-bottom:1px dashed var(--line)}
 .tcrow{display:flex;flex-direction:column;gap:1px;padding:4px 0}
 .tcrow+.tcrow{border-top:1px dashed var(--line)}
@@ -951,7 +954,7 @@ function typeCheck(d,P){
   const offOf=dir=>{const r=route(dir), ids=cmStayIds(r), t=(TCOFF[d.id]||{})[dir];return t?t.filter(id=>ids.includes(id)):(cmOffOf(bt[dir],ids)??[]);};
   const trips=()=>{const one=dir=>{const s=bt[dir]||{}, r=route(dir);if(!r||!(r.legs||[]).length) return null;const mode=s.mode||'at';if(mode==='train'?!s.train:!s.at) return null;
       const ids=cmStayIds(r), off=offOf(dir);
-      return cmPlan(r,dir,ds,{mode,at:s.at?sinceStart(toMin(s.at)):null,train:s.train?sinceStart(toMin(s.train)):null,stay:!(ids.length&&off.length===ids.length),off});};
+      return cmPlan(r,dir,ds,{mode,at:s.at?sinceStart(toMin(s.at)):null,train:s.train?sinceStart(toMin(s.train)):null,near:s.near,stay:!(ids.length&&off.length===ids.length),off});};
     const go=one('go'),back=one('back');return go||back?{go,back}:null;};
   const stops=usual?['go','back'].flatMap(dir=>{const r=route(dir);return r?(r.legs||[]).filter(l=>cmStay(l.kind)).map(l=>({dir,l,on:!offOf(dir).includes(l.id)})):[];}):[];
   const calc=cmd=>{const {base,cmBlocks}=cmSlotsOf(d.slots||[],cmd,usual), r={cm:{study:0,create:0},other:{study:0,create:0},cuts:[]};
@@ -1482,7 +1485,7 @@ function cmPlan(route,dir,ds,o){
   const fixes={};
   const f=legs.findIndex(l=>cmRide(l.kind));
   let start;
-  if(o.mode==='train'&&f>=0){const e=tt[f].find(x=>x.d>=o.train);const dep=e?e.d:o.train;if(!e) miss=true;fixes[f]=dep;let t=dep;for(let i=0;i<f;i++) t-=dur(i);start=t;}
+  if(o.mode==='train'&&f>=0){const e=trainAt(tt[f],o.train,o.near||(dir==='go'?'before':'after'));const dep=e?e.d:o.train;if(!e) miss=true;fixes[f]=dep;let t=dep;for(let i=0;i<f;i++) t-=dur(i);start=t;}
   else if(dir==='go'&&o.mode!=='leave'){let t=o.at;
     for(let i=n-1;i>=0;i--){const l=legs[i];
       if(!cmRide(l.kind)){t-=dur(i);continue;}
@@ -1530,6 +1533,15 @@ function cmDaySetOff(ds,dir,s,r,nx){const ids=cmStayIds(r), base=cmOffOf(s,ids)?
   cmDayEdit(ds,c=>{c[dir]=Object.assign({},c[dir]);delete c[dir].stay;if(sameSet(nx,base)) delete c[dir].noStay; else c[dir].noStay=nx;if(!Object.keys(c[dir]).length) delete c[dir];delete c[dir+'Fix'];delete c[dir+'Cut'];});}
 /* 立ち寄らないとき: entries with ref take everything from that leg of the stopover route (so a change there carries over) */
 function directLegs(route){return (route.direct||[]).map(l=>{if(!l.ref) return l;const src=(route.legs||[]).find(x=>x.id===l.ref);return src?Object.assign(clone(src),{id:l.id,ref:l.ref}):null;}).filter(Boolean);}
+/* the train taken for ふだん乗る電車 m: the one at that time; if the day's diagram has none, the one before it (within
+   3 hours; 行き, so as not to be late) or after it (帰り, as one cannot leave earlier) */
+function trainAt(list,m,near){const ex=list.find(x=>x.d===m);if(ex) return ex;let e=null;
+  if(near==='before') for(const x of list) if(x.d<m&&x.d>=m-180) e=x;
+  return e||list.find(x=>x.d>=m)||null;}
+/* the departures of the first train with the diagrams that have them (平日・土曜・休日), for the choice list */
+function trainChoices(route){const l=(route.legs||[]).find(x=>cmRide(x.kind));if(!l) return [];const t=l.tt||{}, ks=['wd','sa','ho'].filter(k=>String(t[k]||'').trim()), m={};
+  for(const k of ks) for(const e of ttParse(t[k])) (m[e.d]=m[e.d]||[]).push(k);
+  return Object.keys(m).map(Number).sort((a,b)=>a-b).map(d=>[hmOf(d),hmOf(d)+' 発'+(ks.length>1&&m[d].length<ks.length?'（'+m[d].map(k=>DIA[k]).join('・')+'）':'')]);}
 /* the departures of a route's first train or bus, from all diagrams (for choosing the standard train) */
 function firstTrainTimes(route){const l=(route.legs||[]).find(x=>cmRide(x.kind));if(!l) return [];const set=new Set();for(const k of ['wd','sa','ho']) for(const e of ttParse((l.tt||{})[k])) set.add(e.d);return [...set].sort((a,b)=>a-b);}
 /* the day's trips (null when commuting is off, the day is a day off, or "通勤しない") */
@@ -1542,7 +1554,7 @@ function cmDay(ds){
   const one=dir=>{const s=bt[dir]||{}, od=o[dir]||{}, rid=od.route||s.route, r=(C.routes||[]).find(x=>x.id===rid);if(od.skip||!r||!(r.legs||[]).length) return null;
     const mode=od.mode||s.mode||'at', at=od.at||s.at, train=od.train||s.train, sel=cmStaySel(s,od,r), stay=sel.stay, off=sel.off;
     if(mode==='train'?!train:!at) return null;
-    return cmPlan(r,dir,ds,{mode,at:at?sinceStart(toMin(at)):null,train:train?sinceStart(toMin(train)):null,stay,off,fix:o[dir+'Fix']||null,cut:o[dir+'Cut']||null});};
+    return cmPlan(r,dir,ds,{mode,at:at?sinceStart(toMin(at)):null,train:train?sinceStart(toMin(train)):null,near:s.near,stay,off,fix:o[dir+'Fix']||null,cut:o[dir+'Cut']||null});};
   const res={go:one('go'),back:one('back'),dia:cmDia(ds),hol:cmHolName(ds)};
   const T=[res.go,res.back].filter(Boolean);res.dias=[...new Set(T.flatMap(x=>x.dias))];res.sds=[...new Set(T.flatMap(x=>x.sds))].sort();
   return c.cm[ds]=(res.go||res.back)?res:null;
@@ -2330,16 +2342,25 @@ function viewCommuteBody(){
     twoStepBtn('この経路を消す',()=>rDel(r)));};
   /* 日のタイプごと: route, what the day is based on (time or the train), and whether to stop over */
   const rOpts=[['','（使わない）'],...routes.map(r=>[r.id,r.name])];
+  // ふだん乗る電車 on each diagram (only when 土曜 or 休日 has a timetable): the same time, or the one before/after it
+  const trainMap=(r,b,dir,key,up)=>{const l=(r.legs||[]).find(x=>cmRide(x.kind));if(!l||!b.train) return null;const t=l.tt||{}, has=k=>!!String(t[k]||'').trim();
+    if(!has('sa')&&!has('ho')) return null;
+    const m=sinceStart(toMin(b.train)), near=b.near||(dir==='go'?'before':'after');
+    const rows=['wd','sa','ho'].filter(has).map(k=>{const L=ttParse(t[k]), e=trainAt(L,m,near);return {k,e,ex:!!(e&&e.d===m)};}), miss=rows.some(x=>!x.ex);
+    return el('div',{class:'trainmap'+(miss?' warn':'')},
+      el('p',{class:'xs'},rows.map((x,i)=>[i?'　':'',el('span',{class:x.ex?'':'shift'},DIA[x.k]+'…'+(x.e?hmOf(x.e.d)+'発':'便なし'))]),'　に対応します'),
+      miss?[el('p',{class:'xs'},'同じ時刻の便がないダイヤがあります（色のついた所）。'),
+        pfield('bn-'+key,'同じ時刻の便がない日は',pselect('bn-'+key,near,[['before','ひとつ前の便に乗る'],['after','ひとつ後の便に乗る']],v=>up('near',v)))]:null);};
   const byDir=(d,dir)=>{const b=((C.byType||{})[d.id]||{})[dir]||{}, r=routes.find(x=>x.id===b.route), mode=b.mode||'at', key=d.id+dir;
     const up=(k,v)=>cmLive(x=>{x.byType=x.byType||{};const o=x.byType[d.id]=Object.assign({},x.byType[d.id]);o[dir]=Object.assign({},o[dir],{[k]:v});});
     const times=r?firstTrainTimes(r):[], hasStay=r&&(r.legs||[]).some(l=>cmStay(l.kind));
     return el('div',{class:'bydir'},
       el('div',{class:'grid2'},lab('br-'+key,(dir==='go'?'行き':'帰り')+'の経路',pselect('br-'+key,b.route||'',rOpts,v=>up('route',v))),
         r?lab('bm-'+key,'基準',pselect('bm-'+key,mode,CM_MODES(dir),v=>up('mode',v))):el('span',{})),
-      r?(mode==='train'?lab('bt-'+key,'ふだん乗る電車',pselect('bt-'+key,b.train||'',[['','（選ぶ）'],...times.map(m=>[hmOf(m),hmOf(m)+' 発'])],v=>up('train',v)))
+      r?(mode==='train'?[lab('bt-'+key,'ふだん乗る電車',pselect('bt-'+key,b.train?hmOf(sinceStart(toMin(b.train))):'',[['','（選ぶ）'],...trainChoices(r)],v=>up('train',v))),trainMap(r,b,dir,key,up)]
         :lab('ba-'+key,cmAtLabel(dir,mode),ptime('ba-'+key,b.at,v=>up('at',v),cmAtLabel(dir,mode)))):null,
       hasStay?stayBoxes(r,cmOffOf(b,cmStayIds(r))??[],'bs-'+key,nx=>cmLive(x=>{x.byType=x.byType||{};const o=x.byType[d.id]=Object.assign({},x.byType[d.id]);o[dir]=Object.assign({},o[dir],{noStay:nx});delete o[dir].stay;})):null);};
-  const brief=d=>{const b=(C.byType||{})[d.id]||{}, one=(dir,nm)=>{const x=b[dir]||{};if(!routes.some(r=>r.id===x.route)) return null;return nm+' '+(x.mode==='train'?(x.train||'')+'の電車':(x.at||'').replace(/^0(\d):/,'$1:')+(dir==='go'&&x.mode!=='leave'?'着':'発'));};
+  const brief=d=>{const b=(C.byType||{})[d.id]||{}, one=(dir,nm)=>{const x=b[dir]||{};if(!routes.some(r=>r.id===x.route)) return null;return nm+' '+(x.mode==='train'?(x.train||'').replace(/^0(\d):/,'$1:')+'の電車':(x.at||'').replace(/^0(\d):/,'$1:')+(dir==='go'&&x.mode!=='leave'?'着':'発'));};
     const t=[one('go','行き'),one('back','帰り')].filter(Boolean);return t.length?t.join('・'):'通勤なし';};
   const byT=d=>el('details',{class:'set bytblock',id:'cmbt-'+d.id,open:CMOPEN.has('bt:'+d.id),ontoggle:e=>{if(e.target.open) CMOPEN.add('bt:'+d.id); else CMOPEN.delete('bt:'+d.id);}},
     el('summary',{},el('b',{class:'dtl'},dtLetter(d.id,P)),el('span',{style:'flex:1 0 auto'},d.name),el('span',{class:'xs muted num',style:'flex:0 1 auto;text-align:right'},brief(d))),
@@ -2446,7 +2467,7 @@ function cmDayPanel(ds){
       od.skip?null:[
         pfield('cr-'+key,'経路',pselect('cr-'+key,od.route||'',[['',usual?'いつもの経路':'（なし）'],...routes.map(x=>[x.id,x.name])],v=>upd('route',v||undefined))),
         r?pfield('cb-'+key,'基準',pselect('cb-'+key,mode,CM_MODES(dir),v=>upd('mode',v))):null,
-        r?(mode==='train'?pfield('ct-'+key,'乗る電車',pselect('ct-'+key,od.train||s.train||'',[['','（選ぶ）'],...firstTrainTimes(r).map(m=>[hmOf(m),hmOf(m)+' 発'])],v=>upd('train',v)))
+        r?(mode==='train'?pfield('ct-'+key,'乗る電車',pselect('ct-'+key,(od.train||s.train)?hmOf(sinceStart(toMin(od.train||s.train))):'',[['','（選ぶ）'],...trainChoices(r)],v=>upd('train',v)))
           :pfield('ca-'+key,cmAtLabel(dir,mode),ptime('ca-'+key,od.at||s.at,v=>upd('at',v),cmAtLabel(dir,mode)))):null,
         hasStay?stayBoxes(r,cmStaySel(s,od,r).off,'cs-'+key,nx=>cmDaySetOff(ds,dir,s,r,nx)):null]);};
   const dias=sds.map(sd=>pfield('cmd-'+sd,multi?'ダイヤ（'+md(sd)+'・'+WD[parseYmd(sd).getDay()]+'の電車）':'ダイヤ',pselect('cmd-'+sd,(dayRec(sd).cm||{}).dia||'',[['','自動（'+DIA[cmDiaBase(sd)]+'）'],['wd','平日'],['sa','土曜'],['ho','休日']],v=>setOn(sd,c=>{if(v) c.dia=v; else delete c.dia;}))));
