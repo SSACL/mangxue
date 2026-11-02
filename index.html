@@ -913,7 +913,15 @@ const CCACHE=new WeakMap();
 function cacheOf(P){let c=CCACHE.get(P);if(!c||c.v!==CAPV){c={v:CAPV,ds:{}};CCACHE.set(P,c);}return c;}
 
 /* time */
-function dayTypeOf(ds,P){P=P||plan2();const o=P.dates&&P.dates[ds];if(o) return o;if(P.mode==='dates') return P.dflt||((P.dayTypes||[])[0]||{}).id||'';return (P.week||[])[parseYmd(ds).getDay()]||'';}
+function dayTypeOf(ds,P){P=P||plan2();const o=P.dates&&P.dates[ds];if(o) return o;return baseTypeOf(ds,P);}
+/* the 時間割 without the day's own 日ごとの指定: 週ごと; 隔週 = 2〜4 weekly patterns taken in turn, counted from the week
+   marked 第1週 (cycle.anchor); 日ごと = the default */
+function baseTypeOf(ds,P){P=P||plan2();const w=parseYmd(ds).getDay();
+  if(P.mode==='dates') return P.dflt||((P.dayTypes||[])[0]||{}).id||'';
+  if(P.mode==='cycle'&&P.cycle&&(P.cycle.weeks||[]).length){const id=(P.cycle.weeks[cycleWeek(ds,P)]||[])[w];if(id) return id;}
+  return (P.week||[])[w]||'';}
+function cycleN(P){const c=P.cycle||{};return Math.max(2,Math.min(4,+c.n||(c.weeks||[]).length||2));}
+function cycleWeek(ds,P){const c=P.cycle||{}, n=cycleN(P), d=Math.floor(diffDays(weekStartOf(c.anchor||ds,P),weekStartOf(ds,P))/7);return ((d%n)+n)%n;}
 function dtById(id,P){return ((P||plan2()).dayTypes||[]).find(t=>t.id===id)||null;}
 function dtLetter(id,P){const i=((P||plan2()).dayTypes||[]).findIndex(t=>t.id===id);return i<0?'':('ABCDEFGHIJKL'[i]||'?');}
 function weekStartOf(ds,P){const ws=+((P||plan2()).weekStart??1);return addDays(ds,-((parseYmd(ds).getDay()-ws+7)%7));}
@@ -2012,7 +2020,7 @@ function dayPanel(ds){
         withEffect(()=>setDay(ds,x=>{x.g=(Array.isArray(x.g)?x.g.filter(y=>y&&typeof y==='object'):[]).concat([{id:newId('ev'),s:addEv.s,e:addEv.e,t:addEv.t||'予定あり',src:'manual'}]);}));}},'追加する')));
   const settings=[
     el('div',{class:'dpart'},el('h4',{},'時間割'),
-      el('div',{class:'dtchips'},(P.dayTypes||[]).map(t=>typeChip(P,t.id,id===t.id,()=>setDates(x=>{const def=x.mode==='dates'?x.dflt:(x.week||[])[parseYmd(ds).getDay()];if(t.id===def) delete x.dates[ds]; else x.dates[ds]=t.id;})))),
+      el('div',{class:'dtchips'},(P.dayTypes||[]).map(t=>typeChip(P,t.id,id===t.id,()=>setDates(x=>{const def=baseTypeOf(ds,x);if(t.id===def) delete x.dates[ds]; else x.dates[ds]=t.id;})))),
       el('label',{class:'row',for:'off-'+ds,style:'min-height:40px'},el('input',{type:'checkbox',id:'off-'+ds,checked:!!d.off,onchange:e=>withEffect(()=>setDay(ds,x=>{x.off=e.target.checked?1:0;}))}),el('span',{class:'small'},'この日はお休み'))),
     el('div',{class:'dpart'},el('h4',{},'プライベートの予定'),evList.length?evList:el('p',{class:'xs muted'},'なし'),evAdd),
     cmOn()?cmDayPanel(ds):bringFold(ds,'br'),
@@ -2770,7 +2778,7 @@ function typeChip(P,id,on,onclick,small){const d=dtById(id,P);return el('button'
 function timeEditor(P,up,rr){
   rr=rr||render;
   if(TST.brushInit!==1&&(P.dayTypes||[])[0]){TST.brush=P.dayTypes[0].id;TST.brushInit=1;}
-  const types=P.dayTypes||[], ws=+(P.weekStart??1), mode=P.mode==='dates'?'dates':'week';
+  const types=P.dayTypes||[], ws=+(P.weekStart??1), mode=P.mode==='dates'?'dates':P.mode==='cycle'?'cycle':'week';
   const sum=(d,tr)=>(d.slots||[]).filter(s=>s.track===tr).reduce((a,s)=>a+(+s.min||0),0);
   const upT=(id,fn)=>up(x=>{fn(x.dayTypes.find(d=>d.id===id));});
   const legend=el('div',{class:'dtlegend'},types.map(d=>el('span',{},el('b',{class:'dtl'},dtLetter(d.id,P)),' '+d.name)));
@@ -2778,7 +2786,7 @@ function timeEditor(P,up,rr){
   // 日ごとの指定: days given another 時間割 in the calendar, which win over the weekday pattern
   const overs=Object.keys(P.dates||{}).filter(k=>k>=today()).sort(), nOver=overs.length;
   const dtLabel=id=>{const d=dtById(id,P);return d?dtLetter(id,P)+' '+d.name:'（なし）';};
-  const overLine=k=>md(k)+'（'+WD[parseYmd(k).getDay()]+'）　'+dtLabel((P.week||[])[parseYmd(k).getDay()])+' → '+dtLabel(P.dates[k]);
+  const overLine=k=>md(k)+'（'+WD[parseYmd(k).getDay()]+'）　'+dtLabel(baseTypeOf(k,P))+' → '+dtLabel(P.dates[k]);
   const clearOvers=()=>{const sh=()=>document.getElementById('sheet').close();
     openSheet('日ごとの指定を消しますか？',
       el('p',{class:'small'},'次の'+nOver+'日が、曜日の決まりの時間割に戻ります。今日より前の日はそのままです。'),
@@ -2786,14 +2794,30 @@ function timeEditor(P,up,rr){
       el('p',{class:'xs muted'},'消したあとも「保存する」を押すまでは、「元に戻す」で取り消せます。保存すると戻せません。'),
       el('button',{type:'button',class:'btn',style:'background:var(--bad);border-color:var(--bad)',onclick:()=>{sh();up(x=>{for(const k of Object.keys(x.dates||{})) if(k>=today()) delete x.dates[k];});}},'消して曜日の決まりに戻す'),
       el('button',{type:'button',class:'btn sub',onclick:sh},'やめる'));};
+  const oversCard=()=>nOver?el('div',{class:'card overs'},
+      el('p',{class:'small'},'カレンダーで、曜日の決まりとは別の時間割にした日が ',el('b',{},nOver+'日'),' あります（今日以降）。その日は、上の曜日の決まりより日ごとの指定が優先されます。'),
+      el('details',{class:'more'},el('summary',{},'変えた日の一覧'),overs.map(k=>el('p',{class:'xs num'},overLine(k)))),
+      el('button',{type:'button',class:'btn sub sm',onclick:clearOvers},'日ごとの指定を消して、曜日の決まりに戻す')):null;
+  // 隔週: 2〜4 weeks, each with its own weekday pattern, taken in turn; which one this week is can be set
+  const cyc=P.cycle||{}, cn=cycleN(P), ck=mode==='cycle'?cycleWeek(today(),P):0, w0=weekStartOf(today(),P);
+  const upC=fn=>up(x=>{x.cycle=x.cycle||{n:2,weeks:[],anchor:weekStartOf(today(),x)};fn(x.cycle,x);});
+  const cycleTab=[
+    pfield('wst','週のはじまり',pselect('wst',ws,[0,1,2,3,4,5,6].map(i=>[i,DN[i]+'曜日']),v=>up(x=>{x.weekStart=+v;}))),
+    el('div',{class:'grid2'},
+      pfield('cyn','くり返す週の数',pselect('cyn',cn,[[2,'2週'],[3,'3週'],[4,'4週']],v=>upC((c,x)=>{const k=cycleWeek(today(),x);c.n=+v;while(c.weeks.length<c.n) c.weeks.push(clone(c.weeks[c.weeks.length-1]||x.week));c.weeks=c.weeks.slice(0,c.n);c.anchor=addDays(weekStartOf(today(),x),-7*Math.min(k,c.n-1));}))),
+      pfield('cyk','今週は',pselect('cyk',ck,Array.from({length:cn},(_,k)=>[k,'第'+(k+1)+'週']),v=>upC((c,x)=>{c.anchor=addDays(weekStartOf(today(),x),-7*(+v));})))),
+    Array.from({length:cn},(_,k)=>{const start=addDays(w0,7*((k-ck+cn)%cn)), wk=(cyc.weeks||[])[k]||P.week||[];
+      return el('div',{class:'card cyweek'},
+        el('div',{class:'between'},el('h3',{style:'margin:0'},'第'+(k+1)+'週'),el('span',{class:'xs muted'},k===ck?'今週（'+md(start)+'〜）':md(start)+'からの週')),
+        order.map(i=>el('div',{class:'between'},el('span',{class:'small',style:'flex:none;width:3em;'+(i===0?'color:var(--bad)':'')},DN[i]+'曜'),
+          el('div',{class:'dtchips'},types.map(d=>typeChip(P,d.id,wk[i]===d.id,()=>upC(c=>{c.weeks[k]=c.weeks[k]||clone(wk);c.weeks[k][i]=d.id;}),true))))),
+        k>0?el('button',{type:'button',class:'chip sm',style:'align-self:flex-start',onclick:()=>upC(c=>{c.weeks[k]=clone(c.weeks[0]||P.week);})},'第1週と同じにする'):null);}),
+    oversCard()];
   const weekTab=[
     pfield('wst','週のはじまり',pselect('wst',ws,[0,1,2,3,4,5,6].map(i=>[i,DN[i]+'曜日']),v=>up(x=>{x.weekStart=+v;}))),
     el('div',{class:'card'},order.map(i=>el('div',{class:'between'},el('span',{class:'small',style:'flex:none;width:3em;'+(i===0?'color:var(--bad)':'')},DN[i]+'曜'),
       el('div',{class:'dtchips'},types.map(d=>typeChip(P,d.id,(P.week||[])[i]===d.id,()=>up(x=>{x.week[i]=d.id;}),true)))))),
-    nOver?el('div',{class:'card overs'},
-      el('p',{class:'small'},'カレンダーで、曜日の決まりとは別の時間割にした日が ',el('b',{},nOver+'日'),' あります（今日以降）。その日は、上の曜日の決まりより日ごとの指定が優先されます。'),
-      el('details',{class:'more'},el('summary',{},'変えた日の一覧'),overs.map(k=>el('p',{class:'xs num'},overLine(k)))),
-      el('button',{type:'button',class:'btn sub sm',onclick:clearOvers},'日ごとの指定を消して、曜日の決まりに戻す')):null];
+    oversCard()];
   if(!TST.ym) TST.ym=today().slice(0,7);
   const [y,m]=TST.ym.split('-').map(Number), first=new Date(y,m-1,1), n=new Date(y,m,0).getDate();
   const cells=order.map(i=>el('div',{class:'wd',style:i===0?'color:var(--bad)':''},DN[i]));
@@ -2822,16 +2846,17 @@ function timeEditor(P,up,rr){
     el('button',{type:'button',class:'btn sub sm',style:'align-self:stretch;width:100%',onclick:()=>upT(d.id,x=>{x.slots.push({id:newId('sl'),label:tname('study'),time:'',track:'study',min:60,use:'any'});})},'コマを追加'),
     typeCheckView(d,P,rr),
     el('div',{class:'grid2',style:'margin-bottom:12px'},
-      types.length>1?twoStepBtn('この時間割を消す',()=>up(x=>{x.dayTypes=x.dayTypes.filter(y=>y.id!==d.id);x.week=x.week.map(v=>v===d.id?x.dayTypes[0].id:v);for(const k of Object.keys(x.dates||{})) if(x.dates[k]===d.id) delete x.dates[k];if(x.dflt===d.id) x.dflt=x.dayTypes[0].id;})):el('span',{}),
+      types.length>1?twoStepBtn('この時間割を消す',()=>up(x=>{x.dayTypes=x.dayTypes.filter(y=>y.id!==d.id);x.week=x.week.map(v=>v===d.id?x.dayTypes[0].id:v);if(x.cycle&&x.cycle.weeks) x.cycle.weeks=x.cycle.weeks.map(w=>(w||[]).map(v=>v===d.id?x.dayTypes[0].id:v));for(const k of Object.keys(x.dates||{})) if(x.dates[k]===d.id) delete x.dates[k];if(x.dflt===d.id) x.dflt=x.dayTypes[0].id;})):el('span',{}),
       up===tUp?el('button',{type:'button',class:'btn sub sm',onclick:()=>goCommuteType(d.id)},'通勤設定に移動'):el('span',{}))),{id:'tt-'+d.id});
   return [
-    el('div',{class:'seg',style:'grid-template-columns:1fr 1fr'},
-      el('button',{type:'button','aria-pressed':String(mode==='week'),onclick:()=>{if(mode==='week') return;up(x=>{for(const [ds,v] of Object.entries(x.dates||{})) if((x.week||[])[parseYmd(ds).getDay()]===v) delete x.dates[ds];x.mode='week';});}},'週ごと'),
+    el('div',{class:'seg',style:'grid-template-columns:1fr 1fr 1fr'},
+      el('button',{type:'button','aria-pressed':String(mode==='week'),onclick:()=>{if(mode==='week') return;up(x=>{x.mode='week';for(const [ds,v] of Object.entries(x.dates||{})) if(baseTypeOf(ds,x)===v) delete x.dates[ds];});}},'週ごと'),
+      el('button',{type:'button','aria-pressed':String(mode==='cycle'),onclick:()=>{if(mode==='cycle') return;up(x=>{if(!x.cycle||!(x.cycle.weeks||[]).length) x.cycle={n:2,weeks:[clone(x.week),clone(x.week)],anchor:weekStartOf(today(),x)};x.mode='cycle';for(const [ds,v] of Object.entries(x.dates||{})) if(baseTypeOf(ds,x)===v) delete x.dates[ds];});}},'隔週'),
       el('button',{type:'button','aria-pressed':String(mode==='dates'),onclick:()=>{if(mode==='dates') return;up(x=>{const last=(x.goals||[]).reduce((m,g)=>g.date&&g.date>m?g.date:m,addDays(today(),56));x.dates=x.dates||{};
-        for(let ds=addDays(x.start&&x.start<today()?x.start:today(),-7),i=0;ds<=last&&i<500;ds=addDays(ds,1),i++) if(!x.dates[ds]) x.dates[ds]=(x.week||[])[parseYmd(ds).getDay()]||x.dflt;x.mode='dates';x.dflt=x.dflt||(x.dayTypes[0]||{}).id;});}},'日ごと')),
-    el('p',{class:'xs muted'},mode==='week'?'曜日ごとに時間割を決めて、毎週くり返します。':'シフトのように、日付ごとに時間割を決めます。切り替えたときは、それまでの曜日の当て方で最後の目標日まで塗ってあります。'),
+        for(let ds=addDays(x.start&&x.start<today()?x.start:today(),-7),i=0;ds<=last&&i<500;ds=addDays(ds,1),i++) if(!x.dates[ds]) x.dates[ds]=baseTypeOf(ds,x)||x.dflt;x.mode='dates';x.dflt=x.dflt||(x.dayTypes[0]||{}).id;});}},'日ごと')),
+    el('p',{class:'xs muted'},mode==='week'?'曜日ごとに時間割を決めて、毎週くり返します。':mode==='cycle'?'2〜4週分の曜日の決まりを作って、その順にくり返します（第1週→第2週→…→第1週）。':'シフトのように、日付ごとに時間割を決めます。切り替えたときは、それまでの当て方で最後の目標日まで塗ってあります。'),
     legend,
-    mode==='week'?weekTab:dateTab,
+    mode==='week'?weekTab:mode==='cycle'?cycleTab:dateTab,
     el('h2',{class:'sec'},'時間割ごとのコマと1日の目標'),
     types.map(tEdit),
     types.length>=7?null:el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id=newId('t');up(x=>{if(x.dayTypes.length>=7) return;let nm='新しい時間割',k=2;while(x.dayTypes.some(y=>y.name===nm)) nm='新しい時間割'+(k++);x.dayTypes.push({id,name:nm,slots:[]});});POPEN.add('t:'+id);}},'＋ 時間割を足す')];
@@ -2839,7 +2864,7 @@ function timeEditor(P,up,rr){
 
 /* ----- the wizard ----- */
 let WIZ=null;
-const TIMEKEYS=['dayTypes','week','dates','alloc','mode','dflt','weekStart'];
+const TIMEKEYS=['dayTypes','week','dates','alloc','mode','dflt','weekStart','cycle'];
 function wizSteps(){return WIZ.method==='time'?['events','targets','method','time','study','create','outlook','build']:['events','targets','method','study','create','need','time','outlook','build'];}
 function wizName(k){return {events:'当日',targets:'目標日',method:'組み方',study:tname('study'),create:tname('create'),need:'必要な時間',time:'時間',outlook:'見通し',build:'組む'}[k];}
 function openWizard(at){
@@ -3034,7 +3059,7 @@ function guardLeave(proceed,which){
   return true;
 }
 function timeTab(){
-  const saved=plan2(), P=TDRAFT||saved, dirty=!!TDRAFT, mode=m=>m==='dates'?'日ごと':'週ごと';
+  const saved=plan2(), P=TDRAFT||saved, dirty=!!TDRAFT, mode=m=>m==='dates'?'日ごと':m==='cycle'?'隔週':'週ごと';
   return [
     el('div',{class:'card tsaved'},
       el('p',{class:'small'},'保存されている設定：',el('b',{},mode(saved.mode)),dirty&&(P.mode||'week')!==(saved.mode||'week')?el('span',{class:'willsave'},'保存すると：',el('b',{},mode(P.mode))):null),
