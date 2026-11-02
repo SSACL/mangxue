@@ -1,4 +1,4 @@
-const CACHE='mangxue-v16';
+const CACHE='mangxue-v17';
 const SHELL=['./','index.html','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png','icons/apple-touch-icon.png','icons/badge-96.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith('mangxue-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
@@ -28,6 +28,13 @@ function saveAnswer(a){return new Promise(res=>{let r;try{r=indexedDB.open('mang
   r.onerror=()=>res();});}
 self.addEventListener('notificationclick',e=>{
   const d=e.notification.data||{};e.notification.close();
+  // 次の電車に乗る: keep the request, then bring the app up so it works out the rest of the trip and re-sends the notices
+  if(e.action==='next'&&d.ds&&d.rid){
+    e.waitUntil(saveAnswer({ds:d.ds,cm:d.rid,t:Date.now()}).then(()=>self.clients.matchAll({type:'window',includeUncontrolled:true})).then(ws=>{
+      if(ws.length){ws.forEach(w=>w.postMessage({type:'answers'}));return ws[0].focus?ws[0].focus():null;}
+      return self.clients.openWindow(new URL('./#home',self.registration.scope).href);}));
+    return;
+  }
   if((e.action==='ok'||e.action==='ng')&&d.ds&&d.rid){
     e.waitUntil(saveAnswer({ds:d.ds,rid:d.rid,v:e.action==='ok'?1:0,t:Date.now()}).then(()=>self.clients.matchAll({type:'window'})).then(ws=>ws.forEach(w=>w.postMessage({type:'answers'}))));
     return;
