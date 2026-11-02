@@ -1449,7 +1449,7 @@ function viewCheckin(id){
   ];
 }
 
-/* stamps for the calendar: 花丸 = routines and tasks all done; マルチェック = the tasks all done; マル休 = a day off */
+/* stamps for the calendar: 花丸 = routines and tasks all done; マルチェック = the tasks all done; the 休 stamp = a day off */
 function dayTasks(ds){return (PLAN||planActive())?tasksFor(ds).filter(k=>k.kind==='study'||k.kind==='manga'):[];}
 function dayStamp(ds){
   const d=dayRec(ds);if(d.off) return 'kyu';if(ds>today()) return null;
@@ -1537,7 +1537,7 @@ function dayPanel(ds){
   const addEv={s:'',e:'',t:''};
   return el('div',{class:'card daypanel'},
     el('div',{class:'between'},el('h2',{},jpDate(ds)),dt?el('span',{class:'small'},el('b',{class:'dtl'},dtLetter(id,P)),' '+dt.name):el('span',{class:'small muted'},'時間割なし')),
-    d.off?el('p',{class:'small muted'},'お休みの日です（マル休）。'):null,
+    d.off?el('p',{class:'small muted'},'お休みの日です。'):null,
     SH.study?[el('h3',{class:'sub'},tnameS('study')+'予定'),list(['study'])]:null,
     SH.create?[el('h3',{class:'sub'},tnameS('create')+'予定'),list(['manga'])]:null,
     SH.habit?[el('h3',{class:'sub'},'習慣'),el('p',{class:'small'},rate?'ルーティン できた '+rate.ok+' / '+rate.all:'ルーティンの記録なし'),el('a',{href:'#day/'+ds,class:'small'},'この日の記録を開く ›')]:null,
@@ -1549,7 +1549,7 @@ function dayPanel(ds){
           setDay(ds,x=>{x.g=(Array.isArray(x.g)?x.g.filter(y=>y&&typeof y==='object'):[]).concat([{id:newId('ev'),s:addEv.s,e:addEv.e,t:addEv.t||'予定あり',src:'manual'}]);});render();if(before) toast(adjEffect(before,adjSummary()));}},'＋ 足す'))]:null,
     el('h3',{class:'sub'},'この日の時間'),
     el('div',{class:'field'},'日のタイプ',el('div',{class:'dtchips'},(P.dayTypes||[]).map(t=>typeChip(P,t.id,id===t.id,()=>setDates(x=>{const def=x.mode==='dates'?x.dflt:(x.week||[])[parseYmd(ds).getDay()];if(t.id===def) delete x.dates[ds]; else x.dates[ds]=t.id;}))))),
-    el('label',{class:'row',for:'off-'+ds,style:'min-height:40px'},el('input',{type:'checkbox',id:'off-'+ds,checked:!!d.off,onchange:e=>{const before=act?adjSummary():null;setDay(ds,x=>{x.off=e.target.checked?1:0;});render();if(before) toast(adjEffect(before,adjSummary()));}}),el('span',{class:'small'},'この日はお休み（マル休）')),
+    el('label',{class:'row',for:'off-'+ds,style:'min-height:40px'},el('input',{type:'checkbox',id:'off-'+ds,checked:!!d.off,onchange:e=>{const before=act?adjSummary():null;setDay(ds,x=>{x.off=e.target.checked?1:0;});render();if(before) toast(adjEffect(before,adjSummary()));}}),el('span',{class:'small'},'この日はお休み')),
     el('div',{class:'field'},'学習と制作の配分（1日の合計はそのまま）',
       el('div',{class:'seg alloc'},ALLOC_OPTS.map(([v,l])=>el('button',{type:'button','aria-pressed':String(a===v),onclick:()=>setDates(x=>{for(const k of rangeDays()){if(v) x.alloc[k]=v; else delete x.alloc[k];}})},l))),
       el('div',{class:'grid2'},pselect('al-r',CAL.range,[['day','この日だけに'],['week','この週ぜんぶに'],['until','日付までに']],v=>{CAL.range=v;if(v==='until'&&(!CAL.until||CAL.until<ds)) CAL.until=addDays(ds,6);render();}),
