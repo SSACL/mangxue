@@ -273,6 +273,13 @@ dialog.wiz::backdrop{background:rgba(10,14,20,.45)}
 .choice.wizchoice{flex-direction:column;gap:4px}
 .keepcard{border:2px solid var(--accent)}
 .legs{display:flex;flex-direction:column;gap:10px}
+.legcard.ref{padding:8px 10px;gap:0;background:color-mix(in srgb,var(--muted) 8%,var(--surface));border-style:solid}
+.legcard.ref .refl{flex:1;min-width:0;min-height:36px;gap:8px}
+.legcard.ref .refl span{white-space:nowrap}
+.legcard.ref .refline{margin:4px 0 0 32px;line-height:1.5}
+.lno.sm{width:18px;height:18px;font-size:10px;vertical-align:middle}
+.sameas{display:flex;flex-direction:column;gap:6px;border-top:1px dashed var(--line);padding-top:8px}
+.sameas .row{min-height:36px;gap:6px}
 .branch{display:flex;flex-direction:column;gap:8px;margin-top:4px;padding:10px;border-radius:14px;border:1.5px dashed var(--line);background:color-mix(in srgb,var(--muted) 6%,var(--surface))}
 input::placeholder,textarea::placeholder{color:color-mix(in srgb,var(--muted) 55%,transparent);font-style:italic}
 
@@ -1297,7 +1304,7 @@ function rideMin(l,e){return e&&e.a!=null?e.a-e.d:Math.max(1,+l.ride||1);}
    stopovers or not), fix:{k,dep} (次の電車に乗る)}. 'at' means: arrive by it (行き) or leave at it (帰り); 'train' means:
    take the first train of the route at that time (or the first one after it on that day's diagram). */
 function cmPlan(route,dir,ds,o){
-  const legs=o.stay===false&&(route.direct||[]).length?route.direct:(route.legs||[]), n=legs.length, dia=cmDia(ds), tt=legs.map(l=>cmRide(l.kind)?ttFor(l,dia):null);let miss=false;
+  const legs=o.stay===false&&(route.direct||[]).length?directLegs(route):(route.legs||[]), n=legs.length, dia=cmDia(ds), tt=legs.map(l=>cmRide(l.kind)?ttFor(l,dia):null);let miss=false;
   const stayOn=o.stay!==false, dur=l=>(cmStay(l.kind)||l.stayOnly)?(stayOn?Math.max(0,+l.min||0):0):Math.max(0,+l.min||0);
   const xferBefore=i=>i>0&&cmRide(legs[i-1].kind)?Math.max(0,+legs[i].xfer||0):0;
   const fixes={};
@@ -1326,6 +1333,8 @@ function cmPlan(route,dir,ds,o){
   for(const x of out.legs){if(x.skip) continue;const m=x.arr-x.dep;if(cmRide(x.l.kind)){out.ride+=m;out.wait+=x.wait||0;}else if(cmMove(x.l.kind)) out.move+=m; else if(cmStay(x.l.kind)) out.stay+=m; else out.drive+=m;}
   return out;
 }
+/* 立ち寄らないとき: entries with ref take everything from that leg of the stopover route (so a change there carries over) */
+function directLegs(route){return (route.direct||[]).map(l=>{if(!l.ref) return l;const src=(route.legs||[]).find(x=>x.id===l.ref);return src?Object.assign(clone(src),{id:l.id,ref:l.ref}):null;}).filter(Boolean);}
 /* the departures of a route's first train or bus, from all diagrams (for choosing the standard train) */
 function firstTrainTimes(route){const l=(route.legs||[]).find(x=>cmRide(x.kind));if(!l) return [];const set=new Set();for(const k of ['wd','sa','ho']) for(const e of ttParse((l.tt||{})[k])) set.add(e.d);return [...set].sort((a,b)=>a-b);}
 /* the day's trips (null when commuting is off, the day is a day off, or "通勤しない") */
@@ -1883,7 +1892,22 @@ function viewCommute(){
   const lab=(id,text,input,extra)=>el('label',{class:'field',for:id},el('span',{class:'flab'},text,extra||null),input);
   /* one leg = one card */
   /* one leg = one card; key = 'legs' (the route, with the stopover) or 'direct' (立ち寄らないとき) */
+  const legLabel=l=>CM_ICON[l.kind]+' '+(cmRide(l.kind)?(l.from||'?')+'→'+(l.to||'?')+(l.ride?' '+l.ride+'分':''):CM_KIND[l.kind]+(l.min!=null?' '+l.min+'分':''));
+  const sameAs=(r,l,i)=>{const L=r.legs||[], opts=L.map((x,j)=>[x,j]).filter(([x])=>!cmStay(x.kind));if(!opts.length) return null;
+    const used=new Set((r.direct||[]).filter(y=>y.ref&&y.id!==l.id).map(y=>y.ref)), guess=(opts.find(([x])=>x.kind===l.kind&&!used.has(x.id))||opts[0])[0];
+    let pick=guess.id;
+    return el('div',{class:'sameas'},
+      el('label',{class:'row',for:'sa-'+l.id},el('input',{type:'checkbox',id:'sa-'+l.id,checked:false,onchange:e=>{if(e.target.checked) upR(r.id,x=>{const y=x.direct.find(z=>z.id===l.id);for(const k of Object.keys(y)) if(k!=='id') delete y[k];y.ref=pick;});}}),el('span',{class:'small'},'立ち寄るときの区間と同じにする')),
+      el('select',{'aria-label':'同じにする区間',onchange:e=>{pick=e.target.value;}},opts.map(([x,j])=>el('option',{value:x.id,selected:x.id===guess.id},(j+1)+'. '+legLabel(x)))));};
+  const refCard=(r,l,i)=>{const L=r.legs||[], j=L.findIndex(x=>x.id===l.ref), src=L[j];
+    return el('div',{class:'legcard ref'},
+      el('div',{class:'lchead'},el('span',{class:'lno'},String(i+1)),
+        el('label',{class:'row refl',for:'sa-'+l.id},el('input',{type:'checkbox',id:'sa-'+l.id,checked:true,'aria-label':'立ち寄るときの区間と同じ（外すと編集できます）',onchange:e=>{if(!e.target.checked) upR(r.id,x=>{const y=x.direct.find(z=>z.id===l.id), s0=(x.legs||[]).find(z=>z.id===y.ref);delete y.ref;if(s0) Object.assign(y,clone(s0),{id:y.id});});}}),
+          el('span',{class:'small'},'同じ')),
+        el('div',{class:'ord'},el('button',{type:'button',class:'ordb','aria-label':'区間'+(i+1)+'を上へ',disabled:i===0,onclick:()=>upR(r.id,x=>upDown(x.direct,l.id,-1))},'▲'),el('button',{type:'button',class:'ordb','aria-label':'区間'+(i+1)+'を下へ',disabled:i===(r.direct||[]).length-1,onclick:()=>upR(r.id,x=>upDown(x.direct,l.id,1))},'▼'),el('button',{type:'button',class:'ordb','aria-label':'区間'+(i+1)+'を消す',onclick:()=>upR(r.id,x=>{x.direct=x.direct.filter(y=>y.id!==l.id);})},'×'))),
+      el('p',{class:'small refline'},src?['立ち寄るときの ',el('b',{class:'lno sm'},String(j+1)),' と同じ：'+legLabel(src)]:'元の区間が見つかりません（「同じ」を外すと編集できます）'));};
   const legCard=(r,l,i,key)=>{
+    if(key==='direct'&&l.ref) return refCard(r,l,i);
     const list=r[key]||[], upL=fn=>upR(r.id,x=>{fn(x[key].find(y=>y.id===l.id));}), ride=cmRide(l.kind), stay=cmStay(l.kind), prevRide=i>0&&cmRide(list[i-1].kind), bus=l.kind==='bus';
     const tab=TTTAB[l.id]||'wd', cnt=k=>ttParse((l.tt||{})[k]).length;
     return el('div',{class:'legcard'+(stay?' stay':'')},
@@ -1908,7 +1932,8 @@ function viewCommute(){
         (+l.study||0)&&(+l.create||0)?lab('so-'+l.id,'順番',pselect('so-'+l.id,l.order||'study',[['study',tname('study')+' → '+tname('create')],['create',tname('create')+' → '+tname('study')]],v=>upL(x=>{x.order=v;}))):null,
         more('lm:'+l.id,'詳細（メモ）',lab('lm-'+l.id,'メモ',txt('lm-'+l.id,l.memo,v=>upL(x=>{x.memo=v;}),'')))]
       :[el('div',{class:'grid2'},lab('ld-'+l.id,'かかる時間（分）*',num('ld-'+l.id,l.min,v=>upL(x=>{x.min=v;}),'例：10')),el('span',{})),
-        more('lm:'+l.id,'詳細（メモ）',lab('lm-'+l.id,'メモ',txt('lm-'+l.id,l.memo,v=>upL(x=>{x.memo=v;}),'例：家→S駅')))]);
+        more('lm:'+l.id,'詳細（メモ）',lab('lm-'+l.id,'メモ',txt('lm-'+l.id,l.memo,v=>upL(x=>{x.memo=v;}),'例：家→S駅')))],
+      key==='direct'?sameAs(r,l,i):null);
   };
   const addLeg=(r,kind,key)=>upR(r.id,x=>{x[key]=x[key]||[];x[key].push(Object.assign({id:newId('l'),kind},cmRide(kind)?{ride:15,xfer:3,tt:{},notify:true}:cmStay(kind)?{min:180,name:''}:{min:10}));});
   const addChips=(r,key)=>el('div',{class:'chips'},Object.keys(CM_KIND).filter(k=>key==='legs'||k!=='stay').map(k=>el('button',{type:'button',class:'chip sm',onclick:()=>addLeg(r,k,key)},'＋ '+CM_ICON[k]+' '+CM_KIND[k])));
@@ -1916,8 +1941,9 @@ function viewCommute(){
      timetable is copied from the station where it starts, so only the riding time needs checking */
   const makeDirect=r=>{const L=r.legs||[], s=L.findIndex(l=>cmStay(l.kind)), a=L.slice(0,s).map(l=>cmRide(l.kind)).lastIndexOf(true), b0=L.slice(s+1).findIndex(l=>cmRide(l.kind)), b=b0<0?-1:s+1+b0;
     const cp=l=>Object.assign(clone(l),{id:newId('l')});let out;
-    if(a>=0&&b>=0){const A=L[a],B=L[b];out=[...L.slice(0,a).map(cp),Object.assign(cp(A),{to:B.to,ride:(+A.ride||0)+(+B.ride||0),car:A.car,plat:A.plat}),...L.slice(b+1).map(cp)];}
-    else out=L.filter(l=>!cmStay(l.kind)&&!l.stayOnly).map(cp);
+    const ref=l=>({id:newId('l'),ref:l.id});
+    if(a>=0&&b>=0){const A=L[a],B=L[b];out=[...L.slice(0,a).map(ref),Object.assign(cp(A),{to:B.to,ride:(+A.ride||0)+(+B.ride||0),car:A.car,plat:A.plat}),...L.slice(b+1).map(ref)];}
+    else out=L.filter(l=>!cmStay(l.kind)&&!l.stayOnly).map(ref);
     upR(r.id,x=>{x.direct=out;});CMOPEN.add('rd:'+r.id);toast('立ち寄らないときの経路を作りました。乗車時間を確かめてください');};
   const rEdit=r=>{const N=r.notify||{}, hasStay=(r.legs||[]).some(l=>cmStay(l.kind));return det('r:'+r.id,[el('span',{style:'flex:1;min-width:0'},r.name),el('span',{class:'xs muted'},(r.legs||[]).map(l=>CM_ICON[l.kind]).join(''))],
     lab('rn-'+r.id,'経路の名前*',txt('rn-'+r.id,r.name,v=>{if(v) upR(r.id,x=>{x.name=v;});},'例：帰り')),
