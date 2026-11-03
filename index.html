@@ -1009,6 +1009,15 @@ function typeCheckView(d,P,rr){
   return el('div',{class:'tcheck'},el('p',{class:'xs muted'},k.usual?'いつもの通勤で計算（'+md(k.ds)+'（'+WD[parseYmd(k.ds).getDay()]+'）の時刻表）':'通勤なしで計算'),
     stopBox,el('div',{class:'dgrid'+(k.cases.length===1?' one':'')},k.cases.map(col)));
 }
+/* the free stretches of a コマ (minutes since the start of the day): its window less the blocks that take time from it */
+function freeOf(s,blocks){if(!s.time) return null;const a=sinceStart(toMin(s.time)), b=a+(+s.min||0);let fr=[[a,b]];
+  for(const [x,y] of blocks){const nx=[];for(const [p,q] of fr){if(y<=p||x>=q){nx.push([p,q]);continue;}if(x>p) nx.push([p,x]);if(y<q) nx.push([y,q]);}fr=nx;}
+  return fr;}
+/* where a piece of work starts in a コマ when `off` minutes of it are already taken: along its free stretches. Past
+   them (配分 can give a コマ more minutes than its window), it carries on after the window. */
+function slotAt(s,off){if(!s.time) return null;const fr=s.free||[[sinceStart(toMin(s.time)),sinceStart(toMin(s.time))+(+s.base||+s.min||0)]];
+  let o=Math.max(0,off||0);for(const [p,q] of fr){if(o<q-p) return p+o;o-=q-p;}
+  const end=fr.length?fr[fr.length-1][1]:sinceStart(toMin(s.time))+(+s.base||0);return end+o;}
 function cutBy(s,blocks){const min=+s.min||0;let cut=0;if(s.time&&blocks.length){const a=sinceStart(toMin(s.time));for(const [x,y] of blocks) cut+=overlapMin(a,a+min,x,y);}return cut;}
 /* the day's コマ, after private events and mock exams take their hours, and after 配分 moves time between study and 制作 */
 function daySlots(ds,P){
@@ -1022,8 +1031,8 @@ function daySlots(ds,P){
     const {base,cmBlocks}=cmSlotsOf(dt.slots||[],cmd,usual);
     const blocks=privEvents(ds).filter(e=>e.s&&e.e).map(e=>ivl(e.s,e.e));
     for(const m of P.goals||[]) if(m.kind==='mock'&&m.date===ds&&m.from&&m.to) blocks.push(ivl(m.from,m.to));
-    out=base.map(s=>{const min=+s.min||0, cut=cutBy(s,blocks)+(s.cm?0:cutBy(s,cmBlocks));
-      return Object.assign({},s,{base:min,min:Math.max(0,min-cut),cut});});
+    out=base.map(s=>{const min=+s.min||0, bl=s.cm?blocks:blocks.concat(cmBlocks), cut=cutBy(s,blocks)+(s.cm?0:cutBy(s,cmBlocks));
+      return Object.assign({},s,{base:min,min:Math.max(0,min-cut),cut,free:freeOf(s,bl)});});
     const a=+((P.alloc||{})[ds]||0);
     if(a){const from=a>0?'study':'create', to=a>0?'create':'study', k=Math.min(1,Math.abs(a));let moved=0;
       // commute time cannot become 制作 time, so it is not moved
@@ -1237,7 +1246,10 @@ function gapText(gap){const v=Math.round(gap*100);return '計画との差 '+(v>0
 function slotOrder(a,b){return sinceStart(toMin(a.time||'03:59'))-sinceStart(toMin(b.time||'03:59'));}
 function planTasks(ds){
   const P=plan2(), B=P.baseline, t=today(), done=doneMap(), idx=stepIndex(P), T=[];
-  const slots=daySlots(ds,P).slice().sort(slotOrder), lab=s=>(s.time?s.time+' ':'')+s.label;
+  const slots=daySlots(ds,P).slice().sort(slotOrder);
+  // y: a コマ with the minutes left in it; the next piece starts after the ones already given to it
+  const atOf=y=>{const m=slotAt(y.s,(+y.s.min||0)-(y.left==null?(+y.s.min||0):y.left));return m==null?'':hmOf(m);};
+  const lab=y=>{const t=atOf(y);return (t?t+' ':'')+(y.s.label||'');};
   const hasQ=realDocs().length>0;
   for(const tr of ['study','create']){
     const rng=(B.rng||{})[tr]||{}, Q0=QatA(P,tr,addDays(ds,-1)), Q1=QatA(P,tr,ds), list=[];
@@ -1252,32 +1264,32 @@ function planTasks(ds){
     const ss=slots.filter(s=>s.track===tr&&s.min>0).map(s=>({s,left:s.min}));
     const res=tr==='study'?(mockRes(P)[ds]||{list:[]}).list:[];
     // mock review first, in the ordinary study コマ
-    for(const m of res){let need=m.min;const us=[];for(const y of ss){if(need<=0.5) break;if(y.s.use==='app'||y.left<5) continue;const k=Math.min(y.left,need);y.left-=k;need-=k;us.push([y,k]);}
-      us.forEach(([y,k],i)=>T.push({id:'mk:'+m.g.id+':'+ds+(i?':'+i:''),time:lab(y.s)+'・'+fmtMin(k),kind:'study',title:'模試の復習：'+m.g.name,sub:'',plan:Math.round(k),_t:y.s.time||''}));}
+    for(const m of res){let need=m.min;const us=[];for(const y of ss){if(need<=0.5) break;if(y.s.use==='app'||y.left<5) continue;const k=Math.min(y.left,need);const L=lab(y),t0=atOf(y);y.left-=k;need-=k;us.push([L,t0,k]);}
+      us.forEach(([L,t0,k],i)=>T.push({id:'mk:'+m.g.id+':'+ds+(i?':'+i:''),time:L+'・'+fmtMin(k),kind:'study',title:'模試の復習：'+m.g.name,sub:'',plan:Math.round(k),_t:t0}));}
     const unlocked=x=>{const a=x.st.after;if(!a) return true;if(done[a]&&done[a]<ds) return true;const rr=rng[a];return !!rr&&rr[1]<=Q0+1e-6;};
     const used=new Set();
-    const pushQ=(x,y)=>{const st=x.st;T.push({id:'st:'+x.id,step:x.id,cm:!!y.s.cm,time:lab(y.s)+'・'+(st.n||'')+'問',kind:'study',title:'演習 '+(st.n||'')+'問：'+st.title,sub:(x.carry?'持ち越し　':x.ahead?'先取り　':'')+(st.sub||''),plan:Math.round(st.min),_t:y.s.time||'',app:st.app||null,n:st.n});};
+    const pushQ=(x,y,L,t0)=>{const st=x.st;T.push({id:'st:'+x.id,step:x.id,cm:!!y.s.cm,time:L+'・'+(st.n||'')+'問',kind:'study',title:'演習 '+(st.n||'')+'問：'+st.title,sub:(x.carry?'持ち越し　':x.ahead?'先取り　':'')+(st.sub||''),plan:Math.round(st.min),_t:t0,app:st.app||null,n:st.n});};
     const ahead=tr==='study'?Object.entries(rng).filter(([id,r])=>r[0]>=Q1-1e-6&&!done[id]&&idx[id]&&idx[id].kind==='solve').sort((a,b)=>a[1][0]-b[1][0]).slice(0,12).map(([id,r])=>({id,part:r[1]-r[0],first:true,last:true,carry:false,ahead:true,r,st:idx[id]})):[];
     if(tr==='study') for(const y of ss.filter(y=>y.s.use==='app')){
-      const got=[];
+      const got=[], L0=lab(y), t00=atOf(y);
       for(const x of list){if(used.has(x.id)||x.st.kind!=='solve'||!unlocked(x)) continue;if(y.left<x.part*0.6) break;y.left-=x.part;used.add(x.id);got.push(x);if(y.left<5) break;}
       for(const x of ahead){if(y.left<x.part*0.6) break;if(used.has(x.id)||!unlocked(x)) continue;y.left-=x.part;used.add(x.id);got.push(x);}
       if(!got.length&&!hasQ) continue;
       const f=got[0]&&got[0].st, mins=y.s.min;
-      T.push({id:'aq:'+y.s.id+':'+ds,kind:'study',cm:!!y.s.cm,time:lab(y.s)+'・'+fmtMin(mins),title:(y.s.cm?'通勤で演習':'アプリで演習')+'：'+(f?(subjShort(P,f.subject)||f.title)+'の続きから':'間違えた問題の解き直し'),
-        sub:got.length?got.map(x=>x.st.title).join('、')+(got.some(x=>x.carry)?'（持ち越しあり）':''):'計画の外のおまけです',plan:mins,_t:y.s.time||'',steps:got.map(x=>x.id),slot:{min:mins,subject:f?f.subject:null,book:f&&f.app?f.app.book:null,review:!got.length}});
+      T.push({id:'aq:'+y.s.id+':'+ds,kind:'study',cm:!!y.s.cm,time:L0+'・'+fmtMin(mins),title:(y.s.cm?'通勤で演習':'アプリで演習')+'：'+(f?(subjShort(P,f.subject)||f.title)+'の続きから':'間違えた問題の解き直し'),
+        sub:got.length?got.map(x=>x.st.title).join('、')+(got.some(x=>x.carry)?'（持ち越しあり）':''):'計画の外のおまけです',plan:mins,_t:t00,steps:got.map(x=>x.id),slot:{min:mins,subject:f?f.subject:null,book:f&&f.app?f.app.book:null,review:!got.length}});
       y.left=0;
     }
     const other=ss.filter(y=>y.s.use!=='app');
     for(const x of list){
       if(used.has(x.id)) continue;const st=x.st;
-      if(st.kind==='solve'){const y=other.find(y=>y.left>=x.part*0.6)||other.find(y=>y.left>0)||other[other.length-1]||ss[ss.length-1];if(y){y.left-=x.part;pushQ(x,y);}else pushQ(x,{s:{label:'',time:''}});continue;}
+      if(st.kind==='solve'){const y=other.find(y=>y.left>=x.part*0.6)||other.find(y=>y.left>0)||other[other.length-1]||ss[ss.length-1];if(y){const L=lab(y),t0=atOf(y);y.left-=x.part;pushQ(x,y,L,t0);}else pushQ(x,{s:{label:'',time:''}},'','');continue;}
       let need=x.part;const us=[];
-      for(const y of other){if(need<=0.5) break;if(y.left<5) continue;const k=Math.min(y.left,need);y.left-=k;need-=k;us.push([y,k]);}
-      if(need>0.5){if(us.length) us[us.length-1][1]+=need; else{const y=other[other.length-1];if(y) us.push([y,need]); else us.push([{s:{label:'今日は入るコマがありません',time:''}},need]);}}
-      us.forEach(([y,k],i)=>{const fin=x.last&&i===us.length-1, whole=Math.round(x.part)<st.min-1||us.length>1;
-        T.push({id:fin?'st:'+x.id:'sp:'+ds+':'+i+':'+x.id,step:x.id,time:(y.s.label?lab(y.s)+'・':'')+fmtMin(k)+(whole?'（全'+fmtMin(st.min)+'）':''),kind:tr==='study'?'study':'manga',
-          title:st.title+(x.first&&i===0||x.carry?'':'（続き）'),sub:(x.carry?'持ち越し　':'')+(st.sub||''),plan:Math.round(k),_t:y.s.time||''});});
+      for(const y of other){if(need<=0.5) break;if(y.left<5) continue;const k=Math.min(y.left,need);const L=lab(y),t0=atOf(y);y.left-=k;need-=k;us.push([y,k,L,t0]);}
+      if(need>0.5){if(us.length) us[us.length-1][1]+=need; else{const y=other[other.length-1];if(y){const L=lab(y),t0=atOf(y);us.push([y,need,L,t0]);} else us.push([{s:{label:'今日は入るコマがありません',time:''}},need,'今日は入るコマがありません','']);}}
+      us.forEach(([y,k,L,t0],i)=>{const fin=x.last&&i===us.length-1, whole=Math.round(x.part)<st.min-1||us.length>1;
+        T.push({id:fin?'st:'+x.id:'sp:'+ds+':'+i+':'+x.id,step:x.id,time:(L?L+'・':'')+fmtMin(k)+(whole?'（全'+fmtMin(st.min)+'）':''),kind:tr==='study'?'study':'manga',
+          title:st.title+(x.first&&i===0||x.carry?'':'（続き）'),sub:(x.carry?'持ち越し　':'')+(st.sub||''),plan:Math.round(k),_t:t0});});
     }
   }
   for(const m of (P.goals||[]).filter(g=>g.kind==='mock'&&g.date===ds)) T.push({id:'mock:'+m.id,time:(m.from||'')+(m.to?'〜'+m.to:''),kind:'admin',title:'模試：'+m.name,sub:'',_t:m.from||''});
@@ -3079,7 +3091,7 @@ function timeEditor(P,up,rr){
 let WIZ=null;
 const TIMEKEYS=['dayTypes','week','dates','alloc','mode','dflt','weekStart','cycle'];
 function wizSteps(){return WIZ.method==='time'?['events','targets','method','time','study','create','outlook','build']:['events','targets','method','study','create','need','time','outlook','build'];}
-function wizName(k){return {events:'当日',targets:'目標日',method:'組み方',study:tname('study'),create:tname('create'),need:'必要な時間',time:'時間',outlook:'見通し',build:'組む'}[k];}
+function wizName(k){return {events:'当日',targets:'目標日',method:'組み方',study:tname('study'),create:tname('create'),need:'必要な時間',time:'時間割',outlook:'見通し',build:'組む'}[k];}
 function openWizard(at){
   const cur=plan2();
   if(!WIZ){WIZ={P:clone(cur),i:0,method:'work',src:cur.t||0};delete WIZ.P.baseline;}
@@ -3145,10 +3157,10 @@ function wizNeed(){
       el('p',{class:'small num'},'作業 '+hrs(W)+' ／ いまの時間割で使える時間 '+hrs(C)+'（予備日を除く）'),
       f<=1.0001?el('p',{class:'small',style:'color:var(--good)'},'いまの時間割で足ります（使うのは時間割の'+Math.round(f*100)+'%）。')
         :[el('p',{class:'small',style:'color:#E8590C'},'いまの時間割の'+Math.round(f*100)+'%が必要です。'+(tr==='study'?'通勤のコマはそのままにして、':'')+'ほかのコマを伸ばすと、こうなります：'),
-          el('table',{class:'table'},el('tbody',{},(P.dayTypes||[]).map(d=>el('tr',{},el('td',{},el('b',{class:'dtl'},dtLetter(d.id,P)),' '+d.name),el('td',{class:'num'},fmtMin((d.slots||[]).filter(s=>s.track===tr).reduce((a,s)=>a+(+s.min||0),0))+' → '+fmtMin(scaled(d))))))),
+          el('table',{class:'table'},el('tbody',{},(P.dayTypes||[]).filter(d=>(d.slots||[]).some(s=>s.track===tr&&+s.min>0)).map(d=>el('tr',{},el('td',{},el('b',{class:'dtl'},dtLetter(d.id,P)),' '+d.name),el('td',{class:'num'},fmtMin((d.slots||[]).filter(s=>s.track===tr).reduce((a,s)=>a+(+s.min||0),0))+' → '+fmtMin(scaled(d))))))),
           el('button',{type:'button',class:'btn sub sm',onclick:()=>wizUp(x=>{for(const d of x.dayTypes) for(const s of d.slots||[]) if(s.track===tr&&s.use!=='app') s.min=Math.ceil((+s.min||0)*k/5)*5;})},'この時間割にする')]);
   };
-  return [el('p',{class:'small'},'前提から出した作業の量と、いまの時間割で使える時間をくらべます。足りないときは、時間割を伸ばす案を出します。次の「時間」で、自分で直すこともできます。'),card('study'),card('create')];
+  return [el('p',{class:'small'},'前提から出した作業の量と、いまの時間割で使える時間をくらべます。足りないときは、時間割を伸ばす案を出します。次の「時間割」で、自分で直すこともできます。'),card('study'),card('create')];
 }
 /* 見通し: for each goal, the work, the time, and the buffer; what to do when it does not fit */
 function goalRows(P,R,tr,interactive){
@@ -3165,7 +3177,7 @@ function goalRows(P,R,tr,interactive){
         el('div',{class:'chips'},
           !G.eatBuf&&g.buf?el('button',{type:'button',class:'chip sm',onclick:()=>wizUp(x=>{x.goals.find(y=>y.id===gid).eatBuf=true;})},'予備日から回す'):null,
           el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf(tr))},tname(tr)+'の前提を直す'),
-          el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf('time'))},'時間を直す'),
+          el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf('time'))},'時間割を直す'),
           el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(1)},'目標日を直す'))):null,
       G.eatBuf&&interactive?el('button',{type:'button',class:'chip sm',style:'align-self:flex-start',onclick:()=>wizUp(x=>{delete x.goals.find(y=>y.id===gid).eatBuf;})},'予備日から回すのをやめる'):null);});
 }
@@ -3197,7 +3209,8 @@ function wizBuildView(){
     missing.length?el('div',{class:'warn'},missing.map(g=>g.name).join('・')+'の日付がまだです。決めないまま組むと、その分の作業は計画に入りません。'):null,
     near.length?el('div',{class:'card'},el('h2',{},'期日まで2週間以内の節目'),el('p',{class:'small'},'期日が近いときは、予備日を取ると作業の時間が足りなくなりやすいので、予備日なしで組むのがおすすめです。'),
       near.map(g=>el('label',{class:'row',for:'nb-'+g.id,style:'min-height:44px'},el('input',{type:'checkbox',id:'nb-'+g.id,checked:!!pick[g.id],onchange:e=>{pick[g.id]=e.target.checked;wizSave();}}),el('span',{},g.name+'（'+md(g.date)+'）を予備日なしで組む')))):null,
-    el('div',{class:'card'},el('label',{class:'row',style:'min-height:44px;opacity:.6'},el('input',{type:'checkbox',disabled:true}),el('span',{},'節目と期日をGoogleカレンダーに書き出す',el('br'),el('span',{class:'xs muted'},'Googleとの連携の設定が済むと選べます')))),
+    gcalCfg().clientId?el('div',{class:'card'},el('label',{class:'row',for:'wz-gx',style:'min-height:44px'},el('input',{type:'checkbox',id:'wz-gx',checked:WIZ.gx!==false,onchange:e=>{WIZ.gx=e.target.checked;wizSave();}}),el('span',{},'組んだあと、節目と期日をGoogleカレンダーに書き出す',el('br'),el('span',{class:'xs muted'},'Googleの「芒学」カレンダーに書き出します。あとからカレンダー画面の「節目を書き出す」でもできます。'))))
+      :el('div',{class:'card'},el('label',{class:'row',style:'min-height:44px;opacity:.6'},el('input',{type:'checkbox',disabled:true}),el('span',{},'節目と期日をGoogleカレンダーに書き出す',el('br'),el('span',{class:'xs muted'},'Googleとの連携を設定すると選べます（メニューの「問題の取り込み・同期・バックアップ」）。')))),
     over?el('div',{class:'warn'},'はみ出す節目があるので、まだ組めません。「見通し」で直してください。',el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf('outlook'))},'見通しへ')):null,
     el('button',{type:'button',class:'btn',disabled:over,onclick:wizBuild},'この内容で組む（今日から）')];
 }
@@ -3206,8 +3219,11 @@ function wizBuild(){
   const t=today(), pick=WIZ.nb||{}, src=clone(WIZ.P);keepRewards(src,plan2());
   for(const g of src.goals||[]) if(pick[g.id]&&diffDays(t,g.date)<=14) g.buffer=false;
   setPlan2(x=>{for(const k of Object.keys(x)) delete x[k];Object.assign(x,src);x.v=3;x.baseline=scheduleAll(x,t,{});x.start=t;});
+  const gx=WIZ.gx!==false&&!!gcalCfg().clientId;
   WIZ=null;wizSave();document.getElementById('wiz').close();
   toast('計画を組みました。今日の「今日やること」から切り替わります');TABSTATE.plan='all';go('plan');
+  // the export asks Google to sign in, so it starts here, within the press of 組む
+  if(gx) gRun('計画を組みました。Googleに書き出しています',gcalExport);
 }
 
 /* ----- 全体 ----- */
@@ -3285,7 +3301,7 @@ function timeTab(){
 function viewPlan(){
   return [
     el('h1',{},'計画'),statusNode(),
-    swipeTabs([['all','全体',planOverview()],['goals','節目',planGoals()],['time','時間',timeTab()]],'plan')
+    swipeTabs([['all','全体',planOverview()],['goals','節目',planGoals()],['time','時間割',timeTab()]],'plan')
   ];
 }
 
