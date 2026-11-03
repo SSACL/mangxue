@@ -362,6 +362,7 @@ details.more[open]{display:flex;flex-direction:column;gap:8px}
 .bydir{display:flex;flex-direction:column;gap:6px;padding:6px 0}
 .tleg.stay{color:var(--accent-ink)}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.chlist{margin:0;padding-left:1.2em;display:grid;gap:2px}
 .gtag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:8px;background:var(--chip);color:var(--chip-ink);font-size:10px;vertical-align:1px}
 ol.steps{margin:6px 0 8px;padding-left:1.4em;display:grid;gap:6px}
 .leg{display:flex;flex-direction:column;gap:8px;padding:10px 0;border-top:1px dashed var(--line)}
@@ -911,7 +912,8 @@ function migratePlan(P){
 const MIG=new WeakMap();
 function mig(P){if(!P) return null;if(P.v>=3) return P;let m=MIG.get(P);if(!m){m=migratePlan(P);MIG.set(P,m);}return m;}
 function plan2(){return mig(S.meta.plan)||mig(PLAN2SEED)||EMPTY_PLAN2;}
-function setPlan2(fn){const x=clone(plan2());fn(x);x.t=Date.now();S.meta.plan=x;save('meta/plan');}
+var GMUTE=false;   // true while 組む saves the plan: it asks once itself, after the build
+function setPlan2(fn){const old=plan2(), x=clone(old);fn(x);x.t=Date.now();S.meta.plan=x;save('meta/plan');if(!GMUTE&&gcalNote(old,x)) setTimeout(()=>gcalAsk('change'),0);}
 function planActive(){const p=S.meta.plan;return !!(p&&p.v>=3&&p.baseline&&p.baseline.by);}
 function tname(tr){const n=plan2().names||{};return tr==='study'?(n.study||'学習'):(n.create||'制作');}
 function isWork(g){return (g.kind==='mid'||g.kind==='target')&&(g.track==='study'||g.track==='create')&&!!g.date;}
@@ -2378,8 +2380,33 @@ async function gcalExport(){
     const r=await gapiT(token,'POST','/calendars/'+encodeURIComponent(cid)+'/events',body);ev[g.id]=r.id;n++;
   }
   let rm=0;for(const [gid,eid] of Object.entries(ev)) if(!goals.some(g=>g.id===gid)){try{await gapiT(token,'DELETE','/calendars/'+encodeURIComponent(cid)+'/events/'+encodeURIComponent(eid));}catch(e){if(!(e.code==='http'&&(e.status===404||e.status===410))) throw e;}delete ev[gid];rm++;}
-  setGcal(x=>{x.exp=Object.assign({},x.exp,{ev});x.lastExport=Date.now();});
+  setGcal(x=>{x.exp=Object.assign({},x.exp,{ev});x.lastExport=Date.now();});GCH={};
   toast(gcalCfg().exp.acct+' の「'+GCALNAME+'」カレンダーに節目を '+n+' 件書き出しました'+(rm?'（'+rm+' 件消しました）':''));
+}
+/* 書き出すか聞く: after 組む, and when the date of a 節目・期日 changes (added, moved, removed). The changes since the last
+   export are kept (in this page only) and listed, so 「あとで」 and a later change show them all. Only once the 書き出し用
+   account is chosen. */
+let GCH={};
+function gcalReady(){const c=gcalCfg();return !!(c.clientId&&c.exp.acct);}
+function gExpLabel(g){if(!g) return '（消した）';if(!g.date) return '（日付なし）';if(g.gcal===false) return '（書き出さない）';return md(g.date)+(g.kind==='mock'&&g.from&&g.to?' '+g.from+'〜'+g.to:'');}
+function gcalNote(oldP,newP){
+  if(!gcalReady()) return false;
+  const O=new Map((oldP.goals||[]).map(g=>[g.id,g])), N=new Map((newP.goals||[]).map(g=>[g.id,g]));let any=false;
+  for(const id of new Set([...O.keys(),...N.keys()])){const a=O.has(id)?gExpLabel(O.get(id)):'（追加）', b=gExpLabel(N.get(id));if(a===b) continue;
+    const exp=x=>x&&x.date&&x.gcal!==false;if(!exp(O.get(id))&&!exp(N.get(id))) continue;
+    any=true;const g=N.get(id)||O.get(id), c=GCH[id];
+    if(c){c.b=b;c.name=g.name;if(c.a===c.b) delete GCH[id];} else GCH[id]={name:g.name||GKIND[g.kind]||'節目',a,b};}
+  return any;
+}
+function gcalAsk(kind){
+  if(!gcalReady()) return;
+  const c=gcalCfg(), ch=Object.values(GCH), sh=()=>document.getElementById('sheet').close();
+  openSheet('Googleカレンダーに書き出しますか？',
+    el('p',{class:'small'},(kind==='build'?'計画を組みました。':'節目・期日の日付が変わりました。')+'書き出し用のアカウントの「'+GCALNAME+'」カレンダーに、いまの節目・期日を書き出しますか？'),
+    el('p',{class:'xs muted',style:'word-break:break-all'},'書き出し用のアカウント：'+c.exp.acct),
+    ch.length?[el('p',{class:'xs muted'},'前に書き出してから変わった日付'),el('ul',{class:'small chlist'},ch.slice(0,8).map(x=>el('li',{},x.name+'　'+x.a+' → '+x.b)),ch.length>8?el('li',{class:'muted'},'ほか '+(ch.length-8)+' 件'):null)]:null,
+    el('div',{class:'grid2'},el('button',{type:'button',class:'btn',onclick:()=>{sh();gRun('書き出しています',async()=>{await gcalExport();GCH={};});}},'書き出す'),el('button',{type:'button',class:'btn sub',onclick:sh},'あとで')),
+    el('p',{class:'xs muted'},'あとで書き出すときは、カレンダー画面の「節目を書き出す」から。'));
 }
 function gcalHelp(){return el('button',{type:'button',class:'help','aria-label':'Googleとの連携の準備',onclick:e=>{e.preventDefault();e.stopPropagation();openSheet('Googleとの連携の準備',
   el('p',{class:'small'},'ご自分のGoogleアカウントで、Google Cloud Console（console.cloud.google.com）に次を登録します。費用はかかりません。'),
@@ -3250,21 +3277,20 @@ function wizBuildView(){
     missing.length?el('div',{class:'warn'},missing.map(g=>g.name).join('・')+'の日付がまだです。決めないまま組むと、その分の作業は計画に入りません。'):null,
     near.length?el('div',{class:'card'},el('h2',{},'期日まで2週間以内の節目'),el('p',{class:'small'},'期日が近いときは、予備日を取ると作業の時間が足りなくなりやすいので、予備日なしで組むのがおすすめです。'),
       near.map(g=>el('label',{class:'row',for:'nb-'+g.id,style:'min-height:44px'},el('input',{type:'checkbox',id:'nb-'+g.id,checked:!!pick[g.id],onchange:e=>{pick[g.id]=e.target.checked;wizSave();}}),el('span',{},g.name+'（'+md(g.date)+'）を予備日なしで組む')))):null,
-    gcalCfg().clientId&&gcalCfg().exp.acct?el('div',{class:'card'},el('label',{class:'row',for:'wz-gx',style:'min-height:44px'},el('input',{type:'checkbox',id:'wz-gx',checked:WIZ.gx!==false,onchange:e=>{WIZ.gx=e.target.checked;wizSave();}}),el('span',{},'組んだあと、節目と期日をGoogleカレンダーに書き出す',el('br'),el('span',{class:'xs muted',style:'word-break:break-all'},'書き出し用のアカウント（'+gcalCfg().exp.acct+'）の「'+GCALNAME+'」カレンダーに書き出します。あとからカレンダー画面の「節目を書き出す」でもできます。'))))
-      :el('div',{class:'card'},el('label',{class:'row',style:'min-height:44px;opacity:.6'},el('input',{type:'checkbox',disabled:true}),el('span',{},'節目と期日をGoogleカレンダーに書き出す',el('br'),el('span',{class:'xs muted'},gcalCfg().clientId?'設定で「書き出し用のアカウント」を選ぶと使えます（メニューの「問題の取り込み・同期・バックアップ」）。':'Googleとの連携を設定すると選べます（メニューの「問題の取り込み・同期・バックアップ」）。')))),
+    el('p',{class:'xs muted'},gcalReady()?'組んだあと、節目・期日をGoogleカレンダー（「'+GCALNAME+'」）に書き出すか聞きます。':gcalCfg().clientId?'設定で「書き出し用のアカウント」を選ぶと、組んだあとにGoogleカレンダーへ書き出せます（メニューの「問題の取り込み・同期・バックアップ」）。':'Googleとの連携を設定すると、組んだあとにGoogleカレンダーへ書き出せます（メニューの「問題の取り込み・同期・バックアップ」）。'),
     over?el('div',{class:'warn'},'はみ出す節目があるので、まだ組めません。「見通し」で直してください。',el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf('outlook'))},'見通しへ')):null,
     el('button',{type:'button',class:'btn',disabled:over,onclick:wizBuild},'この内容で組む（今日から）')];
 }
 function keepRewards(dst,cur){for(const g of dst.goals||[]){const c=(cur.goals||[]).find(x=>x.id===g.id);if(c&&c.reward&&!g.reward){g.reward=c.reward;if(c.got) g.got=c.got;}}}
 function wizBuild(){
-  const t=today(), pick=WIZ.nb||{}, src=clone(WIZ.P);keepRewards(src,plan2());
+  const t=today(), pick=WIZ.nb||{}, src=clone(WIZ.P), old=plan2();keepRewards(src,old);
   for(const g of src.goals||[]) if(pick[g.id]&&diffDays(t,g.date)<=14) g.buffer=false;
-  setPlan2(x=>{for(const k of Object.keys(x)) delete x[k];Object.assign(x,src);x.v=3;x.baseline=scheduleAll(x,t,{});x.start=t;});
-  const gx=WIZ.gx!==false&&!!gcalCfg().clientId&&!!gcalCfg().exp.acct;
+  GMUTE=true;try{setPlan2(x=>{for(const k of Object.keys(x)) delete x[k];Object.assign(x,src);x.v=3;x.baseline=scheduleAll(x,t,{});x.start=t;});}finally{GMUTE=false;}
+  gcalNote(old,plan2());
   WIZ=null;wizSave();document.getElementById('wiz').close();
   toast('計画を組みました。今日の「今日やること」から切り替わります');TABSTATE.plan='all';go('plan');
-  // the export asks Google to sign in, so it starts here, within the press of 組む
-  if(gx) gRun('計画を組みました。Googleに書き出しています',gcalExport);
+  // the 書き出す button in the ask is the press that may open Google's sign-in
+  if(gcalReady()) setTimeout(()=>gcalAsk('build'),0);
 }
 
 /* ----- 全体 ----- */
@@ -3272,7 +3298,7 @@ function planOverview(){
   const P=plan2(), t=today(), act=planActive();
   if(!act) return [
     el('div',{class:'card'},el('h2',{},'まだ組んでいません'),
-      el('p',{class:'small'},'「計画を組む」を押すと、当日 → 目標日 → 組み方 → '+tname('study')+'・'+tname('create')+'の前提 → 時間 → 見通しの順に聞きながら組みます。途中で閉じても、続きから再開できます。'),
+      el('p',{class:'small'},'「計画を組む」を押すと、当日 → 目標日 → 組み方 → '+tname('study')+'・'+tname('create')+'の前提 → 時間割 → 見通しの順に聞きながら組みます。途中で閉じても、続きから再開できます。'),
       el('button',{type:'button',class:'btn',onclick:()=>openWizard()},WIZ?'計画を組む（続きから）':'計画を組む')),
     PLAN?el('p',{class:'xs muted'},'組むまでは、これまでの計画で「今日やること」を出しています。'):null];
   const B=P.baseline, A=adjOf(P);
