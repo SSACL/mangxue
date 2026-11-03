@@ -1393,7 +1393,8 @@ function itemDone(ds,it){
   if(it.type==='count') return Number(v)>0;
   return !!v;
 }
-function routineApplies(ds,r){if(r.byCm&&cmOn()) return !!routineBy(ds,r);return (r.days||ALLDAYS).includes(parseYmd(ds).getDay());}
+function routineOnDay(ds,r){return r.when==='types'?(r.types||[]).includes(dayTypeOf(ds)):(r.days||ALLDAYS).includes(parseYmd(ds).getDay());}
+function routineApplies(ds,r){if(!routineOnDay(ds,r)) return false;if(r.byCm&&cmOn()) return !!routineBy(ds,r);return true;}
 function routineState(ds,r){
   if(r.kind==='sleep'){const m=sleepMin(dayRec(ds).rec.sleep);return m==null?null:(m>=life().sleepTarget?1:0);}
   const v=dayRec(ds).r[r.id];return v===1||v===0?v:null;
@@ -2743,7 +2744,18 @@ function viewRoutines(){
   const updR=(id,fn)=>{setLife(x=>{fn(x.routines.find(r=>r.id===id));});render();};
   const updI=(id,fn)=>{setLife(x=>{fn(x.items.find(i=>i.id===id));});render();};
   const useBox=(id,label,on,fn)=>el('label',{class:'row',for:id,style:'min-height:44px'},el('input',{type:'checkbox',id,checked:on,onchange:e=>fn(e.target.checked)}),el('span',{},label));
-  const daysPick=(r)=>el('div',{class:'field'},'曜日',el('div',{class:'wds'},ALLDAYS.map(i=>el('button',{type:'button','aria-pressed':String((r.days||ALLDAYS).includes(i)),'aria-label':DN[i]+'曜日',onclick:()=>updR(r.id,x=>{const s=new Set(x.days||ALLDAYS);if(s.has(i)) s.delete(i); else s.add(i);x.days=[...s].sort();})},DN[i]))));
+  // 出す日：曜日で選ぶ（いくつでも）か、時間割で選ぶ（いくつでも）
+  const PP=plan2(), DT=PP.dayTypes||[];
+  const typesOf=r=>(r.types||[]).filter(id=>DT.some(t=>t.id===id));
+  const whenLabel=r=>{if(r.when==='types'){const ts=typesOf(r);return ts.length?'時間割 '+ts.map(id=>dtLetter(id,PP)).join('・'):'出す日なし';}const ds=r.days||ALLDAYS;return ds.length?daysLabel(ds):'出す日なし';};
+  const daysPick=(r)=>{const ty=r.when==='types', none=ty?!typesOf(r).length:!(r.days||ALLDAYS).length;
+    return el('div',{class:'field'},'出す日',
+      el('div',{class:'seg',style:'grid-template-columns:repeat(2,minmax(0,1fr))'},el('button',{type:'button','aria-pressed':String(!ty),onclick:()=>updR(r.id,x=>{delete x.when;})},'曜日で選ぶ'),
+        el('button',{type:'button','aria-pressed':String(ty),disabled:!DT.length,onclick:()=>updR(r.id,x=>{x.when='types';if(!(x.types||[]).some(id=>DT.some(t=>t.id===id))) x.types=DT.map(t=>t.id);})},'時間割で選ぶ')),
+      ty?el('div',{class:'dtchips'},DT.map(t=>typeChip(PP,t.id,(r.types||[]).includes(t.id),()=>updR(r.id,x=>{const s=new Set((x.types||[]).filter(id=>DT.some(t=>t.id===id)));if(s.has(t.id)) s.delete(t.id); else s.add(t.id);x.types=DT.map(t=>t.id).filter(id=>s.has(id));}))))
+        :el('div',{class:'wds'},ALLDAYS.map(i=>el('button',{type:'button','aria-pressed':String((r.days||ALLDAYS).includes(i)),'aria-label':DN[i]+'曜日',onclick:()=>updR(r.id,x=>{const s=new Set(x.days||ALLDAYS);if(s.has(i)) s.delete(i); else s.add(i);x.days=[...s].sort();})},DN[i]))),
+      el('p',{class:'xs muted'},ty?'選んだ時間割の日に出ます。その日の時間割は、計画の曜日の決まりと、カレンダーでの日ごとの指定で決まります。祝日も、その日の時間割しだいです。':DT.length?'選んだ曜日に出ます。祝日も曜日どおりです。祝日を外したいときは「時間割で選ぶ」にします。':'選んだ曜日に出ます。'),
+      none?el('p',{class:'xs',style:'color:#E8590C'},'どれも選ばれていないので、このルーティンは出ません。'):null);};
   const offPill=off=>off?el('span',{class:'pill gray',style:'padding:2px 8px;font-size:11px'},'使わない'):null;
   const sr=sleepRoutine();
 
@@ -2784,11 +2796,11 @@ function viewRoutines(){
           items().map(it=>el('button',{type:'button',class:'chip sm','aria-pressed':String(c.items.includes(it.id)),onclick:()=>tog('items',it.id)},(it.emoji||'●')+' '+it.name))):null);
     }));
 
-  const rEdit=r=>det('r:'+r.id,[el('span',{},r.emoji||'・'),el('span',{style:'flex:1;min-width:0'},(r.byCm&&cmOn()?'通勤に合わせて ':(r.by?r.by+' までに':''))+r.name),offPill(r.off)||el('span',{class:'xs muted'},daysLabel(r.days||ALLDAYS))],
+  const rEdit=r=>det('r:'+r.id,[el('span',{},r.emoji||'・'),el('span',{style:'flex:1;min-width:0'},(r.byCm&&cmOn()?'通勤に合わせて ':(r.by?r.by+' までに':''))+r.name),offPill(r.off)||el('span',{class:'xs muted'},whenLabel(r))],
     useBox('ru-'+r.id,'このルーティンを使う',!r.off,v=>updR(r.id,x=>{x.off=!v;})),
     el('div',{class:'grid2'},txt('rn-'+r.id,'名前',r.name,v=>{if(!v) return;if(nameTaken(L.routines,v,r.id)){toast('同じ名前のルーティンがあります');render();return;}updR(r.id,x=>{x.name=v;});}),txt('re-'+r.id,'絵文字',r.emoji,v=>updR(r.id,x=>{x.emoji=v;}))),
     el('label',{class:'field',for:'rk-'+r.id},'期限の時刻の決め方',el('select',{id:'rk-'+r.id,onchange:e=>updR(r.id,x=>{if(e.target.value) x.byCm=e.target.value; else delete x.byCm;})},[['','決まった時刻'],...Object.entries(CM_BY)].map(([v,l])=>el('option',{value:v,selected:(r.byCm||'')===v},l)))),
-    r.byCm?el('p',{class:'xs muted'},cmOn()?'毎日、その日の通勤の時刻になります。通勤がない日（スキップした日も）は出ません。':'通勤経路の設定がオフなので、いまは下の決まった時刻を使います。'):null,
+    r.byCm?el('p',{class:'xs muted'},cmOn()?'期限は、その日の通勤の時刻になります。下の「出す日」に入る日のうち、通勤がある日だけ出ます。通勤がない日（スキップした日も）は出ません。':'通勤経路の設定がオフなので、いまは下の決まった時刻を使います。'):null,
     !r.byCm||!cmOn()?el('label',{class:'field',for:'rb-'+r.id},'期限の時刻（なくてもOK）',el('input',{type:'time',id:'rb-'+r.id,value:r.by||'',onchange:e=>updR(r.id,x=>{x.by=e.target.value;})})):null,
     daysPick(r),
     el('div',{class:'grid2'},
