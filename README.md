@@ -41,7 +41,7 @@ Googleカレンダーの予定を「プライベートの予定」として取�
 5. 「データアクセス（Data Access）」で、次のスコープを追加します。
    - `calendar.calendarlist.readonly`（カレンダーの一覧を見る）
    - `calendar.events.readonly`（予定を見る）
-   - `calendar.app.created`（アプリが作った「芒学」カレンダーだけに書く）
+   - `calendar.app.created`（アプリが作った「制作と学習の計画【芒学】」カレンダーだけに書く）
 6. 「クライアント」→「クライアントを作成」で、種類「ウェブ アプリケーション」を選び、「承認済みの JavaScript 生成元」にアプリのアドレスを入れます（例：`https://ユーザー名.github.io`。アプリの「取り込み」画面にあるGoogleカレンダーの「？」に、入れるアドレスが出ます）。
 7. できたクライアントID（`…apps.googleusercontent.com`）を、アプリの「取り込み」画面に貼ります。
 

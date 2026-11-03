@@ -2265,6 +2265,7 @@ function gcalCfg(){const x=S.meta.gcal||{};
   return Object.assign({},x,{imp:Object.assign({acct:'',cals:[]},imp),exp:Object.assign({acct:'',cal:'',ev:{}},exp)});}
 function setGcal(fn){const x=clone(gcalCfg());delete x.cals;delete x.exportCal;delete x.ev;fn(x);x.t=Date.now();S.meta.gcal=x;save('meta/gcal');}
 const GPUR={imp:'取り込み用',exp:'書き出し用'};
+const GCALNAME='制作と学習の計画【芒学】';   // the name of the calendar the app makes for 書き出し
 /* Google's sign-in script, loaded ahead (when a page with the buttons is shown) so that a press opens the window at once */
 function gisLoad(){
   if(window.google&&google.accounts&&google.accounts.oauth2) return Promise.resolve();
@@ -2320,12 +2321,12 @@ async function gcalPickImp(choose){
     x.imp={acct:r.acct,cals:keep.length?keep:pr?[{id:pr.id,name:pr.name}]:[]};});
   toast('取り込み用のアカウント：'+r.acct);
 }
-/* 書き出し用のアカウントを選ぶ. Another account than before gets its own 「芒学」 calendar on the next export; the one in the
+/* 書き出し用のアカウントを選ぶ. Another account than before gets its own calendar (GCALNAME) on the next export; the one in the
    account before stays as it is */
 async function gcalPickExp(){
   const r=await gAuth('exp',true), prev=gcalCfg().exp;
   if(r.acct!==prev.acct) setGcal(x=>{x.exp={acct:r.acct,cal:'',ev:{}};});
-  toast('書き出し用のアカウント：'+r.acct+(prev.acct&&prev.acct!==r.acct&&prev.cal?'。前のアカウントの「芒学」カレンダーは、そのまま残ります':''));
+  toast('書き出し用のアカウント：'+r.acct+(prev.acct&&prev.acct!==r.acct&&prev.cal?'。前のアカウントの「'+GCALNAME+'」カレンダーは、そのまま残ります':''));
 }
 /* 取り込む: the timed events of the chosen calendars, from today for 8 weeks, become プライベートの予定 (split at the user's
    day boundary). All-day events, events marked 予定なし (free), declined ones and the app's own calendar are left out.
@@ -2358,15 +2359,15 @@ async function gcalImport(){
   const eff=before?adjEffect(before,adjSummary()):'';
   toast('Googleの予定を '+n+' 件取り込みました'+(eff&&eff.indexOf('影響はありません')<0?'。'+eff:''));
 }
-/* 書き出す: 節目・期日 (the plan's dated goals) as events in the app's own calendar 「芒学」 in the 書き出し用 account, made on
+/* 書き出す: 節目・期日 (the plan's dated goals) as events in the app's own calendar (GCALNAME) in the 書き出し用 account, made on
    the first export; later exports update them and remove the ones no longer in the plan. Nothing else is touched. */
 async function gcalExport(){
   if(!gcalCfg().exp.acct){toast('設定で、書き出し用のアカウントを選んでください');return;}
   const {token}=await gAuth('exp');
   let cid=gcalCfg().exp.cal;
-  if(cid){try{await gapiT(token,'GET','/calendars/'+encodeURIComponent(cid));}catch(e){if(e.code==='http'&&(e.status===404||e.status===403||e.status===410)) cid=''; else throw e;}}
+  if(cid){try{const c=await gapiT(token,'GET','/calendars/'+encodeURIComponent(cid));if(c&&c.summary&&c.summary!==GCALNAME) await gapiT(token,'PATCH','/calendars/'+encodeURIComponent(cid),{summary:GCALNAME});}catch(e){if(e.code==='http'&&(e.status===404||e.status===403||e.status===410)) cid=''; else throw e;}}
   const tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||'Asia/Tokyo';
-  if(!cid){const c=await gapiT(token,'POST','/calendars',{summary:'芒学',description:'芒学 mángxué の節目・期日',timeZone:tz});cid=c.id;setGcal(x=>{x.exp=Object.assign({},x.exp,{cal:cid,ev:{}});});}
+  if(!cid){const c=await gapiT(token,'POST','/calendars',{summary:GCALNAME,description:'芒学 mángxué の節目・期日',timeZone:tz});cid=c.id;setGcal(x=>{x.exp=Object.assign({},x.exp,{cal:cid,ev:{}});});}
   const goals=(plan2().goals||[]).filter(g=>g.date&&g.gcal!==false), ev=Object.assign({},gcalCfg().exp.ev);let n=0;
   for(const g of goals){
     const hh=t=>String(t).replace(/^(\d):/,'0$1:');
@@ -2378,7 +2379,7 @@ async function gcalExport(){
   }
   let rm=0;for(const [gid,eid] of Object.entries(ev)) if(!goals.some(g=>g.id===gid)){try{await gapiT(token,'DELETE','/calendars/'+encodeURIComponent(cid)+'/events/'+encodeURIComponent(eid));}catch(e){if(!(e.code==='http'&&(e.status===404||e.status===410))) throw e;}delete ev[gid];rm++;}
   setGcal(x=>{x.exp=Object.assign({},x.exp,{ev});x.lastExport=Date.now();});
-  toast(gcalCfg().exp.acct+' の「芒学」カレンダーに節目を '+n+' 件書き出しました'+(rm?'（'+rm+' 件消しました）':''));
+  toast(gcalCfg().exp.acct+' の「'+GCALNAME+'」カレンダーに節目を '+n+' 件書き出しました'+(rm?'（'+rm+' 件消しました）':''));
 }
 function gcalHelp(){return el('button',{type:'button',class:'help','aria-label':'Googleとの連携の準備',onclick:e=>{e.preventDefault();e.stopPropagation();openSheet('Googleとの連携の準備',
   el('p',{class:'small'},'ご自分のGoogleアカウントで、Google Cloud Console（console.cloud.google.com）に次を登録します。費用はかかりません。'),
@@ -2415,7 +2416,7 @@ function gcalCard(){
       el('h3',{class:'sub'},'書き出し'),
       acctLine('書き出し用のアカウント',exp.acct),
       el('button',{type:'button',class:'btn sub sm',onclick:()=>gRun('Googleにつないでいます',gcalPickExp)},exp.acct?'アカウントを変える':'Googleにログインして、書き出し用のアカウントを選ぶ'),
-      el('p',{class:'xs muted'},(exp.acct&&exp.acct===imp.acct?'取り込みと同じアカウントです。':'')+(exp.cal?'このアカウントの「芒学」カレンダーに、節目・期日を '+Object.keys(exp.ev||{}).length+' 件書き出しています'+(cfg.lastExport?'（'+md(ymd(new Date(cfg.lastExport)))+' '+hm(cfg.lastExport)+'）':'')+'。':'はじめて書き出すとき、書き出し用のアカウントに「芒学」というカレンダーを作ります。ほかのカレンダーには書き込みません。')+'ログインしたのが書き出し用のアカウントでなければ、書き出さずに止めます。'),
+      el('p',{class:'xs muted'},(exp.acct&&exp.acct===imp.acct?'取り込みと同じアカウントです。':'')+(exp.cal?'このアカウントの「'+GCALNAME+'」カレンダーに、節目・期日を '+Object.keys(exp.ev||{}).length+' 件書き出しています'+(cfg.lastExport?'（'+md(ymd(new Date(cfg.lastExport)))+' '+hm(cfg.lastExport)+'）':'')+'。':'はじめて書き出すとき、書き出し用のアカウントに「'+GCALNAME+'」というカレンダーを作ります。ほかのカレンダーには書き込みません。')+'ログインしたのが書き出し用のアカウントでなければ、書き出さずに止めます。'),
       el('button',{type:'button',class:'btn sub sm',disabled:!exp.acct,onclick:()=>gRun('書き出しています',gcalExport)},'Googleに節目を書き出す'),
       Object.keys(GTOK).length?el('button',{type:'button',class:'chip sm',style:'align-self:flex-start',onclick:()=>{for(const t of Object.values(GTOK)){try{google.accounts.oauth2.revoke(t.token,()=>{});}catch(_){}}GTOK={};GCALS=null;toast('この端末のGoogleのログインを取り消しました');render();}},'この端末のログインを取り消す'):null]:null);
 }
@@ -3249,7 +3250,7 @@ function wizBuildView(){
     missing.length?el('div',{class:'warn'},missing.map(g=>g.name).join('・')+'の日付がまだです。決めないまま組むと、その分の作業は計画に入りません。'):null,
     near.length?el('div',{class:'card'},el('h2',{},'期日まで2週間以内の節目'),el('p',{class:'small'},'期日が近いときは、予備日を取ると作業の時間が足りなくなりやすいので、予備日なしで組むのがおすすめです。'),
       near.map(g=>el('label',{class:'row',for:'nb-'+g.id,style:'min-height:44px'},el('input',{type:'checkbox',id:'nb-'+g.id,checked:!!pick[g.id],onchange:e=>{pick[g.id]=e.target.checked;wizSave();}}),el('span',{},g.name+'（'+md(g.date)+'）を予備日なしで組む')))):null,
-    gcalCfg().clientId&&gcalCfg().exp.acct?el('div',{class:'card'},el('label',{class:'row',for:'wz-gx',style:'min-height:44px'},el('input',{type:'checkbox',id:'wz-gx',checked:WIZ.gx!==false,onchange:e=>{WIZ.gx=e.target.checked;wizSave();}}),el('span',{},'組んだあと、節目と期日をGoogleカレンダーに書き出す',el('br'),el('span',{class:'xs muted',style:'word-break:break-all'},'書き出し用のアカウント（'+gcalCfg().exp.acct+'）の「芒学」カレンダーに書き出します。あとからカレンダー画面の「節目を書き出す」でもできます。'))))
+    gcalCfg().clientId&&gcalCfg().exp.acct?el('div',{class:'card'},el('label',{class:'row',for:'wz-gx',style:'min-height:44px'},el('input',{type:'checkbox',id:'wz-gx',checked:WIZ.gx!==false,onchange:e=>{WIZ.gx=e.target.checked;wizSave();}}),el('span',{},'組んだあと、節目と期日をGoogleカレンダーに書き出す',el('br'),el('span',{class:'xs muted',style:'word-break:break-all'},'書き出し用のアカウント（'+gcalCfg().exp.acct+'）の「'+GCALNAME+'」カレンダーに書き出します。あとからカレンダー画面の「節目を書き出す」でもできます。'))))
       :el('div',{class:'card'},el('label',{class:'row',style:'min-height:44px;opacity:.6'},el('input',{type:'checkbox',disabled:true}),el('span',{},'節目と期日をGoogleカレンダーに書き出す',el('br'),el('span',{class:'xs muted'},gcalCfg().clientId?'設定で「書き出し用のアカウント」を選ぶと使えます（メニューの「問題の取り込み・同期・バックアップ」）。':'Googleとの連携を設定すると選べます（メニューの「問題の取り込み・同期・バックアップ」）。')))),
     over?el('div',{class:'warn'},'はみ出す節目があるので、まだ組めません。「見通し」で直してください。',el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf('outlook'))},'見通しへ')):null,
     el('button',{type:'button',class:'btn',disabled:over,onclick:wizBuild},'この内容で組む（今日から）')];
