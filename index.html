@@ -3313,7 +3313,7 @@ function planOverview(){
     el('div',{class:'card'},el('h2',{},'まだ組んでいません'),
       el('p',{class:'small'},'「計画を組む」を押すと、当日 → 目標日 → 組み方 → '+tname('study')+'・'+tname('create')+'の前提 → 時間割 → 見通しの順に聞きながら組みます。途中で閉じても、続きから再開できます。'),
       el('button',{type:'button',class:'btn',onclick:()=>openWizard()},WIZ?'計画を組む（続きから）':'計画を組む')),
-    PLAN?el('p',{class:'xs muted'},'組むまでは、これまでの計画で「今日やること」を出しています。'):null];
+    PLAN&&(PLAN.schedule||[]).length?el('p',{class:'xs muted'},'組むまでは、これまでの計画で「今日やること」を出しています。'):null];
   const B=P.baseline, A=adjOf(P);
   const goals=(P.goals||[]).filter(g=>g.date).sort(byDate), last=goals.reduce((m,g)=>g.date>m?g.date:m,addDays(t,30)), span=Math.max(1,diffDays(B.made,last));
   const X=ds=>Math.max(0,Math.min(100,diffDays(B.made,ds)/span*100));
@@ -3750,7 +3750,7 @@ function viewProgress(){
         el('tbody',{},st.rows.map(r=>el('tr',{},el('td',{},r.s.short),
           el('td',{class:'num'},r.c.total?r.c.answered+' / '+r.c.total:'未取り込み'),
           el('td',{class:'num'},r.c.answered?Math.round(r.c.ok/r.c.answered*100)+'%':'—'),
-          el('td',{class:'num muted'},r.p>=1?'済':r.p>0?Math.round(r.p*100)+'%':md(r.s.start)+'〜'))))))),
+          el('td',{class:'num muted'},r.p>=1?'済':r.p>0?Math.round(r.p*100)+'%':r.s.start>='9999'?'—':md(r.s.start)+'〜'))))))),
     (()=>{const w=weakTags();return el('div',{class:'card'},el('h2',{},'弱いところ'),
       w.length?el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'論点'),el('th',{},'正解率'),el('th',{},'回答'),el('th',{},'勘'))),
         el('tbody',{},w.map(x=>el('tr',{},el('td',{},x.k),el('td',{class:'num'},x.rate+'%'),el('td',{class:'num'},String(x.n)),el('td',{class:'num'},String(x.kan)))))))
