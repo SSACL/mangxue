@@ -648,7 +648,7 @@ function mergeLog(k,remote){
 }
 
 /* GitHub (contents API). Each device writes only its own files, so writes never collide. */
-const ERR={auth:'トークンが無効か期限切れです',forbidden:'リポジトリに入れません（名前と権限を確認）',rate:'GitHubの回数制限です。少し待つと再開します',conflict:'書き込みが重なりました。すぐにやり直します',net:'通信できませんでした'};
+const ERR={auth:'トークンが無効か期限切れです',forbidden:'リポジトリにアクセスできません（名前と権限を確認）',rate:'GitHubの回数制限です。少し待つと再開します',conflict:'書き込みが重なりました。すぐにやり直します',net:'通信できませんでした'};
 function b64(str){const b=new TextEncoder().encode(str);let s='';for(let i=0;i<b.length;i+=0x8000) s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(s);}
 function hashStr(s){let h=5381;for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0)+':'+s.length;}
 function repoPath(){return '/repos/'+encodeURIComponent(SYNC.owner)+'/'+encodeURIComponent(SYNC.repo);}
@@ -758,7 +758,7 @@ function syncCard(){
     const inp=(id,label,key,type,ph)=>el('label',{class:'field',for:id},label,el('input',{type:type||'text',id,value:f[key],placeholder:ph||'',autocomplete:'off',autocapitalize:'off',spellcheck:'false',oninput:e=>{f[key]=e.target.value.trim();}}));
     const submit=async e=>{
       e.preventDefault();
-      if(!f.owner||!f.repo||!f.token||!f.name){msg.textContent='4つとも入れてください。';return;}
+      if(!f.owner||!f.repo||!f.token||!f.name){msg.textContent='4つとも入力してください。';return;}
       msg.textContent='確認しています…';
       SYNC={owner:f.owner,repo:f.repo,token:f.token,name:f.name};BRANCH='';
       try{
@@ -769,7 +769,7 @@ function syncCard(){
     };
     return el('form',{class:'card',onsubmit:submit},
       el('h2',{},'端末どうしの自動同期'),
-      el('p',{class:'small muted'},PENDING?'ほかの端末から設定が届きました。この端末の名前を入れて保存してください。':'問題と記録を、ご自分の非公開リポジトリ経由で、スマホ・iPad・PCの間で自動的にそろえます。2台目からは、1台目の「ほかの端末に設定を移す」を使うと入力が要りません。'),
+      el('p',{class:'small muted'},PENDING?'ほかの端末から設定が届きました。この端末の名前を入力して保存してください。':'問題と記録を、ご自分の非公開リポジトリ経由で、スマホ・iPad・PCの間で自動的にそろえます。2台目からは、1台目の「ほかの端末に設定を移す」を使うと入力が要りません。'),
       el('label',{class:'field',for:'s-paste'},'設定リンクを貼り付け（2台目以降）',el('input',{type:'text',id:'s-paste',autocomplete:'off',placeholder:'https://…#sync=…',oninput:e=>{const v=e.target.value;const i=v.indexOf('#sync=');if(i<0) return;const p=parseSyncPayload(v.slice(i+6).trim());if(p){PENDING=p;render();}else msg.textContent='リンクを読み取れませんでした。もう一度コピーしてください。';}})),
       inp('s-owner','GitHubのユーザー名','owner'),inp('s-repo','データ用のリポジトリ（非公開）','repo'),
       inp('s-token','トークン','token','password','github_pat_…'),inp('s-name','この端末の名前','name','text','スマホ／iPad／PC'),
@@ -983,7 +983,7 @@ function typeCheck(d,P,opt){
 const TCOFF={};
 function typeSumHelp(){return el('button',{type:'button',class:'help','aria-label':'閉じているときの目安について',onclick:e=>{e.preventDefault();e.stopPropagation();openSheet('閉じているときの目安',
   el('p',{class:'small'},'カードを閉じているときの「学習◯分・制作◯分」は、その時間割の1日の作業時間の目安です。'),
-  el('p',{class:'small'},'通勤を使う時間割（「通勤込み目安」）は、いつもの通勤で計算します：電車・バスの乗車時間と、演習に入れる設定の待ち時間、いつもの立ち寄り先での学習・制作、それに通勤と重ならない分のコマを足します。'),
+  el('p',{class:'small'},'通勤を使う時間割（「通勤込み目安」）は、いつもの通勤で計算します：電車・バスの乗車時間と、演習に使う設定にした待ち時間、いつもの立ち寄り先での学習・制作、それに通勤と重ならない分のコマを足します。'),
   el('p',{class:'small'},'時刻表は、今日以降で次にその時間割になる日のものを使います。その日が土曜・休日・祝日なら、そのダイヤで計算します。ダイヤによって乗る電車や待ち時間が変わると、目安も変わります。'),
   el('p',{class:'small'},'日ごとの実際の時間は、カレンダーの日の欄で確かめられます。「通勤込み」と出ていない時間割は、コマの合計です。'));}},'?');}
 /* for the folded 時間割 card: the day's 学習・制作 in minutes; with the commute it counts the time on the way (and at
@@ -1335,7 +1335,7 @@ function createAdvice(){
 /* ---------- life: routines and daily records (the center of the app) ---------- */
 const ALLDAYS=[0,1,2,3,4,5,6], WEEKDAYS=[1,2,3,4,5], DN='日月火水木金土';
 const PALETTE=['#E5484D','#F76B15','#E2A336','#46A758','#12A594','#0090FF','#8E4EC6','#D6409F'];
-const MIN_CHOICES=[15,30,45,60,90];   // anything longer is typed in (自由に入れる)
+const MIN_CHOICES=[15,30,45,60,90];   // anything longer is typed in (自由に入力)
 const TYPES={sleep:'睡眠（寝た時刻と起きた時刻）',span:'時間（内訳を選ぶ・重なってもOK）',memo:'メモ',check:'チェック（やった・やらない）',count:'回数'};
 const LIFE_PRESET={v:3,dayStart:'04:00',sleepTarget:420,
   items:[
@@ -1658,17 +1658,17 @@ function sleepSheet(ds){
     el('div',{class:'grid2'},
       el('label',{class:'field',for:'sh-bed'},'寝た時刻',el('input',{type:'time',id:'sh-bed',value:st.bed,onchange:e=>{st.bed=e.target.value;}})),
       el('label',{class:'field',for:'sh-wake'},'起きた時刻',el('input',{type:'time',id:'sh-wake',value:st.wake,onchange:e=>{st.wake=e.target.value;}}))),
-    el('button',{type:'button',class:'btn',onclick:()=>{if(!st.bed||!st.wake){toast('寝た時刻と起きた時刻を入れてください');return;}setDay(ds,d=>{d.rec.sleep={bed:st.bed,wake:st.wake};});s.close();toast('睡眠 '+fmtMin(sleepMin(st))+' を記録しました');render();}},'記録する'));
+    el('button',{type:'button',class:'btn',onclick:()=>{if(!st.bed||!st.wake){toast('寝た時刻と起きた時刻を入力してください');return;}setDay(ds,d=>{d.rec.sleep={bed:st.bed,wake:st.wake};});s.close();toast('睡眠 '+fmtMin(sleepMin(st))+' を記録しました');render();}},'記録する'));
 }
 function minChooser(st,cb){
   const chips=el('div',{class:'chips'});
-  const hI=el('input',{type:'number',min:0,max:23,inputmode:'numeric',class:'num','aria-label':'時間（自由に入れる）',style:'width:68px'});
-  const mI=el('input',{type:'number',min:0,max:59,inputmode:'numeric',class:'num','aria-label':'分（自由に入れる）',style:'width:68px'});
+  const hI=el('input',{type:'number',min:0,max:23,inputmode:'numeric',class:'num','aria-label':'時間（自由に入力）',style:'width:68px'});
+  const mI=el('input',{type:'number',min:0,max:59,inputmode:'numeric',class:'num','aria-label':'分（自由に入力）',style:'width:68px'});
   const upd=()=>{const v=(parseInt(hI.value,10)||0)*60+(parseInt(mI.value,10)||0);if(v>0){st.m=v;[...chips.children].forEach(b=>b.setAttribute('aria-pressed','false'));}else if(!chips.querySelector('[aria-pressed="true"]')) st.m=null;if(cb) cb();};
   hI.addEventListener('input',upd);mI.addEventListener('input',upd);
   chips.append(...[...new Set([st.m,...MIN_CHOICES].filter(n=>n>0))].sort((a,b)=>a-b).map(n=>el('button',{type:'button',class:'chip sm','aria-pressed':String(n===st.m),onclick:e=>{st.m=n;hI.value='';mI.value='';[...chips.children].forEach(b=>b.setAttribute('aria-pressed',String(b===e.currentTarget)));if(cb) cb();}},fmtMin(n))));
   return el('div',{style:'display:flex;flex-direction:column;gap:8px'},chips,
-    el('div',{class:'row',style:'gap:6px;flex-wrap:wrap'},el('span',{class:'xs muted'},'自由に入れる'),hI,el('span',{class:'small'},'時間'),mI,el('span',{class:'small'},'分')));
+    el('div',{class:'row',style:'gap:6px;flex-wrap:wrap'},el('span',{class:'xs muted'},'自由に入力'),hI,el('span',{class:'small'},'時間'),mI,el('span',{class:'small'},'分')));
 }
 function minutePicker(def,onPick,extra){
   const st={m:def};
@@ -1734,8 +1734,8 @@ function spanEditor(ds,key,name,badge,subs,list){
     el('label',{class:'field',for:'b-'+uid},'おわり',el('input',{type:'time',id:'b-'+uid,oninput:e=>{st.b=e.target.value;refresh();},onchange:e=>{st.b=e.target.value;refresh();}})));
   const minBox=minChooser(st,refresh);
   const modeSeg=el('div',{class:'seg',style:'grid-template-columns:1fr 1fr'},
-    el('button',{type:'button','aria-pressed':'true',onclick:e=>{st.mode='min';minBox.hidden=false;timeBox.hidden=true;e.target.setAttribute('aria-pressed','true');e.target.nextSibling.setAttribute('aria-pressed','false');refresh();}},'分で入れる'),
-    el('button',{type:'button','aria-pressed':'false',onclick:e=>{st.mode='time';minBox.hidden=true;timeBox.hidden=false;e.target.setAttribute('aria-pressed','true');e.target.previousSibling.setAttribute('aria-pressed','false');refresh();}},'時刻で入れる'));
+    el('button',{type:'button','aria-pressed':'true',onclick:e=>{st.mode='min';minBox.hidden=false;timeBox.hidden=true;e.target.setAttribute('aria-pressed','true');e.target.nextSibling.setAttribute('aria-pressed','false');refresh();}},'分で入力'),
+    el('button',{type:'button','aria-pressed':'false',onclick:e=>{st.mode='time';minBox.hidden=true;timeBox.hidden=false;e.target.setAttribute('aria-pressed','true');e.target.previousSibling.setAttribute('aria-pressed','false');refresh();}},'時刻で入力'));
   // at first only a ＋; it opens the inputs, and 記録する (or やめる) brings the ＋ back
   const addRow=el('div',{class:'addrow',hidden:true},subs.length?subChips:null,modeSeg,minBox,timeBox,
     el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>{addRow.hidden=true;plus.hidden=false;}},'やめる'),recBtn));
@@ -1819,7 +1819,7 @@ function donut(ds){
   const legend=el('div',{class:'dleg'},segs.map(s=>el('div',{class:'dl'},el('i',{style:'background:var(--s'+(SLOT_OF[s.key]||8)+')'}),el('span',{},s.name),el('span',{class:'num'},fmtMin(s.m)),el('span',{class:'num muted'},Math.round(s.m/1440*100)+'%'))),
     sum<1440?el('div',{class:'dl'},el('i',{style:'background:var(--line)'}),el('span',{},'記録なし'),el('span',{class:'num'},fmtMin(1440-sum)),el('span',{class:'num muted'},Math.round((1440-sum)/1440*100)+'%')):null);
   return el('div',{class:'card'},el('h2',{},'24時間の使い方'),
-    sum?el('div',{class:'donut'},svg,legend):el('p',{class:'small muted'},'睡眠や時間の記録を入れると、ここに24時間の円グラフが出ます。'),
+    sum?el('div',{class:'donut'},svg,legend):el('p',{class:'small muted'},'睡眠や時間を記録すると、ここに24時間の円グラフが出ます。'),
     over?el('p',{class:'xs muted'},'ながら時間があるため、記録の合計が24時間を超えています。円は記録の合計を100%として描いています。'):null);
 }
 function navBtn(href,label,dir,onclick){
@@ -1907,7 +1907,7 @@ function viewCheckin(id){
   const again=(dayRec(ds).ci||{})[id];
   return [
     el('div',{},el('span',{class:'small muted'},jpDate(ds)+(again?'・'+hm(again)+'に記録済み（答え直せます）':'')),el('h1',{},ciTitle(c))),
-    c.report&&(PLAN||planActive())?[el('h2',{class:'sec'},'学習と制作'),el('p',{class:'xs muted'},'今日やったことにチェックを入れてください。'+(tracks().study==='time'||tracks().manga==='time'?'使った時間も一緒に記録します。':'')),taskList(ds),trackEditors(ds)]:null,
+    c.report&&(PLAN||planActive())?[el('h2',{class:'sec'},'学習と制作'),el('p',{class:'xs muted'},'今日やったことをチェックしてください。'+(tracks().study==='time'||tracks().manga==='time'?'使った時間も一緒に記録します。':'')),taskList(ds),trackEditors(ds)]:null,
     rs.length?el('div',{class:'card'},el('h2',{},'ルーティン'),rs.map((r,i)=>routineRow(ds,r,i===0))):null,
     its.length&&c.report?el('h2',{class:'sec'},'生活の記録'):null,
     its.map(it=>itemEditor(ds,it)),
@@ -1988,7 +1988,7 @@ function gcalCalRow(){
   return el('div',{class:'card'},el('h2',{},'Googleカレンダー'),el('div',{class:'grid2'},
       el('button',{type:'button',class:'btn sub sm',onclick:()=>{if(!cfg.imp.acct||!(cfg.imp.cals||[]).length){toast('取り込み用のアカウントとカレンダーを選んでください');FOCUS='#gcal-card';go('import');return;}gRun('取り込んでいます',gcalImport);}},'予定を取り込む'),
       el('button',{type:'button',class:'btn sub sm',onclick:()=>{if(!cfg.exp.acct){toast('書き出し用のアカウントを選んでください');FOCUS='#gcal-card';go('import');return;}gRun('書き出しています',gcalExport);}},'節目を書き出す')),open,
-    el('p',{class:'xs muted'},'取り込み：今日から8週間の、時刻のある予定。前に取り込んだ分は入れ替わり、手で追加した予定は残ります。'+(cfg.lastImport?'前回 '+md(ymd(new Date(cfg.lastImport)))+' '+hm(cfg.lastImport)+'。':'')));
+    el('p',{class:'xs muted'},'取り込み：今日から8週間の、時刻のある予定。前に取り込んだ分は置き換わり、手で追加した予定は残ります。'+(cfg.lastImport?'前回 '+md(ymd(new Date(cfg.lastImport)))+' '+hm(cfg.lastImport)+'。':'')));
 }
 function viewCal(){
   const t=today();if(!CAL.ym) CAL.ym=t.slice(0,7);if(!CAL.sel) CAL.sel=t;
@@ -2078,7 +2078,7 @@ function dayPanel(ds){
   const evAdd=el('details',{class:'more evfold',open:EVOPEN.has(ds),ontoggle:e=>{if(e.target.open) EVOPEN.add(ds); else EVOPEN.delete(ds);}},el('summary',{},'予定を追加'),
     el('div',{class:'evadd'},ptime('ev-s',addEv.s,v=>{addEv.s=v;},'はじまり'),el('span',{},'〜'),ptime('ev-e',addEv.e,v=>{addEv.e=v;},'おわり'),
       el('input',{type:'text',id:'ev-t',placeholder:'メモ（任意）','aria-label':'メモ',onchange:e=>{addEv.t=e.target.value.trim();}}),
-      el('button',{type:'button',class:'btn sub sm',onclick:()=>{if(!addEv.s||!addEv.e){toast('はじまりとおわりの時刻を入れてください');return;}
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>{if(!addEv.s||!addEv.e){toast('はじまりとおわりの時刻を入力してください');return;}
         withEffect(()=>setDay(ds,x=>{x.g=(Array.isArray(x.g)?x.g.filter(y=>y&&typeof y==='object'):[]).concat([{id:newId('ev'),s:addEv.s,e:addEv.e,t:addEv.t||'予定あり',src:'manual'}]);}));}},'追加する')));
   const settings=[
     el('div',{class:'dpart'},el('h4',{},'時間割'),
@@ -2146,7 +2146,7 @@ function bringSet(ds,k,v){setDay(ds,x=>{x.bring=Object.assign({},x.bring,{[k]:v}
 function bringWhen(ds){
   const b=bringOf(ds), at=(dayRec(ds).bring||{}).at;if(at) return at+' にお知らせします';
   const g=cmOn()&&!dayRec(ds).off?(cmDay(ds)||{}).go:null;
-  if(!g) return 'この日は行きの通勤がありません。お知らせする時刻を入れてください';
+  if(!g) return 'この日は行きの通勤がありません。お知らせする時刻を入力してください';
   const r=routines().find(x=>x.byCm==='go-leave'&&x.before!=null&&routineApplies(ds,x)), N=cmNotify(g.route);
   const m=r?g.leave-r.before:N.home!=null&&g.legs.some(x=>cmRide(x.l.kind))?g.leave-N.home:g.leave-10;
   return '家を出る前（'+hmOf(m)+'）の通知でお知らせします';
@@ -2415,7 +2415,7 @@ function gcalHelp(){return el('button',{type:'button',class:'help','aria-label':
   el('ol',{class:'small steps'},
     el('li',{},'新しいプロジェクトを作る（名前は自由）'),
     el('li',{},'「APIライブラリ」で「Google Calendar API」を選び、有効にする'),
-    el('li',{},'メニューの「Google Auth Platform」を開き、はじめての設定（Get Started）で、アプリ名・サポート用のメール・ユーザーの種類「外部（External）」・連絡先のメールを入れて作成'),
+    el('li',{},'メニューの「Google Auth Platform」を開き、はじめての設定（Get Started）で、アプリ名・サポート用のメール・ユーザーの種類「外部（External）」・連絡先のメールを入力して作成'),
     el('li',{},'「対象（Audience）」のテストユーザー（Test users）に、使うGoogleアカウントを追加（取り込み用と書き出し用でアカウントを分けるときは両方。テストのままで使えます。公開の手続きはいりません）'),
     el('li',{},'「データアクセス（Data Access）」のスコープの追加で、次の3つを選んで保存：calendar.calendarlist.readonly、calendar.events.readonly、calendar.app.created'),
     el('li',{},'「クライアント」→「クライアントを作成」：種類「ウェブ アプリケーション」、「承認済みの JavaScript 生成元」に ',el('b',{class:'num'},location.origin),' を追加'),
@@ -2481,7 +2481,7 @@ function slotHelp(){return el('button',{type:'button',class:'help','aria-label':
 /* what skipping the commute does, and what to add when other plans fill the time too */
 function skipHelp(){return el('button',{type:'button',class:'help','aria-label':'スキップについての説明',onclick:e=>{e.preventDefault();e.stopPropagation();openSheet('通勤設定のスキップ',
   el('p',{class:'small'},'スキップすると、その日の通勤の時刻・通知・電車での演習のコマ・通勤に合わせたルーティンだけがなくなります。ほかの学習・制作のコマはそのまま残ります。'),
-  el('p',{class:'small'},'飲み会や用事でその時間もふさがるときは、カレンダーの「プライベートの予定」に時刻を入れてください。重なるコマが減り、計画がその分を調整します。'));}},'?');}
+  el('p',{class:'small'},'飲み会や用事でその時間もふさがるときは、カレンダーの「プライベートの予定」に、時刻つきの予定を追加してください。重なるコマが減り、計画がその分を調整します。'));}},'?');}
 function privacyHelp(){return el('button',{type:'button',class:'help','aria-label':'駅名の登録についての注意',onclick:e=>{e.preventDefault();e.stopPropagation();openSheet('駅名について',el('p',{class:'small'},'通勤経路は個人情報です。駅名はイニシャル（例：S駅）での登録がおすすめです。通知の文面は、届くまで通知の送り役（Cloudflare）に保存されます。'));}},'?');}
 function viewCommute(){CMDV=true;try{return viewCommuteBody();}finally{CMDV=false;}}
 function viewCommuteBody(){
@@ -2521,7 +2521,7 @@ function viewCommuteBody(){
         el('div',{class:'grid2'},lab('lr-'+l.id,'乗車時間（分）*',num('lr-'+l.id,l.ride,v=>upL(x=>{x.ride=v;}),'例：18')),prevRide?lab('lx-'+l.id,'乗り換え（分）',num('lx-'+l.id,l.xfer,v=>upL(x=>{x.xfer=v;}),'例：3')):el('span',{})),
         // the wait on the platform as 演習, for each ride (off for all of them by the switch at the top)
         el('label',{class:'row',for:'lw-'+l.id},el('input',{type:'checkbox',id:'lw-'+l.id,checked:l.waitStudy!=null?!!l.waitStudy:(prevRide?C.waitStudy===true:true),disabled:!!C.waitOff||C.study===false,onchange:e=>upL(x=>{x.waitStudy=e.target.checked;})}),
-          el('span',{class:'small'},prevRide?'乗り換え待ちも演習に入れる':'駅での待ち時間も演習に入れる',el('br'),el('span',{class:'xs muted'},C.waitOff?'いまは上の設定で、どの区間も入れないことになっています':prevRide?'乗り換えにかかる分のあと、電車を待つ時間だけ。待ちが2分以内の日は入れません':'駅に着いてから電車が出るまでの時間。待ちが2分以内の日は入れません'))),
+          el('span',{class:'small'},prevRide?'乗り換え待ちも演習に使う':'駅での待ち時間も演習に使う',el('br'),el('span',{class:'xs muted'},C.waitOff?'いまは上の設定で、どの区間も使わないことになっています':prevRide?'乗り換えにかかる分のあと、電車を待つ時間だけ。待ちが2分以内の日は使いません':'駅に着いてから電車が出るまでの時間。待ちが2分以内の日は使いません'))),
         el('div',{class:'field'},el('span',{class:'flab'},'時刻表*'),
           el('div',{class:'seg tttabs',role:'tablist'},['wd','sa','ho'].map(k=>el('button',{type:'button',role:'tab','aria-selected':String(tab===k),'aria-pressed':String(tab===k),onclick:()=>{TTTAB[l.id]=k;render();}},DIA[k]+(cnt(k)?' '+cnt(k):'')))),
           el('textarea',{rows:2,'aria-label':DIA[tab]+'ダイヤの時刻表',value:(l.tt||{})[tab]||'',placeholder:'例：7:32 7:41 7:52-8:10 8:01',onchange:e=>upL(x=>{x.tt=Object.assign({},x.tt,{[tab]:e.target.value.trim()});})})),
@@ -2564,7 +2564,7 @@ function viewCommuteBody(){
     cmLive(x=>{const i=x.routes.findIndex(y=>y.id===r.id), c=clone(x.routes[i]);c.id=id;delete c.direct;
       c.name=/行き/.test(r.name)?r.name.replace('行き','帰り'):/帰り/.test(r.name)?r.name.replace('帰り','行き'):r.name+'（逆向き）';
       c.legs=(c.legs||[]).slice().reverse().map(l=>Object.assign(l,{id:newId('l'),from:l.to,to:l.from,tt:{}}));x.routes.splice(i+1,0,c);});
-    CMOPEN.add('r:'+id);toast('すぐ下に逆向きの経路を作りました。時刻表を入れてください');};
+    CMOPEN.add('r:'+id);toast('すぐ下に逆向きの経路を作りました。時刻表を入力してください');};
   const rMenu=r=>{const i=routes.findIndex(y=>y.id===r.id), sh=()=>document.getElementById('sheet').close(), full=routes.length>=CM_MAX;
     const used=(P.dayTypes||[]).filter(d=>['go','back'].some(k=>((((C.byType||{})[d.id]||{})[k])||{}).route===r.id)).map(d=>dtLetter(d.id,P));
     openSheet('「'+r.name+'」',el('div',{class:'actmenu'},
@@ -2622,7 +2622,7 @@ function viewCommuteBody(){
       el('div',{class:'grid3'},lab('gn-h','出る前（分）',num('gn-h',(C.notify||{}).home,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{home:v??10});}))),lab('gn-b','乗る前（分）',num('gn-b',(C.notify||{}).board,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{board:v??5});}))),lab('gn-x','乗り換えの前（分）',num('gn-x',(C.notify||{}).xfer,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{xfer:v??2});}))))),
     el('div',{class:'card'},el('h2',{},'演習と円グラフ'),
       el('label',{class:'row',for:'cm-s'},el('input',{type:'checkbox',id:'cm-s',checked:C.study!==false,onchange:e=>cmLive(x=>{x.study=e.target.checked;})}),el('span',{class:'small'},'通勤中にアプリで演習する')),
-      el('label',{class:'row',for:'cm-w'},el('input',{type:'checkbox',id:'cm-w',checked:!!C.waitOff,onchange:e=>cmLive(x=>{x.waitOff=e.target.checked;})}),el('span',{class:'small'},'駅での待ち時間（乗り換え待ちも）は、どの区間も演習に入れない',el('br'),el('span',{class:'xs muted'},'区間ごとの「待ち時間も演習に入れる」より、こちらが優先されます'))),
+      el('label',{class:'row',for:'cm-w'},el('input',{type:'checkbox',id:'cm-w',checked:!!C.waitOff,onchange:e=>cmLive(x=>{x.waitOff=e.target.checked;})}),el('span',{class:'small'},'駅での待ち時間（乗り換え待ちも）は、どの区間も演習に使わない',el('br'),el('span',{class:'xs muted'},'区間ごとの「待ち時間も演習に使う」より、こちらが優先されます'))),
       el('label',{class:'row',for:'cm-m'},el('input',{type:'checkbox',id:'cm-m',checked:!!C.moveSplit,onchange:e=>cmLive(x=>{x.moveSplit=e.target.checked;})}),el('span',{class:'small'},'徒歩・自転車を「通勤（運動）」として別に数える'))),
     el('h2',{class:'sec'},'経路'),
     routes.map(rEdit),
@@ -2648,7 +2648,7 @@ function cmPreview(){
   if(!CMP.ds) CMP.ds=today();let kids;
   CMDV=true;
   try{const C=commute(), pv=cmDay(CMP.ds);
-    kids=[CDRAFT?el('p',{class:'xs muted'},'保存していない変更も入れて計算しています。'):null,
+    kids=[CDRAFT?el('p',{class:'xs muted'},'保存していない変更も含めて計算しています。'):null,
       pfield('cm-pv','日付',pdate('cm-pv',CMP.ds,v=>{CMP.ds=v||today();cmPreview();})),
       el('p',{class:'small'},cmDiaText(CMP.ds,pv)),
       pv?['go','back'].map(dir=>pv[dir]?tripView(pv[dir],null):null):el('p',{class:'small muted'},C.on?'この日は通勤がありません。':'通勤の機能がオフです。')];}
@@ -2765,9 +2765,9 @@ function viewRoutines(){
       el('p',{},el('b',{},'ことばの使い分け：'),'「習慣」は暮らしの側の全体で、「ルーティン」と「生活の記録」からできています。学習と制作は「学習・制作の記録」として別に扱います（メニュー「学習と制作の記録方法」）。'),
       el('p',{},el('b',{},'ルーティン：'),'時刻や曜日が決まっていて、ホームで ○（できた）か ×（できなかった）を付けるものです。答えなかった日は「記録なし」になり、責められることはありません。'),
       el('p',{},el('b',{},'チェックイン／レポート：'),'アプリを開くよう促す時刻と、そのときに聞く項目です（最大4回）。〆のレポートでは、学習と制作の記録が最初に出ます。時刻の前後1時間は、まだ済んでいなければホームのボタンがオレンジになります。同じ項目を何回聞いてもよく、答え直すと上書きされます。'),
-      el('p',{},el('b',{},'生活の記録：'),'睡眠・仕事・家事・趣味・運動など、一日の過ごし方です。時間は15分〜6時間のボタンのほか、自由にも入れられます。「時間」の項目は内訳を選んで、分か時刻で入れます。ながら作業で時刻が重なっても大丈夫です。'),
+      el('p',{},el('b',{},'生活の記録：'),'睡眠・仕事・家事・趣味・運動など、一日の過ごし方です。時間は15分〜6時間のボタンのほか、自由にも入力できます。「時間」の項目は内訳を選んで、分か時刻で入力します。ながら作業で時刻が重なっても大丈夫です。'),
       el('p',{},el('b',{},'ワンタップ記録：'),'よく使う「内訳と時間」の組み合わせを、ボタン1つで記録できます（4つまで）。'),
-      el('p',{},el('b',{},'使わない：'),'消さずに一時的に止めておけます。チェックを入れ直せば元に戻ります。'),
+      el('p',{},el('b',{},'使わない：'),'消さずに一時的に止めておけます。もう一度チェックすれば元に戻ります。'),
       el('p',{},el('b',{},'お休みの日：'),'記録画面でオンにすると、その日はルーティンを休んでも連続記録が途切れません。'),
       el('p',{},el('b',{},'プリセットに戻す：'),'この画面の設定だけを最初の状態に戻します。これまでの記録は消えません。')));
 
@@ -2842,7 +2842,7 @@ function viewRoutines(){
     el('h1',{},'習慣の設定'),statusNode(),pushCard(),help,
     general,ciCards,quickCard,
     el('h2',{},'ルーティン'),
-    el('p',{class:'xs muted'},'通知（何分前・時刻ちょうど）は次の段階で届くようになります。設定は今のうちに入れておけます。'),
+    el('p',{class:'xs muted'},'通知（何分前・時刻ちょうど）は次の段階で届くようになります。設定は今のうちにしておけます。'),
     RS.map((r,i)=>arrows(rEdit(r),'routines',r.id,i,RS.length,y=>y.kind!=='sleep',r.name)),
     el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id='r'+Date.now().toString(36);setLife(x=>{x.routines.push({id,name:freshName(x.routines,'新しいルーティン'),emoji:'✅',kind:'manual',by:'',days:ALLDAYS.slice(),before:10,at:true});});OPEN.add('r:'+id);render();}},'＋ ルーティンを追加'),
     el('h2',{},'生活の記録項目'),
@@ -2864,13 +2864,13 @@ function viewTracks(){
   const st=trackTotal('study'), mg=trackTotal('manga');
   return [
     el('h1',{},'学習と制作の記録方法'),statusNode(),
-    el('p',{class:'small muted'},'「今日やること」にチェックを入れたときに、使った時間も一緒に記録するかを選びます。時間を記録すると、これまでの合計時間や、制作が見積もりのどのあたりまで来ているかがわかります。'),
+    el('p',{class:'small muted'},'「今日やること」をチェックしたときに、使った時間も一緒に記録するかを選びます。時間を記録すると、これまでの合計時間や、制作が見積もりのどのあたりまで来ているかがわかります。'),
     el('div',{class:'card'},el('h2',{},(P_().study.icon||'📖')+' '+tname('study')),seg('study'),
       el('p',{class:'small num'},'これまで '+fmtH(st)+(T.studyGoal?' ／ 目標 '+T.studyGoal+'時間（'+Math.round(st/60/T.studyGoal*100)+'%）':'')),
       el('label',{class:'field',for:'tg'},'学習時間の目標（任意・時間）',el('input',{type:'number',id:'tg',min:0,inputmode:'numeric',value:T.studyGoal||'',placeholder:'例：900',onchange:e=>setT(x=>{x.studyGoal=Math.max(0,parseInt(e.target.value,10)||0);})}))),
     el('div',{class:'card'},el('h2',{},(P_().create.icon||'✏️')+' '+tname('create')),seg('manga'),
       el('p',{class:'small num'},'これまで '+fmtH(mg)+(est?' ／ 見積もり '+fmtH(est)+'（'+Math.round(mg/est*100)+'%）':''))),
-    el('p',{class:'xs muted'},'「時間も記録する」にすると、チェックを入れたときに時間を選ぶ画面が出ます（予定の時間が最初から選ばれています）。記録画面から、あとで追加したり消したりもできます。')
+    el('p',{class:'xs muted'},'「時間も記録する」にすると、チェックしたときに時間を選ぶ画面が出ます（予定の時間が最初から選ばれています）。記録画面から、あとで追加したり消したりもできます。')
   ];
 }
 
@@ -2917,7 +2917,7 @@ function bufReward(up,g){const upG=fn=>up(x=>{fn(x.goals.find(y=>y.id===g.id));}
 function eventsEditor(P,up){
   const gs=(P.goals||[]).filter(g=>g.kind==='event').sort(byDate);
   return [
-    el('p',{class:'small'},'まず、動かせない「当日」を入れます。試験や即売会のように、その日に行われるものです。ホームには日付で出ます。'),
+    el('p',{class:'small'},'まず、動かせない「当日」を入力します。試験や即売会のように、その日に行われるものです。ホームには日付で出ます。'),
     gs.map(g=>el('div',{class:'card'},goalBase(P,up,g,pfield('gt-'+g.id,'どちらの当日か',pselect('gt-'+g.id,g.track||'study',[['study',tname('study')],['create',tname('create')]],v=>up(x=>{x.goals.find(y=>y.id===g.id).track=v;})))))),
     el('button',{type:'button',class:'btn sub sm',onclick:()=>up(x=>{x.goals.push({id:newId('e'),kind:'event',track:'study',name:'新しい当日',date:'',gcal:true});})},'＋ 当日を追加')];
 }
@@ -2938,7 +2938,7 @@ function targetsEditor(P,up){
     el('h2',{class:'sec'},'途中の節目（任意）'),el('p',{class:'xs muted'},'「全単元1周」「本1の本文完成」のように、途中で区切りたいところです。'),
     mids.map(g=>pdet('g:'+g.id,sum(g),goalBase(P,up,g,[pfield('gk-'+g.id,'どちらの節目か',pselect('gk-'+g.id,g.track,[['study',tname('study')],['create',tname('create')]],v=>up(x=>{const y=x.goals.find(z=>z.id===g.id);y.track=v;y.scope=v==='study'?{upto:'p1',subjects:'all'}:{works:'all',part:'all'};}))),scopeFields(P,up,g),bufReward(up,g)]))),
     el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id=newId('g');up(x=>{x.goals.push({id,kind:'mid',track:'study',name:'新しい節目',date:'',buffer:true,reward:'',gcal:true,scope:{upto:'p1',subjects:'all'}});});POPEN.add('g:'+id);}},'＋ 途中の節目を追加'),
-    el('h2',{class:'sec'},'模試'),el('p',{class:'xs muted'},'模試の時間帯には計画の作業を入れず、翌日から期限までに復習の時間を取ります。'),
+    el('h2',{class:'sec'},'模試'),el('p',{class:'xs muted'},'模試の時間帯には計画の作業を割り振らず、翌日から期限までに復習の時間を取ります。'),
     mocks.map(g=>{const upG=fn=>up(x=>{fn(x.goals.find(y=>y.id===g.id));});return pdet('g:'+g.id,sum(g),goalBase(P,up,g,[
       el('div',{class:'grid2'},pfield('mf-'+g.id,'はじまり',ptime('mf-'+g.id,g.from,v=>upG(x=>{x.from=v;}))),pfield('mt-'+g.id,'おわり',ptime('mt-'+g.id,g.to,v=>upG(x=>{x.to=v;})))),
       el('div',{class:'grid2'},pfield('mr-'+g.id,'復習にかける時間（時間）',pnum('mr-'+g.id,g.reviewH,v=>upG(x=>{x.reviewH=v;}),0.5,0)),pfield('md-'+g.id,'何日以内に復習するか',pnum('md-'+g.id,g.reviewDays,v=>upG(x=>{x.reviewDays=Math.max(1,Math.round(v));}),1,1)))]));}),
@@ -2992,7 +2992,7 @@ function studyEditor(P,up){
       el('div',{class:'grid2'},pfield('mn-'+m.id,'教材名',ptext('mn-'+m.id,m.name,v=>{if(v) upM(x=>{x.name=v;});})),
         pfield('mk-'+m.id,'使い方',pselect('mk-'+m.id,m.kind,[['read','読む（テキスト）'],['solve','解く（問題集）']],v=>upM(x=>{x.kind=v;})))),
       m.kind==='solve'?[el('div',{class:'grid2'},pfield('mq-'+m.id,'1問の目安（分）',pnum('mq-'+m.id,m.perQ||P.perQ||3,v=>upM(x=>{x.perQ=v||3;}),0.5,0.5)),pfield('mc-'+m.id,'何問ずつ区切る',pnum('mc-'+m.id,m.chunkQ||chunkQ(P,m.perQ||P.perQ||3),v=>upM(x=>{x.chunkQ=Math.max(1,Math.round(v));}),1,1))),
-          pfield('mb-'+m.id,'アプリの問題集（取り込んだもの）',pselect('mb-'+m.id,m.book||'',[['','（アプリには入れない・まだ）'],...books.map(b=>[b,bookName(b)])],v=>upM(x=>{x.book=v||undefined;})))]
+          pfield('mb-'+m.id,'アプリの問題集（取り込んだもの）',pselect('mb-'+m.id,m.book||'',[['','（アプリに取り込まない・まだ）'],...books.map(b=>[b,bookName(b)])],v=>upM(x=>{x.book=v||undefined;})))]
         :el('div',{class:'grid2'},pfield('mp-'+m.id,'1ページを読む時間（分）',pnum('mp-'+m.id,m.perPage||P.perPage||4,v=>upM(x=>{x.perPage=v||4;}),0.5,0.5)),pfield('mc-'+m.id,'何ページずつ区切る（節より長いとき）',pnum('mc-'+m.id,m.chunkPages||20,v=>upM(x=>{x.chunkPages=Math.max(1,Math.round(v));}),1,1))),
       pfield('mt-'+m.id,'目次（1行に1項目：単元の短い名前 | 見出し | '+(m.kind==='solve'?'問題数':'開始ページ-終了ページ')+'）',el('textarea',{id:'mt-'+m.id,rows:Math.min(12,Math.max(4,n+1)),value:draft,placeholder:m.kind==='solve'?'労基 | 第1章 総則 | 25':'労基 | 第1章 第1節 労働条件の原則 | 12-20',oninput:e=>{draft=e.target.value;}})),
       el('button',{type:'button',class:'btn sub sm',onclick:()=>{const r=parseToc(draft,m,P);if(r.bad.length){toast('読めない行があります：'+r.bad[0].slice(0,20));return;}upM(x=>{x.toc=r.out;});toast('目次を保存しました（'+r.out.length+'項目）');}},'目次を保存'),
@@ -3043,9 +3043,9 @@ function createEditor(P,up){
       w.name,()=>up(x=>upDown(x.works,w.id,-1)),()=>up(x=>upDown(x.works,w.id,1)),i===0,i===ws.length-1);};
   const add=(type)=>{const id=newId('w');up(x=>{let n='新しい作品',k=2;while(x.works.some(y=>y.name===n)) n='新しい作品'+(k++);x.works.push({id,name:n,type,pages:16,chunk:4,steps:type==='manga'?clone(MANGA_STEPS):[{id:'s1',name:'工程1',perPage:false,hours:5}]});});POPEN.add('w:'+id);};
   return [
-    el('p',{class:'small'},tname('create')+'の前提を決めます。作品ごとに、工程と、1ページあたり（または工程全体）の時間の想定を入れます。'),
+    el('p',{class:'small'},tname('create')+'の前提を決めます。作品ごとに、工程と、1ページあたり（または工程全体）の時間の想定を入力します。'),
     R.all.n?el('div',{class:'card'},el('p',{class:'small'},'これまでの記録では、'+tname('create')+'は想定の ',el('b',{},String(Math.round(R.all.ratio*100)/100)+'倍'),' かかっています（記録'+R.all.n+'件）。工程ごとの「実績に合わせる」で想定を直せます。')):
-      el('p',{class:'xs muted'},'作業を済みにするときにかかった時間を入れておくと、次に組み直すとき、ここに想定との差が出ます。'),
+      el('p',{class:'xs muted'},'作業を済みにするときにかかった時間を記録しておくと、次に組み直すとき、ここに想定との差が出ます。'),
     ws.map(wEdit),
     el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>add('manga')},'＋ 漫画型で追加'),el('button',{type:'button',class:'btn sub sm',onclick:()=>add('custom')},'＋ 一から組む'))];
 }
@@ -3650,7 +3650,7 @@ function viewAnswer(){
       el('span',{style:'font-weight:700'},q.base?(P_().study.baseBook||'テキスト')+' p.'+q.base:(P_().study.baseBook||'テキスト')+'（目次の取り込み後にページを表示）'),
       el('span',{class:'xs muted'},'出典 '+bookName(it.doc.book)+' No.'+(q.no!=null?q.no:'—')+(q.page?' ・ p.'+q.page:''))),
     el('label',{class:'field',for:memoId},'自分のことばでメモ',el('textarea',{id:memoId,rows:2,value:s.memo||'',oninput:e=>{const v=e.target.value;clearTimeout(memoTimer);memoTimer=setTimeout(()=>{const sd=S.state[it.docId];sd.s[q.id].memo=v;sd.s[q.id].t=Date.now();save('state/'+it.docId);},600);}})),
-    el('div',{class:'row'},el('input',{type:'checkbox',id:noteId,checked:!!s.note,onchange:e=>{const sd=S.state[it.docId];sd.s[q.id].note=e.target.checked;sd.s[q.id].t=Date.now();save('state/'+it.docId);}}),el('label',{for:noteId},'間違いノートに入れる')),
+    el('div',{class:'row'},el('input',{type:'checkbox',id:noteId,checked:!!s.note,onchange:e=>{const sd=S.state[it.docId];sd.s[q.id].note=e.target.checked;sd.s[q.id].t=Date.now();save('state/'+it.docId);}}),el('label',{for:noteId},'間違いノートに追加する')),
     el('button',{type:'button',class:'btn',onclick:next},P.i+1>=P.queue.length?'結果を見る':'次の問題')];
 }
 function viewDone(){
@@ -3662,7 +3662,7 @@ function viewDone(){
 }
 function paperForm(){
   const books=[...new Set([...Object.keys(idPrefix()),...(plan2().materials||[]).filter(m=>m.kind==='solve'&&m.book).map(m=>m.book)])], subs=practiceSubjects();
-  if(!books.length||!subs.length) return el('div',{class:'card'},el('h2',{},'紙で解いた分を記録'),el('p',{class:'small muted'},'教材設定で問題集（解く教材）を取り込み、単元を入れると、本で解いた問題の番号と結果を記録できます。'));
+  if(!books.length||!subs.length) return el('div',{class:'card'},el('h2',{},'紙で解いた分を記録'),el('p',{class:'small muted'},'教材設定で問題集（解く教材）を取り込み、単元を追加すると、本で解いた問題の番号と結果を記録できます。'));
   const st={book:books[0],subject:subs.some(s=>s.id===P.subject)?P.subject:subs[0].id,no:'',res:'',conf:0};
   const qOf=()=>{const no=parseInt(st.no,10);if(!no) return null;const d=S.qbank[st.book+'-'+st.subject];return d&&Array.isArray(d.items)?d.items.find(q=>q.no===no)||null:null;};
   const resWrap=el('div',{});
@@ -3674,7 +3674,7 @@ function paperForm(){
   const submit=e=>{
     e.preventDefault();
     const no=parseInt(st.no,10);
-    if(!no||st.res===''){toast('番号と結果を入れてください');return;}
+    if(!no||st.res===''){toast('番号と結果を入力してください');return;}
     const docId=st.book+'-'+st.subject, qid=(idPrefix()[st.book]||String(st.book).toUpperCase())+'-'+st.subject+'-'+String(no).padStart(((P_().study.idPad||{})[st.book])||4,'0');
     const okv=st.nb?Number(st.res)===st.nb:st.res==='1';
     const blanks=st.nb?[Number(st.res)]:null;
@@ -3683,7 +3683,7 @@ function paperForm(){
     const f=document.getElementById('p-no');f.value='';f.focus();st.no='';document.getElementById('p-kan').checked=false;st.conf=0;drawRes();
   };
   return el('form',{class:'card',onsubmit:submit},
-    el('h2',{},'紙で解いた分を記録'),el('p',{class:'small muted'},'本で解いた問題の番号と結果だけを入れます。取り込みのあとも記録は引き継がれます。'),
+    el('h2',{},'紙で解いた分を記録'),el('p',{class:'small muted'},'本で解いた問題の番号と結果だけを入力します。取り込みのあとも記録は引き継がれます。'),
     el('div',{class:'grid2'},
       el('label',{class:'field',for:'p-book'},'問題集',el('select',{id:'p-book',onchange:e=>{st.book=e.target.value;drawRes();}},books.map(b=>el('option',{value:b},bookName(b))))),
       el('label',{class:'field',for:'p-sub'},'単元',el('select',{id:'p-sub',onchange:e=>{st.subject=e.target.value;drawRes();}},subs.map(s=>{const o=el('option',{value:s.id},s.short);if(s.id===st.subject) o.selected=true;return o;})))),
@@ -3762,7 +3762,7 @@ function viewProgress(){
       el('div',{class:'between',style:'align-items:baseline'},el('h2',{},tname('create')),el('span',{class:'small muted num'},el('b',{style:'font-size:22px;color:var(--ink)'},mg.pct+'%'),'　予定 '+mg.plan+'%')),
       el('div',{class:'bar manga'},el('i',{style:'width:'+mg.pct+'%'}),el('b',{style:'left:'+mg.plan+'%'})),
       (()=>{const used=trackTotal('manga'), est=works().reduce((a,w)=>a+workPct(w,manga()[w.id]).total,0)*60;return used?el('p',{class:'small num'},'制作に使った時間 '+fmtH(used)+' ／ 見積もり '+fmtH(est)+'（時間で見ると '+Math.round(used/est*100)+'%）'):null;})(),
-      el('p',{class:'xs muted'},'終わったページ数を工程ごとに入れると、1ページ'+(P_().create.hoursPerPage||8)+'時間'+(works().some(w=>w.cover)?'・表紙'+(P_().create.coverHours||10)+'時間':'')+'の見積もりで計算します。'),
+      el('p',{class:'xs muted'},'終わったページ数を工程ごとに入力すると、1ページ'+(P_().create.hoursPerPage||8)+'時間'+(works().some(w=>w.cover)?'・表紙'+(P_().create.coverHours||10)+'時間':'')+'の見積もりで計算します。'),
       works().map((w,wi)=>[
         el('div',{class:'between',style:wi?'border-top:1px solid var(--line);padding-top:12px':''},el('h2',{},w.name+'（'+(mg.per[w.id]||0)+'%）'),pagesIn(w.id)),
         w.plot?el('div',{class:'row'},el('input',{type:'checkbox',id:'plot-'+w.id,checked:!!m[w.id].plot,onchange:e=>setM(x=>{x[w.id].plot=e.target.checked?1:0;})}),el('label',{for:'plot-'+w.id},'プロット完成')):null,
@@ -3893,7 +3893,7 @@ function impRead(text){
   if(!kind) throw '1行目に、テンプレートの見出し（教材・章・節… か 教材・番号・単元・形…）がありません。';
   const out=[];
   rows.forEach((r,i)=>{const o={_line:i+2};head.forEach((h,k)=>{o[h]=r[k]==null?'':r[k];});if(!String(o['教材']||'').startsWith('（例）')) out.push(o);});
-  if(!out.length) throw '取り込む行がありません。「（例）」で始まる行は読み込まないので、2行目から自分の行を入れてください。';
+  if(!out.length) throw '取り込む行がありません。「（例）」で始まる行は読み込まないので、2行目から自分で入力してください。';
   return {kind,rows:out};
 }
 
@@ -3915,9 +3915,9 @@ function impToc(rows){
     prev={book,kindW,ch,unit};
     if(!book){errs.push(line+'行目：教材の名前がありません。');return;}
     if(kindW!=='読む'&&kindW!=='解く'){errs.push(line+'行目：種類は「読む」か「解く」にしてください。');return;}
-    if(!ch&&!sec){errs.push(line+'行目：章か節のどちらかを入れてください。');return;}
+    if(!ch&&!sec){errs.push(line+'行目：章か節のどちらかを入力してください。');return;}
     if(!unit){errs.push(line+'行目：単元がありません。');return;}
-    if(a==null||b==null||b<a){errs.push(line+'行目：はじめ・おわりは数字で、おわりがはじめより後になるように入れてください。');return;}
+    if(a==null||b==null||b<a){errs.push(line+'行目：はじめ・おわりは数字で、おわりがはじめより後になるように入力してください。');return;}
     if(g('確認')) notes.push(book+' '+(ch?ch+' ':'')+sec+'：'+g('確認'));
     let m=mats.find(x=>x.name===book);if(!m){m={name:book,kind:kindW==='解く'?'solve':'read',rows:[]};mats.push(m);}
     m.rows.push({ch,sec,unit,a,b});
@@ -3947,7 +3947,7 @@ function impQs(rows){
     const line=r._line||('問題'+(i+1)), g=k=>impStr(r[k]), at=line+(r._line?'行目':'')+'：';
     const book=g('教材'), no=impNum(r['番号']), unit=g('単元'), form=IMP_FORMS[g('形')], stem=g('問題');
     if(!book){errs.push(at+'教材の名前がありません。');return;}
-    if(no==null){errs.push(at+'番号は数字で入れてください。');return;}
+    if(no==null){errs.push(at+'番号は数字で入力してください。');return;}
     if(!unit){errs.push(at+'単元がありません。');return;}
     if(!form){errs.push(at+'形は「○×」「選択肢」「穴埋め」「並び替え」のどれかにしてください。');return;}
     if(!stem){errs.push(at+'問題文がありません。');return;}
@@ -3955,7 +3955,7 @@ function impQs(rows){
     const ans=r['答え'], extra=r['選択肢']!=null?r['選択肢']:r['語群']!=null?r['語群']:r['選択肢・語群'];
     if(form==='tf'){const a=String(ans==null?'':ans).normalize('NFKC').trim();
       if(/^(○|◯|o|O|正|true|まる)$/.test(a)) q.answer=true; else if(/^(×|✕|x|X|誤|false|ばつ)$/.test(a)) q.answer=false; else {errs.push(at+'○×の答えは「○」か「×」にしてください。');return;}}
-    else if(form==='mc5'){const ch=impList(extra);if(ch.length<2){errs.push(at+'選択肢を2つ以上入れてください。');return;}
+    else if(form==='mc5'){const ch=impList(extra);if(ch.length<2){errs.push(at+'選択肢を2つ以上入力してください。');return;}
       const L='ABCDEFGHIJ';q.choices=ch.slice(0,10).map((t,k)=>({k:L[k],text:t}));
       const a=String(ans==null?'':ans).normalize('NFKC').trim().toUpperCase(), n=parseInt(a,10);
       q.correct=isFinite(n)&&n>=1&&n<=q.choices.length?L[n-1]:(q.choices.some(c=>c.k===a)?a:null);
@@ -3964,7 +3964,7 @@ function impQs(rows){
       const a=impList(ans);if(!keys.length){errs.push(at+'穴埋めの問題文に、空欄 ［A］［B］… がありません。');return;}
       if(a.length!==keys.length){errs.push(at+'空欄の数（'+keys.length+'）と答えの数（'+a.length+'）が合いません。');return;}
       q.blanks=keys.map((k,j)=>({k,answer:a[j]}));const w=impList(extra);if(w.length) q.words=w;}
-    else {const a=impList(ans);if(a.length<2){errs.push(at+'並び替えの答えを、正しい順に2つ以上入れてください。');return;}
+    else {const a=impList(ans);if(a.length<2){errs.push(at+'並び替えの答えを、正しい順に2つ以上入力してください。');return;}
       q.order=true;q.blanks=a.map((t,j)=>({k:String(j+1),answer:t}));q.words=a.slice().sort(()=>Math.random()-0.5);}
     if(g('解説')) q.expl=g('解説');
     const tg=impList(r['論点']).flatMap(x=>x.split(/[、,]/)).map(x=>x.trim()).filter(Boolean);if(tg.length) q.tags=tg;
@@ -4004,7 +4004,7 @@ function impRun(text){
 }
 
 /* what to hand to one's own AI, with the units already entered so that it uses the same names */
-function unitListText(){const s=(plan2().subjects||[]).map(x=>x.name);return s.length?s.join('、'):'（まだありません。単元や分野の名前を短く入れてください。全部で20個まで）';}
+function unitListText(){const s=(plan2().subjects||[]).map(x=>x.name);return s.length?s.join('、'):'（まだありません。単元や分野の名前を短く書いてください。全部で20個まで）';}
 const IMP_TOC_EX={'形式':'芒学の目次','教材':'（教材の名前）','種類':'読む','目次':[
   {'章':'第1章 （章の見出し）','節':'1 （節の見出し）','単元':'（単元の名前）','はじめ':1,'おわり':8},
   {'章':'第1章 （章の見出し）','節':'2 （節の見出し）','単元':'（単元の名前）','はじめ':9,'おわり':20}]};
@@ -4020,7 +4020,7 @@ function tocPrompt(){return [
   '- 出力は、下の形のJSONだけにしてください。説明の文はいりません。',
   '- 1冊につき1つのJSONにします。',
   '- 「種類」は、読むもの（テキスト・入門書）なら「読む」、問題集なら「解く」です。',
-  '- 「目次」には、いちばん細かい見出し（節）を1つずつ、本の順に入れます。節がない章は、「節」を "" にして章を1つ入れます。',
+  '- 「目次」には、いちばん細かい見出し（節）を1つずつ、本の順に書きます。節がない章は、「節」を "" にして章を1つ書きます。',
   '- 「はじめ」「おわり」は数字です。読むものはページ、問題集は問題番号です。',
   '- 「単元」は、次の一覧から、その見出しに合うものを選んでください：'+unitListText(),
   '- 読み取れない所や自信のない所は、推測で埋めず、その行に「確認」という項目を足して、内容を書いてください。',
@@ -4035,13 +4035,13 @@ function qPrompt(){return [
   '- 問題文・選択肢・答え・解説は、本のとおりに書き写します。言い換えたり、足したりしないでください。',
   '- 「形」は「○×」「選択肢」「穴埋め」「並び替え」のどれかです。',
   '  - ○×：答えは「○」か「×」。',
-  '  - 選択肢：選択肢を順に「選択肢」に入れ、答えは正しい選択肢の番号（1から数える）。',
-  '  - 穴埋め：問題文の空欄を ［A］［B］… と書き、答えを「答え」に順に入れます。語群があれば「語群」に入れます。',
-  '  - 並び替え：正しい順を「答え」に入れます。',
-  '- 記述や計算の問題は入れないでください。',
-  '- 「番号」は本の問題番号（数字）です。「ページ」は本のページで、分からなければ入れません。',
+  '  - 選択肢：選択肢を順に「選択肢」に書き、答えは正しい選択肢の番号（1から数える）。',
+  '  - 穴埋め：問題文の空欄を ［A］［B］… と書き、答えを「答え」に順に書きます。語群があれば「語群」に書きます。',
+  '  - 並び替え：正しい順を「答え」に書きます。',
+  '- 記述や計算の問題は含めないでください。',
+  '- 「番号」は本の問題番号（数字）です。「ページ」は本のページで、分からなければ省きます。',
   '- 「単元」は、次の一覧から選んでください：'+unitListText(),
-  '- 「論点」は、その問題の論点を短く。なければ入れません。',
+  '- 「論点」は、その問題の論点を短く。なければ省きます。',
   '- 読み取れない所や自信のない所は、推測で埋めず、その問題に「確認」という項目を足して、内容を書いてください。',
   '',
   '形：',
@@ -4057,12 +4057,12 @@ function qTemplate(){return csvRows(IMP_Q_COLS,[
   ['（例）問題集B','4','単元の名前','並び替え','何を並べるか','1番目／2番目／3番目','','解説','','','']]);}
 function formHelp(){openSheet('取り込みの形',
   el('p',{class:'small'},el('b',{},'JSON（おすすめ）：'),'「自分のAIで作る」のプロンプトをコピーし、目次や問題のページの写真と一緒に、自分のAIに渡します。返ってきたJSONを、ファイルにして選ぶか、そのまま貼り付けます。'),
-  el('p',{class:'small'},el('b',{},'CSV（手で入れる）：'),'テンプレートを保存し、表計算アプリで1行ずつ入れて、CSVで保存してから選びます。「（例）」で始まる行は読み込みません。'),
+  el('p',{class:'small'},el('b',{},'CSV（手入力する）：'),'テンプレートを保存し、表計算アプリで1行ずつ手入力して、CSVで保存してから選びます。「（例）」で始まる行は読み込みません。'),
   el('p',{class:'small',style:'margin-top:8px'},el('b',{},'目次の列')),
   el('ul',{class:'small',style:'margin:0;padding-left:1.2em'},el('li',{},'教材・種類（読む／解く）：空欄なら上の行と同じ'),el('li',{},'章・節：節がない章は節を空欄に。章が空欄なら上の行と同じ'),el('li',{},'単元：空欄なら上の行と同じ'),el('li',{},'はじめ・おわり：読むものはページ、解くものは問題番号'),el('li',{},'確認：読み取りに自信のない所のメモ（任意）')),
   el('p',{class:'small',style:'margin-top:8px'},el('b',{},'問題の列')),
-  el('ul',{class:'small',style:'margin:0;padding-left:1.2em'},el('li',{},'形：○× ／ 選択肢 ／ 穴埋め ／ 並び替え'),el('li',{},'答え：○×は「○」「×」、選択肢は正しい番号、穴埋めは空欄の順、並び替えは正しい順'),el('li',{},'選択肢・語群：選択肢の問題は選択肢、穴埋めは語群（任意）'),el('li',{},'いくつも入れる所は「／」（全角）か改行で区切る'),el('li',{},'穴埋めの問題文は、空欄を ［A］［B］… と書く'),el('li',{},'確認：読み取りに自信のない所のメモ。取り込むと「要確認」に並びます')),
-  el('p',{class:'xs muted'},'同じ教材の目次を取り込み直すと、目次は入れ替わります。同じ問題集・単元・番号の問題は、上書きされます。'));}
+  el('ul',{class:'small',style:'margin:0;padding-left:1.2em'},el('li',{},'形：○× ／ 選択肢 ／ 穴埋め ／ 並び替え'),el('li',{},'答え：○×は「○」「×」、選択肢は正しい番号、穴埋めは空欄の順、並び替えは正しい順'),el('li',{},'選択肢・語群：選択肢の問題は選択肢、穴埋めは語群（任意）'),el('li',{},'いくつも書く所は「／」（全角）か改行で区切る'),el('li',{},'穴埋めの問題文は、空欄を ［A］［B］… と書く'),el('li',{},'確認：読み取りに自信のない所のメモ。取り込むと「要確認」に並びます')),
+  el('p',{class:'xs muted'},'同じ教材の目次を取り込み直すと、目次は置き換わります。同じ問題集・単元・番号の問題は、上書きされます。'));}
 
 function viewMaterials(){
   const P=plan2(), mats=P.materials||[];
@@ -4102,18 +4102,18 @@ function viewMaterials(){
       el('label',{class:'field',for:'imp-paste'},'または貼り付け',paste),
       el('button',{type:'button',class:'btn sm',onclick:()=>impRun(paste.value)},'貼り付けた中身を取り込む')),
     el('div',{class:'card'},el('h2',{},'自分のAIで作る（おすすめ）'),
-      el('p',{class:'small'},'プロンプトをコピーし、目次や問題のページの写真と一緒に、自分のAIに渡してください。返ってきたJSONを、上の「取り込む」に入れます。'),
+      el('p',{class:'small'},'プロンプトをコピーし、目次や問題のページの写真と一緒に、自分のAIに渡してください。返ってきたJSONを、上の「取り込む」に貼り付けるか、ファイルにして選びます。'),
       el('button',{type:'button',class:'btn sub sm',onclick:()=>copyText(tocPrompt(),'目次用のプロンプト')},'目次用のプロンプトをコピー'),el('button',{type:'button',class:'btn sub sm',onclick:()=>copyText(qPrompt(),'問題用のプロンプト')},'問題用のプロンプトをコピー'),
       el('p',{class:'xs muted'},'プロンプトには、いま入っている単元の名前が入ります。目次を先に取り込むと、問題も同じ単元にそろいます。')),
-    el('div',{class:'card'},el('h2',{},'手で入れる（CSV）'),
-      el('p',{class:'small'},'テンプレートを保存し、表計算アプリで入れて、CSVで保存してから「ファイルを選ぶ」で取り込みます。'),
+    el('div',{class:'card'},el('h2',{},'自分で入力する（CSV）'),
+      el('p',{class:'small'},'テンプレートを保存し、表計算アプリで手入力して、CSVで保存してから「ファイルを選ぶ」で取り込みます。'),
       el('button',{type:'button',class:'btn sub sm',onclick:()=>saveFile('mangxue-toc-template.csv','\uFEFF'+tocTemplate(),'text/csv')},'目次のテンプレートを保存'),el('button',{type:'button',class:'btn sub sm',onclick:()=>saveFile('mangxue-questions-template.csv','\uFEFF'+qTemplate(),'text/csv')},'問題のテンプレートを保存')),
     el('h2',{class:'sec'},'教材'),
     mats.length?mats.map(m=>{const us=[...new Set((m.toc||[]).map(e=>e.s))].map(id=>subj(id).short).filter(Boolean), n=m.book?qn(m.book):0;
       return el('div',{class:'card'},el('div',{class:'between'},el('h2',{style:'min-width:0'},(m.kind==='solve'?'✏️ ':'📖 ')+m.name),el('span',{class:'xs muted',style:'white-space:nowrap'},m.kind==='solve'?'解く':'読む')),
         el('p',{class:'small muted'},'目次 '+(m.toc||[]).length+'項目'+(us.length?'（単元：'+us.join('・')+'）':'')+(m.kind==='solve'?'　問題 '+n+'問':'')),
         twoStepBtn('この教材を消す',()=>setPlan2(x=>{x.materials=x.materials.filter(y=>y.id!==m.id);})));})
-      :el('p',{class:'small muted'},'まだありません。上の「取り込む」から入れてください。'),
+      :el('p',{class:'small muted'},'まだありません。上の「取り込む」から取り込んでください。'),
     el('div',{class:'card'},el('h2',{},'取り込んだ問題'),
       docs.length?el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'問題集'),el('th',{},'単元'),el('th',{},'問題数'),el('th',{},'要確認'))),
         el('tbody',{},docs.map(([id,d])=>el('tr',{},el('td',{},bookName(d.book)),el('td',{},subj(d.subject).short),el('td',{class:'num'},String(d.items.length)),el('td',{class:'num'},String(d.items.filter(q=>q.check).length)))))))
