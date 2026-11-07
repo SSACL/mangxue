@@ -549,6 +549,7 @@ function fill(str,ds){
     .replace(/\{focus\.weekday\}/g,f?(f.weekday||''):'').replace(/\{focus\.weekend\}/g,f?(f.weekend||''):'').replace(/\{focus\.note\}/g,f?(f.note||''):'')
     .replace(/\{lastWeekNote\}/g,lw?(P_().study.lastWeekNote||''):'').trim();
 }
+function hasPlan(){return planActive()||!!(PLAN&&(PLAN.schedule||[]).length);}
 function tasksFor(ds){return planActive()?planTasks(ds):tasksForLegacy(ds);}
 function tasksForLegacy(ds){
   const sc=(P_().schedule||[]).find(x=>ds>=x.from&&ds<=x.to), wd=parseYmd(ds).getDay(), T=[];
@@ -1838,7 +1839,7 @@ function taskList(ds,opt){
       return el('div',{class:'task'+(k.kind==='manga'?' manga':'')+(done?' done':'')},
         el('input',{type:'checkbox',id,checked:done,onchange:e=>toggleTask(ds,k,e.target.checked)}),
         el('label',{for:id},el('span',{class:'t'},k.time+(rec?'・記録 '+fmtMin(rec.m):'')),el('span',{class:'m'+(opt.compact?' clamp2':'')},k.title),!opt.compact&&k.sub?el('span',{class:'xs muted'},k.sub):(k.app&&!appItems(k.app).length&&!opt.compact?el('span',{class:'xs muted'},'アプリに未取り込み：紙の本で解いてチェック'):null)),solve);})
-      :el('p',{class:'small muted',style:'padding:10px 0'},(PLAN||planActive())?'この日の予定はありません。':'計画を組むと、ここに今日やることが出ます。'));
+      :el('p',{class:'small muted',style:'padding:10px 0'},hasPlan()?'この日の予定はありません。':'計画を組むと、ここに今日やることが出ます。'));
 }
 function trackEditors(ds){
   const tr=tracks();
@@ -1949,7 +1950,7 @@ function retOverlay(){
   if(f) requestAnimationFrame(()=>{const n=document.querySelector(f);if(n) n.scrollIntoView({block:'start'});});
 }
 /* stamps for the calendar: 花丸 = routines and tasks all done; マルチェック = the tasks all done; the 休 stamp = a day off */
-function dayTasks(ds){return (PLAN||planActive())?tasksFor(ds).filter(k=>k.kind==='study'||k.kind==='manga'):[];}
+function dayTasks(ds){return hasPlan()?tasksFor(ds).filter(k=>k.kind==='study'||k.kind==='manga'):[];}
 function dayStamp(ds){
   const d=dayRec(ds);if(d.off) return 'kyu';if(ds>today()) return null;
   const rs=routines().filter(r=>routineApplies(ds,r)), ts=dayTasks(ds).filter(k=>!k.review);
@@ -3438,7 +3439,7 @@ function viewHome(){
   const t=today(), L=life(), d=dayRec(t);
   // progress and the two main buttons first
   let prog=null, notice=[];
-  if(PLAN||planActive()){
+  if(hasPlan()){
     const act=planActive(), ps=act?planStats('study'):null, pc=act?planStats('create'):null;
     const st=ps||studyStats(), mg=pc||mangaStats(), T=tracks();
     const gapOf=x=>x&&x.gap!=null?('差'+(Math.round(x.gap*100)>0?'+':Math.round(x.gap*100)<0?'−':'±')+Math.abs(Math.round(x.gap*100))+'%'):'';
@@ -3495,7 +3496,7 @@ function viewHome(){
     cmLine(t),
     bringOf(t)?el('p',{class:'small bringline'},'🎒 今日の持ち物：'+bringOf(t).t):null,
     el('div',{class:'between'},el('h2',{class:'sec'},'今日やること'),phaseLabel(t)?el('span',{class:'pill',style:'padding:2px 10px;font-size:12px'},phaseLabel(t)):null),
-    PLAN||planActive()?taskList(t,{compact:true}):noPlan(),
+    hasPlan()?taskList(t,{compact:true}):noPlan(),
     next?el('p',{class:'xs muted',style:'text-align:center'},'次の節目 '+md(next[0])+' '+next[1]+'（あと'+diffDays(t,next[0])+'日）'):null,
     brandNode()
   ];
