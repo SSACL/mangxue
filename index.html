@@ -3329,13 +3329,21 @@ function wizSteps(){return WIZ.method==='time'?['events','targets','method','tim
 function wizName(k){return {events:'当日',targets:'目標日',method:'組み方',study:tname('study'),create:tname('create'),need:'必要な時間',time:'時間割',outlook:'見通し',build:'組む'}[k];}
 function openWizard(at){
   const cur=plan2();
-  if(!WIZ){WIZ={P:clone(cur),i:0,method:'work',src:cur.t||0};delete WIZ.P.baseline;}
-  else if((cur.t||0)!==WIZ.src){for(const k of TIMEKEYS) WIZ.P[k]=clone(cur[k]);keepRewards(WIZ.P,cur);WIZ.src=cur.t||0;}
+  // the timetable is taken again from the plan only when it was changed outside (an import of books leaves the half-made one alone)
+  const tk=JSON.stringify(TIMEKEYS.map(k=>cur[k]??null));
+  if(!WIZ){WIZ={P:clone(cur),i:0,method:'work',src:cur.t||0,tk};delete WIZ.P.baseline;}
+  else if(WIZ.tk!=null?WIZ.tk!==tk:(cur.t||0)!==WIZ.src){for(const k of TIMEKEYS) WIZ.P[k]=clone(cur[k]);keepRewards(WIZ.P,cur);WIZ.src=cur.t||0;WIZ.tk=tk;}
+  wizPull();
   if(at){const k=wizSteps().indexOf(at);if(k>=0) WIZ.i=k;}
   CAPV++;const d=document.getElementById('wiz');wizRender(true);if(!d.open) d.showModal();
 }
 function wizSave(){try{IDB.put('__wiz',WIZ);}catch(e){}}
-function wizUp(fn){const k=wizSteps()[WIZ.i];if(k==='events'||k==='targets') WIZ.keep=false;fn(WIZ.P);CAPV++;wizSave();wizRender();}
+// units and books are not kept with the half-made plan: 教材設定 and 計画を組む always use the same list, in either order
+const WIZ_LIVE=['subjects','materials'];
+function wizPull(){if(!WIZ) return;const cur=plan2();let ch=false;for(const k of WIZ_LIVE){const v=clone(cur[k]||[]);if(JSON.stringify(v)!==JSON.stringify(WIZ.P[k]||[])){WIZ.P[k]=v;ch=true;}}if(ch) CAPV++;}
+function wizPush(){if(!WIZ) return;const cur=plan2();if(WIZ_LIVE.every(k=>JSON.stringify(cur[k]||[])===JSON.stringify(WIZ.P[k]||[]))) return;
+  setPlan2(x=>{for(const k of WIZ_LIVE) x[k]=clone(WIZ.P[k]||[]);});WIZ.src=plan2().t||0;}
+function wizUp(fn){const k=wizSteps()[WIZ.i];if(k==='events'||k==='targets') WIZ.keep=false;fn(WIZ.P);wizPush();CAPV++;wizSave();wizRender();}
 /* 組み直し: use the dates set last time as they are, and go straight to 組み方 */
 function wizKeepDates(){WIZ.P.goals=clone(plan2().goals||[]);WIZ.keep=true;CAPV++;WIZ.i=wizSteps().indexOf('method');wizSave();wizRender(true);}
 function keepCard(){
@@ -3450,6 +3458,7 @@ function wizBuildView(){
 }
 function keepRewards(dst,cur){for(const g of dst.goals||[]){const c=(cur.goals||[]).find(x=>x.id===g.id);if(c&&c.reward&&!g.reward){g.reward=c.reward;if(c.got) g.got=c.got;}}}
 function wizBuild(){
+  wizPull();
   const t=today(), pick=WIZ.nb||{}, src=clone(WIZ.P), old=plan2();keepRewards(src,old);
   for(const g of src.goals||[]) if(pick[g.id]&&diffDays(t,g.date)<=14) g.buffer=false;
   GMUTE=true;try{setPlan2(x=>{for(const k of Object.keys(x)) delete x[k];Object.assign(x,src);x.v=3;x.baseline=scheduleAll(x,t,{});x.start=t;});}finally{GMUTE=false;}
