@@ -79,3 +79,10 @@ Googleカレンダーの予定を「プライベートの予定」として取�
 ## ライセンス
 
 MIT License（`LICENSE` を参照してください）
+
+アプリの中で使っている、ほかの作者のもの：
+
+- 書体 Zen角ゴシック New・Truculenta（Google Fonts から読み込みます。SIL Open Font License 1.1）
+- `fonts/mx-yakumono-*.woff`：Zen角ゴシック New のかっこ・中黒・コロンだけを取り出し、幅を半分に詰めたもの（SIL Open Font License 1.1、`fonts/OFL-zen-kaku-gothic.txt`）
+- 演習の問題の書体の候補 Noto Sans JP・Noto Serif JP・BIZ UDPゴシック・BIZ UDP明朝・Klee One・Yuji Syuku（選んだときに Google Fonts から読み込みます。SIL Open Font License 1.1）
+- 日本語を文節で折り返すためのデータと計算のしかた：BudouX（Google LLC、Apache License 2.0、`LICENSE-budoux.txt`）

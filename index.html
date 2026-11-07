@@ -4,39 +4,56 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>芒学 mángxué</title>
-<meta name="theme-color" content="#F4F5F7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#11161D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#EEF0F5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1022" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="まんしゅぇ">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Truculenta:wght@300..700&display=swap">
+<script>try{var mxT=localStorage.getItem('mx-theme');if(mxT==='light'||mxT==='dark')document.documentElement.setAttribute('data-theme',mxT);var mxQ=localStorage.getItem('mx-qfont');if(mxQ)document.documentElement.setAttribute('data-qfont',mxQ);}catch(e){}</script>
 <style>
+/* Zen Kaku Gothic New's brackets, middle dot and colon, re-spaced to half width (fonts/, OFL: fonts/OFL-zen-kaku-gothic.txt) */
+@font-face{font-family:'MX Yakumono';font-weight:400;font-display:swap;src:url(fonts/mx-yakumono-400.woff) format('woff');unicode-range:U+3008-3011,U+3014-3015,U+30FB,U+FF08-FF09,U+FF1A,U+FF3B,U+FF3D,U+FF5B,U+FF5D}
+@font-face{font-family:'MX Yakumono';font-weight:500;font-display:swap;src:url(fonts/mx-yakumono-500.woff) format('woff');unicode-range:U+3008-3011,U+3014-3015,U+30FB,U+FF08-FF09,U+FF1A,U+FF3B,U+FF3D,U+FF5B,U+FF5D}
+@font-face{font-family:'MX Yakumono';font-weight:700;font-display:swap;src:url(fonts/mx-yakumono-700.woff) format('woff');unicode-range:U+3008-3011,U+3014-3015,U+30FB,U+FF08-FF09,U+FF1A,U+FF3B,U+FF3D,U+FF5B,U+FF5D}
+
 /* Layout: one narrow column like a pocket notebook, bottom tab bar for the four places you go every day */
 :root{
-  --bg:#F4F5F7; --surface:#FFFFFF; --line:#E3E6EB; --ink:#1E2A3A; --muted:#5B6472;
-  --accent:#2F6FDB; --accent-ink:#1F4E9E; --accent-soft:#E4ECFA;
-  --manga:#D9822B; --manga-ink:#8A4A12; --manga-soft:#FDEBD8;
-  --good:#1E7A4C; --good-soft:#E1F2E8; --bad:#B3261E; --bad-soft:#FBE3E1;
-  --chip:#E8EAEE; --chip-ink:#3D4653;
+  --bg:#EEF0F5; --surface:#FFFFFF; --line:#D8DCE6; --ink:#161B33; --muted:#586079;
+  --accent:#2E4BE0; --accent-ink:#1F33A3; --accent-soft:#E6EAFE;
+  --manga:#D9416A; --manga-ink:#9E1F45; --manga-soft:#FCE5EC;
+  --good:#12805A; --good-soft:#DFF3EA; --bad:#C02B3A; --bad-soft:#FBE3E5;
+  --warn:#C2570C; --warn-ink:#8F3D06; --warn-soft:#FDEEE2;
+  --chip:#E3E6EE; --chip-ink:#3A4157;
+  --pearl:linear-gradient(90deg,#8FA3FF,#FFA8C8 50%,#86DDC2); --on-accent:#FFFFFF;
   --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--s8:#e34948;--s9:#6f7d8c;--s10:#2fa39b;
-  --font-body:'Noto Sans JP',system-ui,-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;
-  --font-display:'Zen Kaku Gothic New','Noto Sans JP',system-ui,sans-serif;
+  --font-body:'MX Yakumono','Zen Kaku Gothic New',system-ui,-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;
+  --font-display:'MX Yakumono','Zen Kaku Gothic New',system-ui,-apple-system,'Hiragino Sans',sans-serif;
+  --font-num:'Truculenta','MX Yakumono','Zen Kaku Gothic New',system-ui,sans-serif;
+  --font-q:var(--font-body);
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#11161D; --surface:#1A212B; --line:#2A3441; --ink:#E8ECF1; --muted:#9AA5B4;
-  --accent:#5B8FEA; --accent-ink:#A9C4F5; --accent-soft:#1E2F4D;
-  --manga:#E3964A; --manga-ink:#F2C08F; --manga-soft:#3A2A1A;
-  --good:#5FC48E; --good-soft:#173527; --bad:#F08A82; --bad-soft:#3C2120;
-  --chip:#252E3A; --chip-ink:#C9D1DC; --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;--s9:#8d9aa8;--s10:#3fbcb3; color-scheme:dark}}
+  --bg:#0E1022; --surface:#171A30; --line:#2B3050; --ink:#E7E9F7; --muted:#A0A6C4;
+  --accent:#8C9CFF; --accent-ink:#C5CDFF; --accent-soft:#1E2554;
+  --manga:#FF86A6; --manga-ink:#FFC4D3; --manga-soft:#3A1626;
+  --good:#5ED3A0; --good-soft:#12342A; --bad:#FF8A93; --bad-soft:#3A1A20;
+  --warn:#FFA65C; --warn-ink:#FFD2A8; --warn-soft:#3A2412;
+  --chip:#22263F; --chip-ink:#C9CEE6;
+  --pearl:linear-gradient(90deg,#9FB0FF,#FFB0CC 50%,#8EE6CB); --on-accent:#0E1022;
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;--s9:#8d9aa8;--s10:#3fbcb3; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#11161D; --surface:#1A212B; --line:#2A3441; --ink:#E8ECF1; --muted:#9AA5B4;
-  --accent:#5B8FEA; --accent-ink:#A9C4F5; --accent-soft:#1E2F4D;
-  --manga:#E3964A; --manga-ink:#F2C08F; --manga-soft:#3A2A1A;
-  --good:#5FC48E; --good-soft:#173527; --bad:#F08A82; --bad-soft:#3C2120;
-  --chip:#252E3A; --chip-ink:#C9D1DC; --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;--s9:#8d9aa8;--s10:#3fbcb3; color-scheme:dark}
+  --bg:#0E1022; --surface:#171A30; --line:#2B3050; --ink:#E7E9F7; --muted:#A0A6C4;
+  --accent:#8C9CFF; --accent-ink:#C5CDFF; --accent-soft:#1E2554;
+  --manga:#FF86A6; --manga-ink:#FFC4D3; --manga-soft:#3A1626;
+  --good:#5ED3A0; --good-soft:#12342A; --bad:#FF8A93; --bad-soft:#3A1A20;
+  --warn:#FFA65C; --warn-ink:#FFD2A8; --warn-soft:#3A2412;
+  --chip:#22263F; --chip-ink:#C9CEE6;
+  --pearl:linear-gradient(90deg,#9FB0FF,#FFB0CC 50%,#8EE6CB); --on-accent:#0E1022;
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;--s9:#8d9aa8;--s10:#3fbcb3; color-scheme:dark}
+:root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{padding-top:env(safe-area-inset-top,0px)}
@@ -188,7 +205,7 @@ details.set[open]{padding-bottom:14px;display:flex;flex-direction:column;gap:10p
 .topcard .btn.sm{min-height:42px}
 .pb{display:flex;flex-direction:column;gap:4px;text-decoration:none;color:inherit;min-width:0}
 .pb .bar{height:6px}
-.cib.hot{background:#E8590C;border-color:#E8590C;color:#fff;box-shadow:0 2px 10px rgba(232,89,12,.35)}.cib.hot span{color:#fff}
+.cib.hot{background:var(--warn);border-color:var(--warn);color:#fff;box-shadow:0 2px 10px rgba(232,89,12,.35)}.cib.hot span{color:#fff}
 .cib.due{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}.cib.due span{color:var(--accent-ink);opacity:1}
 .tleft{display:flex;flex-direction:column;min-width:0}
 .tleft .status{font-size:11px}
@@ -249,17 +266,17 @@ button.cc{border:0;font:inherit;text-align:left;cursor:pointer;align-items:stret
 .dtile .bar{display:block;height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:4px 0 2px}
 .dtile .bar>i{display:block;height:100%;background:var(--muted)}
 .dtile.ok{border-color:var(--good)}.dtile.ok .bar>i{background:var(--good)}
-.dtile.part{border-color:#E8590C}.dtile.part .bar>i{background:#E8590C}
-.dtile.ng{border-color:#E8590C}
+.dtile.part{border-color:var(--warn)}.dtile.part .bar>i{background:var(--warn)}
+.dtile.ng{border-color:var(--warn)}
 .flow{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
 .frow{display:grid;grid-template-columns:3.2em 1.6em minmax(0,1fr) 1.6em;column-gap:4px;align-items:baseline;padding:6px 6px;border-radius:8px;font-size:14px}
 .frow .ft{justify-self:end;font-variant-numeric:tabular-nums;color:var(--muted)}
 .frow .fi{text-align:center}
 .frow .fs{justify-self:center;font-weight:700}
 .frow.ok{background:color-mix(in srgb,var(--good) 12%,transparent)}.frow.ok .fs{color:var(--good)}
-.frow.ng{background:color-mix(in srgb,#E8590C 10%,transparent)}.frow.ng .fs{color:#E8590C}
+.frow.ng{background:color-mix(in srgb,var(--warn) 10%,transparent)}.frow.ng .fs{color:var(--warn)}
 .frow.none .fs{color:var(--muted)}
-.flowkey .k{font-weight:700}.flowkey .k.ok{color:var(--good)}.flowkey .k.ng{color:#E8590C}
+.flowkey .k{font-weight:700}.flowkey .k.ok{color:var(--good)}.flowkey .k.ng{color:var(--warn)}
 .dset{display:flex;flex-direction:column;gap:12px;padding:12px;border:1px dashed var(--muted);border-radius:14px;background:var(--bg)}
 .dseth{margin:0;font-size:15px}
 .dpart{display:flex;flex-direction:column;gap:6px}
@@ -268,11 +285,11 @@ button.cc{border:0;font:inherit;text-align:left;cursor:pointer;align-items:stret
 .dsetfold>summary{color:var(--muted)}
 .tcheck{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
 .trainmap{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
-.trainmap.warn{background:color-mix(in srgb,#E8590C 10%,var(--surface));border-color:#E8590C}
-.trainmap .shift{color:#B5400A;font-weight:700}
+.trainmap.warn{background:color-mix(in srgb,var(--warn) 10%,var(--surface));border-color:var(--warn)}
+.trainmap .shift{color:var(--warn-ink);font-weight:700}
 .gstat{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:700}
 .gstat.ok{color:var(--good);border:1px solid var(--good)}
-.gstat.short{color:#B5400A;border:1px solid #E8590C;background:color-mix(in srgb,#E8590C 10%,var(--surface))}
+.gstat.short{color:var(--warn-ink);border:1px solid var(--warn);background:color-mix(in srgb,var(--warn) 10%,var(--surface))}
 .tcstops{display:flex;flex-direction:column;gap:0;padding:4px 0 6px;border-bottom:1px dashed var(--line)}
 .tcrow{display:flex;flex-direction:column;gap:1px;padding:4px 0}
 .tcrow+.tcrow{border-top:1px dashed var(--line)}
@@ -339,7 +356,7 @@ dialog.wiz::backdrop{background:rgba(10,14,20,.45)}
 .sameas{display:flex;flex-direction:column;gap:6px;border-top:1px dashed var(--line);padding-top:8px}
 .sameas .row{min-height:36px;gap:6px}
 .branch{display:flex;flex-direction:column;gap:8px;margin-top:4px;padding:10px;border-radius:14px;border:1.5px dashed var(--line);background:color-mix(in srgb,var(--muted) 6%,var(--surface))}
-input::placeholder,textarea::placeholder{color:color-mix(in srgb,var(--muted) 55%,transparent);font-style:italic}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
 
 .legcard{display:flex;flex-direction:column;gap:8px;padding:10px 12px 12px;border:1.5px solid var(--line);border-radius:14px;background:var(--bg)}
 .legcard.stay{border-style:dashed;border-color:var(--accent)}
@@ -391,9 +408,9 @@ body.has-ret .wrap{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 .cmline{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:6px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-align:left;cursor:pointer}
 .cmline .small{flex:1;min-width:0}
 .savebar{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:5;display:flex;flex-direction:column;gap:8px;padding:10px 14px;border-radius:14px;border:1px solid var(--line);background:var(--surface);box-shadow:0 4px 16px rgba(0,0,0,.08)}
-.willsave{display:inline-block;margin-left:8px;padding:2px 10px;border-radius:999px;background:color-mix(in srgb,#E8590C 16%,var(--surface));border:1px solid #E8590C;color:#B5400A;font-weight:700}
-.savebar.on{border:2px solid #E8590C}
-.savebar.on>span{color:#E8590C;font-weight:700}
+.willsave{display:inline-block;margin-left:8px;padding:2px 10px;border-radius:999px;background:color-mix(in srgb,var(--warn) 16%,var(--surface));border:1px solid var(--warn);color:var(--warn-ink);font-weight:700}
+.savebar.on{border:2px solid var(--warn)}
+.savebar.on>span{color:var(--warn);font-weight:700}
 .tsaved{gap:4px}
 
 .choice.wizchoice[aria-pressed="true"]{border:2px solid var(--accent);background:var(--accent-soft)}
@@ -424,10 +441,8 @@ details[open]>summary .tsum{display:none}
 .btn.two{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;line-height:1.15;padding-top:4px;padding-bottom:4px}
 .btn.two .bsub{font-size:10.5px;font-weight:500;color:var(--muted)}
 .wadj{display:grid;grid-template-columns:56px minmax(0,1fr) minmax(0,1fr);gap:6px;align-items:center}
-.card.notice{background:#FFF1E6;border:1px solid #E8590C;gap:8px}
+.card.notice{background:var(--warn-soft);border:1px solid var(--warn);gap:8px}
 .card.notice.good{background:var(--good-soft);border-color:var(--good)}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .card.notice{background:#3A2416}}
-:root[data-theme="dark"] .card.notice{background:#3A2416}
 input[type=date]{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;font-size:15px;min-height:44px;width:100%;min-width:0}
 /* home on one screen */
 .topslot{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -480,6 +495,118 @@ dialog.sheet::backdrop{background:rgba(10,14,20,.45)}
 .dl i{width:12px;height:12px;border-radius:3px}
 .dl span:nth-child(4){text-align:right}
 @media (prefers-reduced-motion: no-preference){.btn,.chip,.seg button,.choice{transition:background .15s,border-color .15s}}
+/* ---------- design 2026-11「芒の銀」: pearl-silver paper, indigo ink, cobalt for 学習, raspberry for 制作.
+   Clean and quiet; the youth and the Y2K live in a few small places only: the wide rounded numerals,
+   the pearl strip on the current tab, the gel highlight on the main button, the small star by the name. ---------- */
+body{font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-feature-settings:"palt" 0}
+::selection{background:color-mix(in srgb,var(--accent) 24%,transparent);color:var(--ink)}
+input,textarea{caret-color:var(--accent)}
+html{scrollbar-color:color-mix(in srgb,var(--muted) 45%,transparent) transparent}
+.wrap{gap:16px;padding-block:10px calc(104px + env(safe-area-inset-bottom,0px))}
+.wrap.v-home{gap:12px}
+h1{font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1.3}
+h2{font-size:15.5px;font-weight:600;letter-spacing:.01em}
+h2.sec{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.04em;margin-top:6px}
+.small{font-size:13.5px;line-height:1.6}.xs{font-size:12px;line-height:1.55}
+.num{font-variant-numeric:tabular-nums}
+/* surfaces: one elevation only (a hairline), radius by size */
+.card{border-radius:16px;padding:18px;gap:12px;border:1px solid var(--line);box-shadow:none}
+.card.tasks{padding:4px 16px}
+.card.mini{padding:12px 14px}
+.topcard{padding:14px 16px 16px;gap:12px}
+details.set{border-radius:14px}
+.empty{border:1.5px dashed var(--line);border-radius:16px;padding:22px 20px;gap:10px;background:transparent}
+.empty h2{font-size:16px}
+.card.notice{background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 55%,transparent)}
+.card.notice.good{background:var(--good-soft);border-color:color-mix(in srgb,var(--good) 55%,transparent)}
+.warn{background:var(--warn-soft);color:var(--warn-ink)}
+/* controls */
+.btn{border-radius:14px;font-weight:600;letter-spacing:.02em;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 86%,#fff) 0%,var(--accent) 52%);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 38%,transparent),0 1px 2px color-mix(in srgb,var(--accent) 30%,transparent)}
+.btn:active{transform:translateY(1px)}
+.btn.sub{background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:none;font-weight:500}
+.btn.dark{background:var(--ink);color:var(--bg);box-shadow:none}
+.btn.sm{border-radius:12px}
+.seg button,.chip{border-color:var(--line);transition:background-color .15s,border-color .15s}
+.seg button[aria-pressed="true"],.chip[aria-pressed="true"]{border:1.5px solid var(--accent);background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+input[type=text],input[type=number],input[type=time],input[type=date],select,textarea{border-color:var(--line);border-radius:12px;background:var(--surface)}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.help{border-color:var(--line);color:var(--muted)}
+/* progress: a quiet track, the planned point as a small diamond */
+.bar{height:6px;border-radius:3px;background:color-mix(in srgb,var(--muted) 18%,transparent)}
+.bar>i{border-radius:3px}
+.bar>b{top:50%;width:9px;height:9px;border-radius:2px;transform:translate(-50%,-50%) rotate(45deg);background:var(--surface);border:2px solid var(--ink)}
+.pb .bar{height:6px}
+/* numerals: Truculenta, close to the width and height of the Zen Kaku Gothic New figures */
+.big,.hdate .n,.pb>.between>b,.cdl b,.topslot .cd b,.dtile>b,.stot,.wizsteps .num,.verdict .mark{font-family:var(--font-num);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.big{font-weight:400}
+.pb>.between>b{font-weight:500;font-size:17px}
+.cdl b{font-weight:500}
+.hdate{font-family:var(--font-body);font-weight:700;font-size:15px;letter-spacing:.02em}
+.hdate .n{font-size:24px;font-weight:400;margin:0 1px;vertical-align:-1px}
+.topslot .hdate{font-size:15px}
+/* navigation */
+.topbar{background:var(--bg);padding:10px 0 6px}
+nav.tabs{background:var(--surface);border-top:1px solid var(--line)}
+nav.tabs a{position:relative;font-size:11px;letter-spacing:.04em}
+nav.tabs a[aria-current="page"]{color:var(--accent-ink);font-weight:600}
+nav.tabs a[aria-current="page"]::before{content:"";position:absolute;top:0;left:50%;width:28px;height:3px;border-radius:0 0 3px 3px;transform:translateX(-50%);background:var(--pearl)}
+.iconbtn{border-color:var(--line);border-radius:12px}
+.menu a{border-radius:12px}
+.menu a .mi{display:inline-grid;place-items:center;width:24px;height:24px;font-size:0}
+.menu a .mi svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.menu a[aria-current="page"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.menu h3{font-size:12px;letter-spacing:.06em;margin:18px 12px 6px}
+.themeseg{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:4px;margin:6px 8px 2px;padding:4px;border-radius:12px;background:var(--chip)}
+.themeseg button{min-height:38px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:12.5px;white-space:nowrap;padding:0 6px;cursor:pointer}
+.hrec svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.themeseg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 0 0 1px var(--line)}
+.tabs2{background:var(--chip)}
+.tabs2 button[aria-selected="true"]{box-shadow:0 0 0 1px var(--line)}
+/* the name */
+.brand ruby{font-family:var(--font-body);font-weight:700}
+.brand rt{font-size:max(11px,.42em)}
+.brand .py{font-family:var(--font-num);font-weight:300;letter-spacing:.02em;font-size:max(11.5px,.62em)}
+.brand .star{display:inline-block;width:.72em;height:.72em;margin-left:-.15em;vertical-align:.35em;fill:var(--accent)}
+/* calendar and lists */
+.cc{border-radius:10px}
+.cc.today{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.task{border-top-color:var(--line)}
+.rcard{border-radius:14px}
+.tf button{border-radius:16px}
+.choice{border-radius:14px}
+.toast{border-radius:12px}
+/* text on the accent, the pearl strip on today's card, the check-in buttons */
+.btn{color:var(--on-accent)}
+.wizsteps li.cur .num{color:var(--on-accent)}
+.topcard{border:1px solid transparent;background:linear-gradient(var(--surface),var(--surface)) padding-box,var(--pearl) border-box}
+.cib{border-radius:14px;min-height:52px}
+.cib.hot{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 86%,#fff) 0%,var(--accent) 52%);border-color:transparent;color:var(--on-accent);box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 38%,transparent),0 2px 8px color-mix(in srgb,var(--accent) 30%,transparent)}
+.cib.hot span{color:var(--on-accent);opacity:.85}
+.hdate .n{font-size:26px;font-weight:600}
+/* the typeface of questions in practice (その他の設定) */
+:root[data-qfont="noto-sans"]{--font-q:'Noto Sans JP',var(--font-body)}
+:root[data-qfont="bizud-gothic"]{--font-q:'BIZ UDPGothic',var(--font-body)}
+:root[data-qfont="noto-serif"]{--font-q:'Noto Serif JP',var(--font-body)}
+:root[data-qfont="bizud-mincho"]{--font-q:'BIZ UDPMincho',var(--font-body)}
+:root[data-qfont="klee"]{--font-q:'Klee One',var(--font-body)}
+:root[data-qfont="yuji"]{--font-q:'Yuji Syuku',var(--font-body)}
+:root[data-qfont="system"]{--font-q:system-ui,-apple-system,'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic','Meiryo','Noto Sans CJK JP',sans-serif}
+.qtext,.qchoice>span,.qfont{font-family:var(--font-q)}
+.card .themeseg{margin:0}
+.qfontlist{display:flex;flex-direction:column;gap:8px}
+.qfopt{display:flex;flex-direction:column;gap:4px;width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-align:left;font:inherit;cursor:pointer}
+.qfopt[aria-pressed="true"]{border:1.5px solid var(--accent);background:var(--accent-soft)}
+.qfopt .qfl{font-size:14px;font-weight:700}
+.qfopt[aria-pressed="true"] .qfl{color:var(--accent-ink)}
+.qfopt .qfs{font-size:19px;line-height:1.5}
+/* wrap Japanese only between phrases (the <wbr> come from the BudouX step in the script); long unbroken strings still wrap */
+body{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}
+input,textarea,select,pre,code,.nophr,.qtext,.qfont,.qchoice{word-break:normal}
+.qtext,.qfont,.qchoice>span{text-wrap:pretty}
+h2{text-wrap:balance}
 </style>
 </head>
 <body>
@@ -2057,7 +2184,7 @@ function dayPanel(ds){
   // the 時間割's 1日の目標: how much of it the commute holds that day, and what is left outside it
   const g=(dt&&dt.goal)||{};
   function goalNote(tr){if(g[tr]==null||d.off) return null;const sm=f=>dsl.filter(x=>x.track===tr&&f(x)).reduce((q,x)=>q+x.min,0), cm=sm(x=>x.cm), ot=sm(x=>!x.cm), need=Math.max(0,g[tr]-cm);
-    return el('span',{class:'xs num'+(ot<need?'':' muted'),style:ot<need?'color:#E8590C':''},'目標 '+fmtMin(g[tr])+'：通勤で '+fmtMin(cm)+'・通勤以外で '+fmtMin(need)+(ot<need?'（コマは '+fmtMin(ot)+'）':''));}
+    return el('span',{class:'xs num'+(ot<need?'':' muted'),style:ot<need?'color:var(--warn)':''},'目標 '+fmtMin(g[tr])+'：通勤で '+fmtMin(cm)+'・通勤以外で '+fmtMin(need)+(ot<need?'（コマは '+fmtMin(ot)+'）':''));}
   const tiles=[SH.study?tile('study'):null,SH.create?tile('create'):null].filter(Boolean);
   // 2) the day in order: work, commute, habits and private events; for days gone by, whether each was done
   const rows=[], mOf=hm=>hm?sinceStart(toMin(hm)):1e9, stOf=v=>!look?'':v===true||v===1?'ok':v===false||v===0?'ng':past?'none':'';
@@ -2534,7 +2661,7 @@ function viewCommuteBody(){
       :stay?[
         el('div',{class:'grid2'},lab('sn-'+l.id,'立ち寄り先*',txt('sn-'+l.id,l.name,v=>upL(x=>{x.name=v;}),'例：自習室')),lab('sm-'+l.id,'滞在時間（分）*',num('sm-'+l.id,l.min,v=>upL(x=>{x.min=v;}),'例：180'))),
         el('div',{class:'grid2'},lab('sst-'+l.id,'このうち'+tname('study')+'（分）',num('sst-'+l.id,l.study,v=>upL(x=>{x.study=v;}),'例：60')),lab('scr-'+l.id,'このうち'+tname('create')+'（分）',num('scr-'+l.id,l.create,v=>upL(x=>{x.create=v;}),'例：120'))),
-        (+l.study||0)+(+l.create||0)>(+l.min||0)?el('p',{class:'xs',style:'color:#E8590C'},tname('study')+'と'+tname('create')+'の合計が、滞在時間を超えています。'):null,
+        (+l.study||0)+(+l.create||0)>(+l.min||0)?el('p',{class:'xs',style:'color:var(--warn)'},tname('study')+'と'+tname('create')+'の合計が、滞在時間を超えています。'):null,
         (+l.study||0)&&(+l.create||0)?lab('so-'+l.id,'順番',pselect('so-'+l.id,l.order||'study',[['study',tname('study')+' → '+tname('create')],['create',tname('create')+' → '+tname('study')]],v=>upL(x=>{x.order=v;}))):null,
         el('p',{class:'xs muted'},'滞在時間は予定です。当日はホームの通勤の詳しい時刻から「いま切り上げる」で早めに出られ、そこからいちばん早い帰り道を出し直します。'),
         more('lm:'+l.id,'詳細（メモ）',lab('lm-'+l.id,'メモ',txt('lm-'+l.id,l.memo,v=>upL(x=>{x.memo=v;}),'')))]
@@ -2672,7 +2799,7 @@ function tripView(p,ds){
       ride&&l.memo?l.memo:null,
       x.wait&&ride&&x.i>0?'待ち'+x.wait+'分':null,
       ride&&(showDia||(x.used&&x.used!==x.dia))?(showDia?md(x.sd)+'の'+DIA[x.dia]+'ダイヤ':'')+(x.used&&x.used!==x.dia?(showDia?'・':'')+DIA[x.dia]+'の時刻表が空欄なので、'+DIA[x.used]+'の時刻表で計算しています':''):null,
-      x.first?el('span',{style:'color:#E8590C'},'終電のあとなので、次の日の始発で計算しています'):null,
+      x.first?el('span',{style:'color:var(--warn)'},'終電のあとなので、次の日の始発で計算しています'):null,
       x.cut?'予定より早く切り上げました':null,
       nx?el('button',{type:'button',class:'chip sm',onclick:()=>{if(cmTakeNext(ds,p.dir,x.i)) redo();}},'次の'+CM_KIND[l.kind]+'に乗る（'+hmOf(nx.d)+'発）'):null,
       cq?el('button',{type:'button',class:'chip sm',onclick:()=>{if(cmCutNow(ds,p.dir,x.i)) redo();}},'いま切り上げる（'+hmOf(cq.arrive)+' 着）'):null].filter(Boolean);
@@ -2683,7 +2810,7 @@ function tripView(p,ds){
     el('p',{class:'small'},el('b',{},/行き|帰り/.test(p.route.name)?p.route.name:(p.dir==='go'?'行き':'帰り')+'（'+p.route.name+'）'),'　'+hmOf(p.leave)+' 出発 → '+hmOf(p.arrive)+' 着'),
     el('ol',{class:'tsteps'},p.legs.filter(x=>!x.skip).map(step)),
     el('p',{class:'xs muted num'},'乗車'+p.ride+'分'+(p.wait?'・待ち'+p.wait+'分':'')+(p.move?'・徒歩/自転車'+p.move+'分':'')+(p.drive?'・運転'+p.drive+'分':'')+(p.stay?'・立ち寄り'+fmtMin(p.stay):'')),
-    p.miss?el('p',{class:'xs',style:'color:#E8590C'},'時刻表の範囲外の区間があります（ふだんの乗車時間で計算しています）。'):null,
+    p.miss?el('p',{class:'xs',style:'color:var(--warn)'},'時刻表の範囲外の区間があります（ふだんの乗車時間で計算しています）。'):null,
     ds&&(p.fix||p.cut)?el('button',{type:'button',class:'chip sm',onclick:()=>{setDay(ds,d=>{d.cm=Object.assign({},d.cm);delete d.cm[p.dir+'Fix'];delete d.cm[p.dir+'Cut'];});redo();}},'もとの予定に戻す'):null);
 }
 /* which diagram the day's trains run on, date by date (trips that cross midnight can have two) */
@@ -2757,7 +2884,7 @@ function viewRoutines(){
       ty?el('div',{class:'dtchips'},DT.map(t=>typeChip(PP,t.id,(r.types||[]).includes(t.id),()=>updR(r.id,x=>{const s=new Set((x.types||[]).filter(id=>DT.some(t=>t.id===id)));if(s.has(t.id)) s.delete(t.id); else s.add(t.id);x.types=DT.map(t=>t.id).filter(id=>s.has(id));}))))
         :el('div',{class:'wds'},ALLDAYS.map(i=>el('button',{type:'button','aria-pressed':String((r.days||ALLDAYS).includes(i)),'aria-label':DN[i]+'曜日',onclick:()=>updR(r.id,x=>{const s=new Set(x.days||ALLDAYS);if(s.has(i)) s.delete(i); else s.add(i);x.days=[...s].sort();})},DN[i]))),
       el('p',{class:'xs muted'},ty?'選んだ時間割の日に出ます。その日の時間割は、計画の曜日の決まりと、カレンダーでの日ごとの指定で決まります。祝日も、その日の時間割しだいです。':DT.length?'選んだ曜日に出ます。祝日も曜日どおりです。祝日を外したいときは「時間割で選ぶ」にします。':'選んだ曜日に出ます。'),
-      none?el('p',{class:'xs',style:'color:#E8590C'},'どれも選ばれていないので、このルーティンは出ません。'):null);};
+      none?el('p',{class:'xs',style:'color:var(--warn)'},'どれも選ばれていないので、このルーティンは出ません。'):null);};
   const offPill=off=>off?el('span',{class:'pill gray',style:'padding:2px 8px;font-size:11px'},'使わない'):null;
   const sr=sleepRoutine();
 
@@ -2929,7 +3056,7 @@ function targetsEditor(P,up){
     return el('div',{class:'card'},el('h2',{},label),el('p',{class:'xs muted'},note),
       el('div',{class:'grid2'},pfield('gd-'+g.id,'日付',pdate('gd-'+g.id,g.date,v=>up(x=>{x.goals.find(y=>y.id===g.id).date=v;}))),pfield('gn-'+g.id,'名前',ptext('gn-'+g.id,g.name,v=>{if(v) up(x=>{x.goals.find(y=>y.id===g.id).name=v;});}))),
       tr==='create'?scopeFields(P,up,g):null,bufReward(up,g),
-      g.date?null:el('p',{class:'xs',style:'color:#E8590C'},'日付が決まると、この目標までの作業が計画に入ります。'));};
+      g.date?null:el('p',{class:'xs',style:'color:var(--warn)'},'日付が決まると、この目標までの作業が計画に入ります。'));};
   const mids=G.filter(g=>g.kind==='mid').sort(byDate), mocks=G.filter(g=>g.kind==='mock').sort(byDate), dates=G.filter(g=>g.kind==='date').sort(byDate);
   const sum=g=>[el('span',{class:'num xs muted',style:'flex:none;width:3.6em'},g.date?md(g.date):'未定'),el('span',{style:'flex:1;min-width:0'},g.name)];
   return [
@@ -3237,7 +3364,7 @@ function wizNeed(){
     return el('div',{class:'card'},el('h2',{},tname(tr)),
       el('p',{class:'small num'},'作業 '+hrs(W)+' ／ いまの時間割で使える時間 '+hrs(C)+'（予備日を除く）'),
       f<=1.0001?el('p',{class:'small',style:'color:var(--good)'},'いまの時間割で足ります（使うのは時間割の'+Math.round(f*100)+'%）。')
-        :[el('p',{class:'small',style:'color:#E8590C'},'いまの時間割の'+Math.round(f*100)+'%が必要です。'+(tr==='study'?'通勤のコマはそのままにして、':'')+'ほかのコマを伸ばすと、こうなります：'),
+        :[el('p',{class:'small',style:'color:var(--warn)'},'いまの時間割の'+Math.round(f*100)+'%が必要です。'+(tr==='study'?'通勤のコマはそのままにして、':'')+'ほかのコマを伸ばすと、こうなります：'),
           el('table',{class:'table'},el('tbody',{},(P.dayTypes||[]).filter(d=>(d.slots||[]).some(s=>s.track===tr&&+s.min>0)).map(d=>el('tr',{},el('td',{},el('b',{class:'dtl'},dtLetter(d.id,P)),' '+d.name),el('td',{class:'num'},fmtMin((d.slots||[]).filter(s=>s.track===tr).reduce((a,s)=>a+(+s.min||0),0))+' → '+fmtMin(scaled(d))))))),
           el('button',{type:'button',class:'btn sub sm',onclick:()=>wizUp(x=>{for(const d of x.dayTypes) for(const s of d.slots||[]) if(s.track===tr&&s.use!=='app') s.min=Math.ceil((+s.min||0)*k/5)*5;})},'この時間割にする')]);
   };
@@ -3252,7 +3379,7 @@ function goalRows(P,R,tr,interactive){
       el('div',{class:'between'},el('b',{class:'small'},g.name),el('span',{class:'xs muted num'},'期日 '+md(g.due))),
       el('p',{class:'xs num'},'作業 '+hrs(cumW)+'（この節目まで）／ 使える時間 '+hrs(g.cap||0)+'（予備日を除く）'),
       el('p',{class:'xs muted num'},'完走予定 '+md(g.fin||g.T)+'・'+(g.buf?'予備日 '+Math.max(0,diffDays(g.fin||g.T,g.due))+'日':'予備日なし')),
-      eat&&!over?el('p',{class:'xs',style:'color:#E8590C'},'予備日のうち '+diffDays(g.T0,g.T)+'日を作業に回しています。'):null,
+      eat&&!over?el('p',{class:'xs',style:'color:var(--warn)'},'予備日のうち '+diffDays(g.T0,g.T)+'日を作業に回しています。'):null,
       over&&interactive?el('div',{class:'notice card'},
         el('p',{class:'small'},el('b',{},hrs(need)+'はみ出します。'),G.eatBuf?'予備日をすべて使っても足りません。':'どうしますか？'),
         el('div',{class:'chips'},
@@ -3321,7 +3448,7 @@ function planOverview(){
     const st=planStats(tr), gl=Object.entries(B.goals||{}).filter(([,g])=>g.track===tr).sort((a,b)=>a[1].due<b[1].due?-1:1);
     if(!gl.length) return null;
     return el('div',{class:'card'},
-      el('div',{class:'between'},el('h2',{},tname(tr)),st?el('span',{class:'small num',style:st.gap<=-0.1?'color:#E8590C;font-weight:700':'color:var(--muted)'},gapText(st.gap)):null),
+      el('div',{class:'between'},el('h2',{},tname(tr)),st?el('span',{class:'small num',style:st.gap<=-0.1?'color:var(--warn);font-weight:700':'color:var(--muted)'},gapText(st.gap)):null),
       st?el('p',{class:'xs muted num'},'いまの節目「'+st.goal.name+'」：終わった '+st.pct+'%・予定 '+st.plan+'%'):null,
       A.lost[tr]>30?el('p',{class:'xs muted'},'プライベートの予定・お休み・時間割の変更で後ろにずれた作業：'+hrs(A.lost[tr])+'（遅れには数えていません）'):null,
       gl.map(([gid,g])=>{const f0=g.fin||g.T, a=A.goals[gid]||{T:f0,buf:0}, moved=a.T>f0;
@@ -3329,7 +3456,7 @@ function planOverview(){
           el('div',{class:'between'},el('b',{class:'small'},g.name),el('span',{class:'xs muted num'},'期日 '+md(g.due))),
           el('div',{class:'gbar','aria-hidden':'true'},el('i',{class:'work',style:'left:'+X(g.from)+'%;width:'+Math.max(0,X(a.T)-X(g.from))+'%'}),g.buf&&a.T<g.due?el('i',{class:'buf',style:'left:'+X(a.T)+'%;width:'+(X(g.due)-X(a.T))+'%'}):null,el('b',{class:'now',style:'left:'+X(t)+'%'})),
           el('p',{class:'xs muted num'},'完走予定 '+md(a.T)+'・'+(g.buf?'予備日 '+a.buf+'日':'予備日なし')+'・作業 '+hrs(g.W)),
-          moved?el('p',{class:'xs',style:'color:#E8590C'},'組んだときより完走予定が'+diffDays(f0,a.T)+'日後ろにずれています（予備日 '+Math.max(0,diffDays(f0,g.due))+'日→'+a.buf+'日）。'):null);}));
+          moved?el('p',{class:'xs',style:'color:var(--warn)'},'組んだときより完走予定が'+diffDays(f0,a.T)+'日後ろにずれています（予備日 '+Math.max(0,diffDays(f0,g.due))+'日→'+a.buf+'日）。'):null);}));
   };
   const bands=phaseBands(P,B,A.q.study);
   return [
@@ -3386,17 +3513,107 @@ function viewPlan(){
 }
 
 /* menu drawer */
+const MICO={"home": "M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z", "day": "M4 20h16M14.5 4.5l5 5L9 20H4v-5z", "cal": "M4 6h16v14H4zM4 10h16M8 3v5M16 3v5", "check": "M4 4h16v16H4zM8 12.5l3 3 5-6.5", "report": "M6 3h9l4 4v14H6zM9 12h7M9 16h7", "practice": "M4 5h16v12H8l-4 3zM9 10h6", "progress": "M4 20V10M10 20V4M16 20v-7M22 20H2", "share": "M4 13v7h16v-7M12 3v12M7.5 7.5L12 3l4.5 4.5", "plan": "M5 21V4M5 4h11l-2 4 2 4H5", "bell": "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4", "train": "M7 3h10a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zM4 10h16M9 21l1.5-4M15 21l-1.5-4", "timer": "M12 8v5l3 2M9 2h6M21 13a9 9 0 1 1-18 0a9 9 0 0 1 18 0", "books": "M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z", "sync": "M20 11a8 8 0 0 0-14.9-4M4 3v4h4M4 13a8 8 0 0 0 14.9 4M20 21v-4h-4", "prefs": "M4 7h9M17 7h3M15 5v4M4 17h3M11 17h9M9 15v4"};
+function mico(k){const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('viewBox','0 0 24 24');const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d',MICO[k]||'');s.append(p);return s;}
+function themeNow(){try{return localStorage.getItem('mx-theme')||'';}catch(_){return '';}}
+function themeColor(){const bg=getComputedStyle(document.body).backgroundColor;document.querySelectorAll('meta[name="theme-color"]').forEach(m=>{if(document.documentElement.getAttribute('data-theme')) m.setAttribute('content',bg);});}
+function setTheme(v){try{v?localStorage.setItem('mx-theme',v):localStorage.removeItem('mx-theme');}catch(_){}if(v) document.documentElement.setAttribute('data-theme',v); else document.documentElement.removeAttribute('data-theme');themeColor();}
+const QFONTS=[
+  {id:'',label:'基本の書体と同じ',name:'Zen角ゴシック New',note:'JIS第1・第2水準の漢字をすべて持っています。'},
+  {id:'noto-sans',label:'ゴシック',name:'Noto Sans JP',css:'Noto+Sans+JP:wght@400;500;700',fam:'Noto Sans JP',note:'字の種類がいちばん多い書体です。JIS第1〜第4水準の漢字をすべて持っています。'},
+  {id:'bizud-gothic',label:'UDゴシック',name:'BIZ UDPゴシック',css:'BIZ+UDPGothic:wght@400;700',fam:'BIZ UDPGothic',note:'読み間違いを減らすための形の書体です。JIS第1〜第3水準の漢字をすべて持っています。'},
+  {id:'noto-serif',label:'明朝',name:'Noto Serif JP',css:'Noto+Serif+JP:wght@400;500;700',fam:'Noto Serif JP',note:'JIS第1〜第4水準の漢字をすべて持っています。'},
+  {id:'bizud-mincho',label:'UD明朝',name:'BIZ UDP明朝',css:'BIZ+UDPMincho:wght@400;700',fam:'BIZ UDPMincho',note:'読み間違いを減らすための形の明朝体です。JIS第1〜第3水準の漢字をすべて持っています。'},
+  {id:'klee',label:'ペン字',name:'Klee One',css:'Klee+One:wght@400;600',fam:'Klee One',note:'鉛筆やペンで書いた字をもとにした書体です。JIS第1・第2水準の漢字をすべて持っています。'},
+  {id:'yuji',label:'筆文字',name:'Yuji Syuku',css:'Yuji+Syuku',fam:'Yuji Syuku',note:'書家が筆で書いた字をもとにした書体です。JIS第1・第2水準の漢字をすべて持っています。'},
+  {id:'system',label:'端末の書体',name:'この端末に入っている書体',note:'書体を取り寄せずに、端末に入っている書体で表示します。中国語や韓国語などの字も、端末に書体があれば表示されます。'}];
+const QF_SAMPLE='学びの道も一歩から　Abc 123';
+function qfontNow(){try{const v=localStorage.getItem('mx-qfont')||'';return QFONTS.some(f=>f.id===v)?v:'';}catch(_){return '';}}
+function fontLink(id,href){let l=document.getElementById(id);if(!l){l=document.createElement('link');l.rel='stylesheet';l.id=id;document.head.append(l);}if(l.getAttribute('href')!==href) l.setAttribute('href',href);}
+function loadQFont(v){const f=QFONTS.find(x=>x.id===v);if(f&&f.css) fontLink('qfont-css','https://fonts.googleapis.com/css2?family='+f.css+'&display=swap');}
+function setQFont(v){try{v?localStorage.setItem('mx-qfont',v):localStorage.removeItem('mx-qfont');}catch(_){}if(v) document.documentElement.setAttribute('data-qfont',v); else document.documentElement.removeAttribute('data-qfont');loadQFont(v);}
+try{loadQFont(qfontNow());}catch(_){}
+function viewPrefs(){
+  const th=themeNow(), qv=qfontNow();
+  const tb=(v,l)=>el('button',{type:'button','aria-pressed':String(th===v),onclick:()=>{setTheme(v);render();}},l);
+  // the samples load only the few letters they show
+  QFONTS.forEach(f=>{if(f.css) fontLink('qfs-'+f.id,'https://fonts.googleapis.com/css2?family='+f.css.split(':')[0]+'&text='+encodeURIComponent(QF_SAMPLE)+'&display=swap');});
+  const fam=f=>f.id==='system'?"system-ui,-apple-system,'Hiragino Sans','Yu Gothic','Meiryo',sans-serif":f.fam?"'"+f.fam+"',var(--font-body)":'var(--font-body)';
+  return [el('h1',{},'その他の設定'),
+    el('p',{class:'small muted'},'表示の明るさと、演習の問題の書体を選びます。この端末だけの設定です。'),
+    el('div',{class:'card'},el('h2',{},'表示の明るさ'),
+      el('div',{class:'themeseg',role:'group','aria-label':'表示の明るさ'},tb('','端末に合わせる'),tb('light','ライト'),tb('dark','ダーク'))),
+    el('div',{class:'card'},el('h2',{},'演習の問題の書体'),
+      el('p',{class:'small muted'},'問題文・選択肢・解説の書体です。選んだ書体にない字は、その字だけ端末の書体で表示されます。'),
+      el('div',{class:'qfontlist',role:'group','aria-label':'演習の問題の書体'},QFONTS.map(f=>
+        el('button',{type:'button',class:'qfopt','aria-pressed':String(qv===f.id),onclick:()=>{setQFont(f.id);render();}},
+          el('span',{class:'qfl'},f.label+'（'+f.name+'）'),
+          el('span',{class:'qfs',style:'font-family:'+fam(f)},QF_SAMPLE),
+          el('span',{class:'xs muted'},f.note)))))];
+}
 function openMenu(){
   const m=document.getElementById('menu');
-  const a=(href,label,ic)=>el('a',{href:'#'+href,'aria-current':VIEW===href.split('/')[0]?'page':null,onclick:()=>m.close()},el('span',{class:'mi','aria-hidden':'true'},ic),el('span',{},label));
+  const a=(href,label,ic)=>el('a',{href:'#'+href,'aria-current':VIEW===href.split('/')[0]?'page':null,onclick:()=>m.close()},el('span',{class:'mi','aria-hidden':'true'},mico(ic)),el('span',{},label));
   m.replaceChildren(...[
     el('div',{class:'between',style:'padding:0 4px 4px 12px'},brandNode(),el('button',{type:'button',class:'iconbtn','aria-label':'メニューを閉じる',onclick:()=>m.close()},'×')),
-    el('h3',{},'毎日'),a('home','ホーム','🏠'),a('day/'+today(),'今日の記録','📝'),a('cal','カレンダー','📅'),
-    life().checkins.filter(c=>c.on).map(c=>a('checkin/'+c.id,ciTitle(c)+'（'+c.time+'）',c.report?'📋':'☑️')),
-    el('h3',{},'学習と制作'),a('practice','演習','✏️'),a('progress','進捗','📈'),a('share','Xへのシェア','📣'),a('plan','計画','🚩'),
-    el('h3',{},'設定と管理'),a('routines','習慣の設定・通知','🔔'),a('commute','通勤経路の設定','🚃'),a('tracks','学習と制作の記録方法','⏱️'),a('materials','教材設定','📚'),a('import','同期・Googleカレンダー・バックアップ','🔄')].flat());
+    el('h3',{},'毎日'),a('home','ホーム','home'),a('day/'+today(),'今日の記録','day'),a('cal','カレンダー','cal'),
+    life().checkins.filter(c=>c.on).map(c=>a('checkin/'+c.id,ciTitle(c)+'（'+c.time+'）',c.report?'report':'check')),
+    el('h3',{},'学習と制作'),a('practice','演習','practice'),a('progress','進捗','progress'),a('share','Xへのシェア','share'),a('plan','計画','plan'),
+    el('h3',{},'設定と管理'),a('routines','習慣の設定・通知','bell'),a('commute','通勤経路の設定','train'),a('tracks','学習と制作の記録方法','timer'),a('materials','教材設定','books'),a('import','同期・Googleカレンダー・バックアップ','sync'),a('prefs','その他の設定','prefs')].flat());
   if(!m.open) m.showModal();
 }
+
+/* ---------- line breaks at phrase boundaries ----------
+   The Japanese model and the scoring below come from BudouX (https://github.com/google/budoux, commit dcf0d03),
+   Copyright 2021 Google LLC, Apache License 2.0 (see LICENSE-budoux.txt). Text is split into phrases and a <wbr>
+   is placed between them; with word-break:keep-all the browser then wraps only between phrases. */
+const BUDOUX_JA={"UW3":{"。":2927,"の":1892,"、":2285,"を":2562,"に":1846,"が":1948,"は":1984,"と":1588,"し":270,"る":1470,"も":1602,"な":1344,"で":1587,"た":1188,"い":987,"く":1291,"て":1233,"う":1105,"へ":1292,"ら":785,"や":1175,"？":1825,"?":1906,"っ":-327,"こ":34,"ぐ":1295,"ー":-115,"ん":563,"，":1899,"ば":1101,"］":1183,"り":561,"か":1026,"]":1525,"！":1800,"お":-585,"ぞ":1145,"ま":10,"ッ":-548,"．":1157,"つ":650,"空":721,"ス":-380,"ど":803,"…":1481,"イ":-308,"ン":-194,"・":500,"だ":608,"方":472,"「":-624,"）":1444,"部":321,"プ":-345,"ご":-381,"あ":570,"フ":-463,"♪":1332,"」":832,"ラ":-86,"☆":1295,"ず":902,"電":-402,"京":-315,"大":-271,"ろ":669,"ア":-307,"日":338,"手":-71,"ぬ":880,"０":-343,"す":643,"々":968,"以":-305,"笑":1486,"間":426,"１":-438,"観":-178,"度":590,"『":-335,"新":-236,"[":-316,"カ":-102,"的":295,"き":223,"ロ":-226,"分":475,"れ":233,"む":812,"じ":416,"ぁ":695,"ジ":-61,"品":40,"せ":290,"今":372,"ゃ":606,"都":-77,"後":594,"中":373,"ぶ":735,"え":464,"】":476,"シ":-201,"ド":-176,"変":324,"〜":332,"番":216,"不":-190,"然":621,"★":1043,"子":-141,"よ":188,"ち":259,"［":-237,"タ":-21,"説":81,"発":-151,"最":-147,"素":-149,"時":91,"年":179,"段":248,"代":-109,"意":-96,"び":17,"学":-74,"　":207,"味":281,"料":-81,"行":-131,"ニ":-63,"光":-39,"用":-107,"ｏ":-95,"体":358,"夜":536,"作":-85,"皆":417,"ト":-7,"人":76,"斤":434,"月":112,"選":-75,"２":-58,"”":363,"聞":-62,"：":130,"前":150,"外":73,"昔":699,"レ":-24,"超":450,"週":93,"５":-34,"水":58,"自":-22,"３":-29,"色":219,"』":227,"出":-24,"能":-12,"ビ":-19,"み":7,"開":-14,"テ":-12,"モ":-19,"バ":-9,"機":-7,"ね":90,"程":51,"題":18},"UW4":{"。":-2921,"の":-1829,"に":-1799,"が":-1557,"は":-1614,"、":-2878,"る":-2280,"で":-1295,"と":-1399,"て":-1522,"を":-1805,"っ":-2000,"か":-1271,"り":-1899,"う":-1061,"ま":-821,"し":-919,"た":-814,"い":-676,"お":416,"な":-906,"ら":-2069,"だ":-1191,"ち":-984,"す":-719,"れ":-1661,"ん":-1845,"き":-877,"そ":223,"ー":-1265,"や":-634,"」":-2633,"あ":79,"け":-1607,"も":-1204,"ぞ":-1147,"く":-1282,"ご":115,"さ":-874,"見":364,"？":-2257,"め":-1016,"み":-637,"よ":-627,"人":194,"「":1150,"私":801,"ッ":-646,"ぐ":-765,"ン":-591,"[":1560,"一":273,"思":304,"わ":-782,"?":-1830,"合":-827,"じ":-1102,"！":-2092,"，":-1995,"言":113,"何":399,"せ":-824,"場":130,"『":381,"行":159,"え":-920,"今":498,"』":-2279,"時":150,"広":186,"食":116,"京":115,"・":-730,"ろ":-1232,"日":91,"．":-1414,"空":439,"へ":-655,"ば":-1174,"つ":-611,"…":-1457,"べ":-1265,"]":-965,"１":526,"効":164,"大":150,"ル":-258,"サ":80,"リ":-277,"エ":110,"び":-775,"特":504,"使":548,"当":94,"ね":-1133,"（":1298,"煙":1199,"綺":1247,"ゆ":-457,"方":-171,"気":101,"ず":-945,"ど":-492,"ぶ":-832,"自":280,"２":318,"［":922,"ぁ":-814,"携":121,"ゃ":-1080,"最":277,"］":-414,"帯":-257,"来":55,"ょ":-821,"フ":-180,"間":-295,"笑":-1460,"ス":-53,"）":-1557,"こ":-226,"有":268,"新":128,"良":25,"タ":-78,"ぎ":-913,"用":-291,"ぜ":-825,"む":-488,"☆":-807,"制":350,"続":-264,"カ":101,"♪":-1026,"能":-219,"ざ":-429,"メ":37,"表":151,"３":242,"多":355,"イ":-59,"手":66,"〜":-834,"ュ":-195,"公":161,"操":52,"無":211,"ほ":-134,"書":273,"０":-120,"的":-273,"デ":120,"次":53,"取":-302,"げ":-451,"不":301,"ロ":-78,"(":402,"友":75,"僕":299,"づ":-539,"【":368,"　":-695,"小":244,"切":-192,"換":-239,"回":-380,"二":438,"込":-346,"バ":93,"ぬ":-173,"楽":174,"ｏ":-168,"本":-26,"水":123,"ぼ":-349,"街":232,"”":-927,"少":102,"機":-41,"品":-112,"ト":-61,"動":-14,"ク":-35,"入":54,"代":-128,"レ":-39,"コ":41,"海":163,"★":-456,"夏":213,"Ｓ":-50,"東":409,"年":-101,"ニ":-66,"美":118,"券":-250,"通":-77,"話":104,"前":-43,"祭":329,"参":227,"返":-112,"聞":85,"ふ":-118,"真":-116,"ビ":-58,"住":70,"四":194,"実":44,"全":48,"ぱ":-125,"＾":-197,"ぃ":-126,"グ":-20,"高":32,"彼":41,"姿":23,"誰":136,"ド":-33,"立":-82,"情":-14,"店":22,"臭":347,"式":-76,"態":-24,"安":52,"例":74,"ひ":49,"作":-19,"肌":6,"心":6,"旅":9,"移":-17,"足":17,"道":3,"物":-12,"甘":9,"三":4,"度":-4},"UW5":{"。":-674,"、":-346,"な":-317,"は":-336,"に":-271,"う":172,"っ":529,"そ":-621,"と":-276,"で":-289,"き":367,"を":-232,"る":172,"ま":-19,"す":-275,"え":248,"い":160,"の":-247,"べ":877,"ラ":186,"じ":322,"こ":49,"動":712,"れ":204,"も":-128,"た":4,"・":-282,"し":-123,"く":141,"め":184,"さ":-135,"」":-340,"供":203,"ル":-252,"あ":-212,"か":71,"帯":89,"力":137,"つ":443,"能":5,"ト":-132,"ン":-77,"へ":-320,"上":-300,"器":-87,"日":203,"思":-109,"が":-175,"ぼ":484,"り":93,"ざ":178,"ん":407,"ぶ":43,"だ":-93,"よ":-151,"け":-56,"］":-113,"わ":267,"ず":293,"ち":226,"回":300,"年":380,"[":-131,"！":-143,"．":-205,"ス":-67,"当":217,"て":84,"都":26,"利":346,"イ":77,"広":-175,"ろ":-71,"的":-90,"び":270,"ュ":-87,"丈":293,"葉":122,"大":-66,"ら":71,"電":-47,"景":147,"所":10,"１":-88,"言":-116,"開":103,"ど":-41,"寺":-104,"本":121,"体":-383,"革":-244,"ぎ":139,"作":104,"券":-65,"…":-59,"有":-41,"む":174,"ね":-52,"版":-41,"先":-251,"要":29,"グ":-23,"合":23,"一":-30,"改":-52,"々":51,"バ":-33,"？":-29,"使":-82,"２":-49,"軽":27,"行":-32,"期":32,"面":21,"ロ":9,"明":20,"ャ":3,"法":-15,"テ":-3},"UW2":{"。":-529,"の":-308,"を":-850,"、":-535,"し":117,"に":-356,"か":23,"も":-359,"が":-287,"と":-398,"っ":90,"で":-342,"れ":34,"そ":-238,"よ":-28,"お":-470,"ぞ":-457,"て":-289,"以":1111,"す":188,"ま":163,"人":184,"さ":308,"」":102,"つ":-181,"だ":161,"あ":-128,"め":65,"う":-203,"見":-171,"手":458,"く":-253,"少":316,"は":-346,"全":550,"一":524,"な":-223,"解":349,"き":-22,"け":99,"い":-42,"特":270,"法":546,"ど":-153,"良":150,"結":1020,"食":125,"ゆ":379,"ラ":-135,"毎":769,"随":939,"ひ":-1043,"ほ":257,"イ":-68,"境":-201,"り":-80,"る":-135,"同":397,"言":-95,"ん":82,"ぱ":113,"た":-83,"場":96,"取":-186,"作":-110,"子":-5,"わ":82,"や":-179,"多":240,"大":130,"能":138,"ぜ":424,"？":-207,"知":-113,"話":2,"目":-168,"題":125,"デ":-143,"「":-92,"サ":-136,"ぐ":-135,"］":-170,"ば":-93,"ご":-82,"ね":197,"関":739,"ー":94,"グ":-101,"新":-39,"Ｐ":-393,"０":95,"１":82,"]":-132,"落":-328,"＾":278,"本":215,"?":-122,"２":-106,"，":-125,"先":225,"［":-21,"ジ":-65,"み":-30,"味":113,"和":169,"生":117,"せ":16,"乗":-145,"素":-202,"家":47,"立":-216,"シ":-84,"世":-71,"水":123,"[":-1,"『":-101,"前":49,"ぶ":3,"ケ":-94,"電":94,"我":-206,"残":150,"券":-97,"今":12,"百":-105,"車":71,"増":-88,"振":-81,"案":107,"用":-31,"プ":-26,"直":159,"三":80,"ろ":-31,"バ":73,"着":-14,"冷":-22,"空":-11,"早":94,"実":50,"５":-43,"げ":40,"並":28,"追":-47,"高":9,"是":7,"変":-3,"フ":-1},"UW1":{"い":-85,"に":-141,"で":-122,"な":-109,"つ":209,"。":-24,"は":-65,"り":-105,"と":36,"が":-106,"こ":43,"そ":47,"ど":124,"う":21,"し":-27,"見":88,"だ":-97,"大":155,"て":68,"の":5,"上":-86,"ん":94,"お":15,"十":-92,"た":-30,"か":-72,"水":48,"知":38,"へ":-23,"始":130,"ッ":196,"プ":-268,"っ":87,"作":25,"く":44,"［":-168,"タ":26,"小":265,"ろ":134,"新":119,"も":10,"「":-110,"．":-184,"『":-146,"積":-240,"や":-89,"イ":-99,"行":-39,"京":-118,"メ":168,"ス":-53,"ち":81,"バ":110,"０":43,"間":106,"撮":-96,"え":-51,"れ":36,"何":93,"壊":-117,"自":113,"ざ":281,"ば":-43,"、":-17,"人":-30,"少":-45,"ら":10,"豊":69,"時":-41,"基":-99,"ー":5,"認":-96,"取":47,"使":-36,"ケ":-28,"」":-29,"機":17,"書":-13,"色":13,"生":-21,"オ":37,"す":6,"]":-17,"話":-6,"面":-14},"UW6":{"。":-91,"の":61,"が":121,"な":119,"さ":361,"を":40,"し":187,"で":51,"は":96,"う":53,"、":-15,"て":-14,"や":268,"に":102,"り":217,"せ":-165,"み":265,"あ":-70,"る":97,"い":114,"ど":175,"」":-94,"つ":238,"ー":-64,"と":25,"ぱ":445,"っ":192,"お":-114,"も":38,"グ":138,"性":11,"ビ":249,"コ":63,"か":132,"ま":175,"め":251,"場":-184,"付":42,"け":-30,"く":87,"供":-335,"人":-33,"画":232,"ク":-138,"ン":-62,"的":122,"ュ":117,"ぐ":23,"わ":138,"ん":138,"タ":93,"０":305,"・":-81,"れ":66,"遊":-229,"ば":120,"空":301,"通":-49,"ろ":102,"日":97,"そ":63,"寺":185,"ス":15,"見":-40,"学":-155,"電":135,"最":-121,"気":164,"地":163,"じ":164,"レ":61,"出":160,"ア":-31,"言":-139,"ず":-134,"ょ":-75,"シ":-42,"む":72,"こ":11,"カ":40,"ル":40,"す":3,"パ":-70,"広":-46,"込":57,"返":79,"公":-16,"ピ":124,"ら":8,"，":19,"よ":8,"：":131,"ゃ":-20,"水":69,"だ":-6,"Ｓ":-3,"合":12,"来":-6,"ち":1},"BW2":{"とこ":-713,"ない":-1317,"とい":121,"せく":2467,"とお":-1189,"です":-1081,"てい":-619,"へよ":1283,"ので":-545,"であ":-1440,"いよ":-1010,"たと":360,"のみ":-1007,"うご":673,"たい":-934,"など":-902,"てお":-1002,"にも":-636,"でも":-693,"たま":-658,"るよ":-359,"いた":-617,"くな":-746,"てく":-533,"、と":-465,"でき":-834,"はじ":-952,"には":-393,"徴エ":984,"とめ":-228,"本イ":1172,"でし":-729,"うど":-808,"帯電":-285,"もつ":-208,"のが":-425,"やす":-667,"いま":-362,"なく":-293,"い合":-354,"くだ":-593,"らゆ":-547,"いと":-336,"こそ":-489,"なか":-197,"いい":-390,"び上":1037,"うや":-350,"う映":519,"とも":-304,"いも":368,"たち":-345,"のも":-451,"てき":-732,"らな":-116,"てみ":-737,"のは":-394,"るで":-52,"の前":-649,"てあ":-944,"がし":174,"くし":-256,"どこ":-494,"い日":234,"もあ":-179,"うこ":-31,"もし":-273,"のい":108,"ると":-176,"ても":-269,"のか":-203,"すご":-658,"のだ":-210,"ども":-364,"かな":-243,"もう":-265,"く来":17,"とか":-408,"なぁ":-331,"いつ":-112,"とき":-288,"かし":-200,"いな":-242,"て行":-1104,"でな":-513,"ただ":-398,"はい":-246,"たよ":-194,"な場":151,"るな":-278,"そこ":-714,"たも":140,"なあ":-877,"はず":-387,"いし":-363,"しい":-183,"がっ":-239,"した":-143,"へと":-134,"てた":-150,"はあ":-235,"では":-198,"てこ":-73,"にし":-105,"ばな":-90,"りし":73,"るし":-197,"とは":-148,"たな":-153,"らい":-134,"たし":-200,"係な":503,"て欲":-457,"。と":91,"るか":-98,"つぶ":-56,"てや":-153,"夏休":-51,"りな":202,"うい":-97,"りも":-73,"いで":-88,"の方":54,"日本":-151,"ぶつ":-72,"なお":-213,"のご":-494,"たさ":-48,"人い":702,"い状":46,"日和":-113,"なし":-92,"・・":-82,"識こ":44,"のよ":-19,"いわ":-50,"」で":280,"とう":-13,"つい":-47,"れた":-25,"とと":-48,"、な":-59,"．５":-244,"にぎ":-77,"．９":-210,"て来":-192,"んど":-4,"でい":-17,"。笑":-155,"がの":31,"．ま":28},"BW1":{"しい":548,"から":720,"ない":579,"んに":-499,"いう":261,"よう":-378,"もは":-1402,"はや":93,"れた":431,"こそ":1262,"まま":1052,"こと":-614,"して":-81,"つな":-733,"」と":95,"その":-393,"のみ":1389,"たい":336,"白い":696,"るの":-448,"ても":250,"少し":730,"まも":-1330,"のは":359,"やく":435,"かも":-670,"とか":674,"たら":546,"たと":-552,"なぞ":-999,"でも":241,"った":70,"この":-461,"全部":387,"まと":-835,"んだ":342,"には":136,"では":-151,"うな":175,"んな":153,"ちが":-363,"とが":-597,"晶の":1358,"たの":-465,"以上":320,"がと":-435,"なら":638,"最近":1077,"ると":4,"んで":-224,"だん":114,"より":820,"もう":664,"もの":-266,"。・":1202,"いと":-155,"くれ":673,"思い":-809,"うに":-43,"おで":-1153,"よく":374,"かし":521,"にも":299,"知ら":-163,"青い":237,"れて":-176,"めて":78,"手順":450,"ぞな":-78,"同じ":339,"だけ":489,"すの":-259,"いの":-158,"きた":227,"すい":44,"まだ":263,"いい":-134,"使い":-565,"まり":243,"けど":434,"敵な":298,"ただ":418,"なぐ":404,"した":129,"とう":58,"なく":234,"が、":407,"りと":396,"いな":-82,"くて":332,"なぜ":1022,"人が":104,"とに":-164,"言い":-428,"問い":-316,"買い":-597,"れが":-308,"の間":715,"とき":826,"いで":-477,"舞う":443,"すが":-135,"など":487,"のが":262,"んて":220,"やら":461,"た．":409,"ので":96,"えば":231,"利な":187,"ては":-175,"的な":140,"は、":203,"ぱり":322,"うぞ":82,"もし":637,"とで":195,"しず":-351,"取り":-196,"うや":-118,"こう":-155,"現在":495,"大変":106,"ほぼ":387,"とも":-55,"いた":105,"待ち":-312,"との":95,"の後":495,"ここ":401,"うか":175,"空き":-161,"安に":-535,"、と":77,"てい":-110,"一番":65,"使う":173,"とは":-100,"あー":941,"普段":308,"いも":-343,"るに":-83,"うと":-101,"きな":64,"Ｈ．":-249,"橋に":52,"、今":324,"べき":568,"まあ":213,"とい":-36,"上に":28,"で、":71,"い」":165,"か、":-115,"い、":-24,"つぶ":-134,"てる":87,"ちら":-147,"らな":-208,"しか":22,"＾＾":102,"たり":71,"ため":380,"ぶん":328,"のも":48,"！！":38,"何か":46,"なか":72,"める":-23,"持て":-232,"是非":356,"ころ":190,"世の":-522,"と、":21,"法的":79,"作り":-39,"さり":103,"わけ":395,"気が":35,"てた":68,"いし":43,"０円":48,"ねー":248,"りは":-122,"すら":58,"ゃあ":173,"えて":-22,"せん":35,"ぜひ":57,"落と":-52,"んか":24,"じる":-28,"持つ":46,"かが":-28,"神社":71,"はも":-6,"三回":37,"だし":52,"まる":-15,"りに":4,"悪い":12},"TW1":{"よいよ":1543,"もはや":795,"ありが":-1015,"をもつ":778,"またま":1597,"こんに":-344,"で見る":-1323,"という":106,"んどん":728,"できる":167,"おって":1406,"が良い":318,"ました":-542,"ふだん":945,"甘えが":-639,"だんど":-806,"十分に":-359,"ていく":417,"すきと":-1293,"ような":446,"・・・":596,"かなり":1000,"。夕方":538,"やはり":917,"ことも":-211,"しかし":450,"ながら":576,"かなか":402,"たちの":64,"もなく":116,"困った":554,"ょっと":-146,"でかけ":-196,"とんど":606,"やすい":83,"なんと":-464,"持って":-346,"ょうど":484,"入れる":240,"っかり":414,"と思う":153,"ていて":218,"ければ":-48,"に人が":230,"かった":-24,"以上に":84,"そして":193,"『いい":-232,"として":95,"なって":-69,"たまた":-144,"くらい":79,"ういう":273,"のおも":-180,"おけば":121,"すごく":213,"その時":610,"、それ":408,"始まる":32,"ろいろ":128,"した．":155,"ない、":-234,"くては":-92,"ちろん":170,"だって":138,"ままに":78,"メール":8,"ように":-50,"らしき":117,"にして":-22,"くさん":54,"ひとつ":77,"ろそろ":62,"あまり":27,"まるで":23,"色から":11,"感じる":-9,"。そう":3,"用する":4},"TW2":{"いとこ":-1279,"してお":-715,"ちがう":-834,"ではな":-797,"分にあ":-1149,"そのま":-610,"うにな":-487,"どんど":-356,"気に入":-1868,"かもし":-123,"んでい":-798,"からし":361,"まるで":-346,"とがあ":-598,"からな":-431,"そもそ":-985,"ではあ":-865,"ともあ":-408,"その後":-608,"れるこ":251,"をもつ":-126,"でもあ":-714,"きとお":-5,"とにな":-244,"目の前":-321,"でもな":-443,"ようや":-146,"あるこ":287,"しかな":345,"とがで":-255,"てもい":-495,"らと言":-763,"ものす":-726,"ってこ":-146,"るにつ":-372,"いてあ":-122,"いい感":-342,"女の子":-759,"全くな":230,"してい":-26,"うとし":-40,"という":-19,"ような":-14,"までに":-20,"なるほ":-77,"したこ":-14,"にはな":14},"BW3":{"こと":458,"ちは":-232,"いい":375,"もの":1419,"いう":254,"その":814,"して":200,"はじ":1177,"でき":476,"おで":246,"ある":-151,"なる":249,"とき":1060,"これ":1032,"まと":955,"なっ":-195,"まま":-87,"この":990,"うま":1422,"そう":-889,"受け":369,"とい":-384,"分か":601,"上が":320,"当日":1142,"ちょ":865,"おり":-485,"子供":153,"そこ":245,"ゆる":-80,"機器":-974,"さん":-833,"もら":1253,"ぞう":541,"ころ":-229,"かっ":-405,"なん":99,"携帯":30,"たま":488,"こそ":-412,"とて":1132,"かな":193,"つな":694,"つぶ":242,"より":-512,"ぞな":-146,"・・":-715,"ため":593,"とっ":501,"なら":-190,"もう":1008,"知る":17,"でも":556,"メー":174,"しい":-366,"さい":-294,"と思":-255,"すぐ":706,"さあ":496,"よく":476,"かか":649,"まも":368,"から":-297,"です":-221,"よう":-126,"まし":-213,"いろ":155,"かけ":749,"こぼ":251,"つい":269,"すか":-218,"いて":-132,"電話":-68,"まだ":320,"とり":664,"みた":-369,"それ":148,"まぁ":609,"かも":-203,"した":347,"いか":335,"すご":747,"始ま":48,"なか":77,"どこ":385,"難し":147,"とつ":-226,"日が":210,"わか":330,"はま":424,"あと":558,"がん":588,"だけ":-176,"もん":186,"ただ":234,"出来":-367,"すき":193,"アプ":48,"けれ":-163,"うち":122,"入れ":110,"最近":237,"だろ":-314,"もと":409,"きる":-225,"だい":249,"物語":88,"問題":172,"なに":251,"みん":214,"大会":-128,"ます":-100,"もっ":272,"変え":385,"友人":89,"始め":-141,"で、":199,"しゃ":156,"まで":-187,"きま":-107,"頃で":-321,"入場":125,"書い":196,"べき":-93,"面白":78,"だし":136,"ませ":-89,"はる":338,"ずっ":182,"かわ":85,"とこ":88,"手に":50,"ごと":-247,"つけ":109,"ない":45,"以上":-58,"いた":-42,"歩く":73,"何で":71,"いま":70,"そく":-366,"うれ":108,"考え":52,"よし":93,"こだ":48,"どい":-30,"しく":-76,"なく":30,"ええ":163,"など":-51,"持っ":63,"いつ":12,"のっ":39,"使っ":22,"あふ":177,"ルー":27,"ちろ":-56,"にぎ":190,"みろ":181,"もつ":60,"通り":-39,"あて":47,"ここ":22,"ほど":-3,"祭り":26,"そし":34,"渡る":-6,"まさ":1},"TW4":{"ありが":1289,"なぞな":1250,"ような":-880,"もはや":1258,"ところ":1583,"ちがう":1001,"ように":-641,"いよい":589,"ある。":-133,"どのよ":2006,"可能性":1316,"とおり":901,"ようや":650,"ことが":-639,"プログ":741,"いっぱ":958,"くらい":862,"できた":906,"かなり":941,"ことに":-679,"ありま":-429,"ことで":161,"して人":-717,"おりに":-190,"しかし":967,"わけで":-292,"ことも":-579,"そのま":347,"うどん":792,"いけな":-320,"そうで":-374,"サービ":54,"した。":-398,"ようで":-380,"してお":277,"おりま":758,"かった":-235,"いろい":677,"まもな":2,"こと。":203,"いって":-270,"ないと":194,"したお":-228,"なんと":529,"ことを":122,"だった":-479,"どんど":313,"ことは":-206,"なんて":-410,"はじま":29,"これは":282,"なかな":210,"制度に":188,"あるい":-1252,"いくさ":-193,"いえば":263,"ひとつ":445,"ない。":58,"やって":87,"メール":27,"すきと":123,"なんか":132,"しゃべ":718,"京都に":156,"なくな":66,"いかな":64,"まって":-124,"はまっ":106,"みんな":1,"いまし":-114,"しない":80,"よりは":-74,"とこが":258,"とても":1,"きれい":27,"さらに":86,"だって":79,"おいし":28,"かわい":44,"手に入":15,"みたい":-25,"なんで":-7,"できる":-1},"TW3":{"のよう":-656,"という":381,"ている":-712,"のまま":-59,"の本は":-859,"へよう":10,"とした":-519,"になっ":-248,"てしま":-665,"らない":-472,"ること":-167,"のよい":289,"る方は":-598,"ところ":-217,"帯電話":-6,"くして":-456,"として":112,"ばいい":-594,"すこと":284,"てほし":-665,"であっ":-559,"ていう":428,"、そし":-1770,"ういう":-266,"ていく":-118,"である":-324,"と言っ":-594,"はまっ":-542,"と同時":-712,"、また":-382,"があっ":359,"はない":-123,"てない":-177,"にしか":-181,"くなっ":-61,"、ある":-182,"ておき":-278,"ばなら":-31,"はいえ":-116,"もある":-71,"たこと":-34,"にでも":-166,"といい":-214,"になら":61,"となっ":22,"たそう":-65,"もしか":-234,"もまた":-45,"るそう":-26,"かどう":-22,"にして":-7,"りした":6,"もいい":-15,"の先に":-21}};
+const BX=(()=>{const m=new Map(Object.entries(BUDOUX_JA).map(([k,v])=>[k,new Map(Object.entries(v))]));let base=0;for(const g of m.values()) for(const v of g.values()) base+=v;return {g:k=>m.get(k)||new Map(),base:-.5*base};})();
+const BXK=['UW1','UW2','UW3','UW4','UW5','UW6','BW1','BW2','BW3','TW1','TW2','TW3','TW4'].map(k=>BX.g(k));
+function bxBounds(s){
+  const [u1,u2,u3,u4,u5,u6,b1,b2,b3,t1,t2,t3,t4]=BXK, out=[];
+  for(let i=1;i<s.length;i++){
+    if((s.codePointAt(i-1)||0)>0xffff) continue;
+    let v=BX.base;
+    v+=(u1.get(s.substring(i-3,i-2))||0)+(u2.get(s.substring(i-2,i-1))||0)+(u3.get(s.substring(i-1,i))||0)+(u4.get(s.substring(i,i+1))||0)+(u5.get(s.substring(i+1,i+2))||0)+(u6.get(s.substring(i+2,i+3))||0);
+    v+=(b1.get(s.substring(i-2,i))||0)+(b2.get(s.substring(i-1,i+1))||0)+(b3.get(s.substring(i,i+2))||0);
+    v+=(t1.get(s.substring(i-3,i))||0)+(t2.get(s.substring(i-2,i+1))||0)+(t3.get(s.substring(i-1,i+2))||0)+(t4.get(s.substring(i,i+3))||0);
+    // a weekday in brackets stays with its date: 4/25（日）
+    if(v>0&&!/^（[月火水木金土日祝]）/.test(s.slice(i,i+3))) out.push(i);
+    // after a full-width colon a new phrase starts: 通勤で演習：|間違えた問題
+    else if(v<=0&&s[i-1]==='：'&&JP_RE.test(s[i]||'')) out.push(i);
+  }
+  // a short quoted name stays on one line: 「ファイルを選ぶ」
+  const keep=[];for(const m of s.matchAll(/「[^「」]{1,16}」/g)) keep.push([m.index,m.index+m[0].length]);
+  return keep.length?out.filter(i=>!keep.some(([a,b])=>i>a&&i<b)):out;
+}
+const PHR_DONE=new WeakSet(), PHR_SKIP=new Set(['SCRIPT','STYLE','TEXTAREA','INPUT','SELECT','OPTION','CODE','PRE','TITLE','svg']);
+const PHR_OFF='.nophr,.qtext,.qfont,.qchoice,textarea,code,pre';
+const JP_RE=/[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/;
+function phrText(n){
+  if(PHR_DONE.has(n)) return;
+  const s=n.nodeValue; PHR_DONE.add(n);
+  if(!s||s.length<4||!JP_RE.test(s)) return;
+  const b=bxBounds(s); if(!b.length) return;
+  const f=document.createDocumentFragment(); let a=0;
+  const txt=x=>{const t=document.createTextNode(x);PHR_DONE.add(t);f.append(t);};
+  for(const i of b){txt(s.slice(a,i));f.append(document.createElement('wbr'));a=i;}
+  txt(s.slice(a));
+  // in a flex or grid box every piece would become its own item; keep the pieces together in one span there
+  const pe=n.parentElement, d=pe?getComputedStyle(pe).display:'';
+  if(/flex|grid/.test(d)){const w=document.createElement('span');w.append(f);n.replaceWith(w);} else n.replaceWith(f);
+}
+function phrTree(root){
+  if(root.nodeType===3){const p=root.parentElement;if(p&&!p.closest(PHR_OFF)&&!PHR_SKIP.has(p.tagName)) phrText(root);return;}
+  if(root.nodeType!==1||PHR_SKIP.has(root.tagName)||root.closest(PHR_OFF)) return;
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>{const p=n.parentElement;return !p||PHR_SKIP.has(p.tagName)||p.closest(PHR_OFF)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT;}});
+  const list=[];while(w.nextNode()) list.push(w.currentNode);
+  list.forEach(phrText);
+}
+try{
+  phrTree(document.body);
+  new MutationObserver(ms=>{for(const m of ms){if(m.type==='characterData'){PHR_DONE.delete(m.target);phrTree(m.target);}else m.addedNodes.forEach(phrTree);}}).observe(document.body,{childList:true,subtree:true,characterData:true});
+}catch(_){}
 
 /* ---------- views ---------- */
 let VIEW='home';
@@ -3404,7 +3621,7 @@ const P={step:'setup',subject:null,book:'all',mode:'cont',count:10,queue:[],i:0,
 function go(v){if(location.hash!=='#'+v) location.hash=v; else render();}
 // views that are only being looked at can be redrawn when a sync brings news; pages being typed into are left alone
 function softRender(){updateStatus();if(VIEW==='home'||VIEW==='progress'||VIEW==='cal'||(VIEW==='practice'&&P.step==='setup')) render();}
-const VIEWS={materials:viewMaterials,home:viewHome,day:viewDay,checkin:viewCheckin,cal:viewCal,routines:viewRoutines,tracks:viewTracks,commute:viewCommute,plan:viewPlan,practice:viewPractice,progress:viewProgress,share:viewShare,import:viewImport};
+const VIEWS={prefs:viewPrefs,materials:viewMaterials,home:viewHome,day:viewDay,checkin:viewCheckin,cal:viewCal,routines:viewRoutines,tracks:viewTracks,commute:viewCommute,plan:viewPlan,practice:viewPractice,progress:viewProgress,share:viewShare,import:viewImport};
 const TAB_OF={share:'progress',day:'home',checkin:'home'};
 function render(){
   const h=(location.hash||'#home').slice(1), i=h.indexOf('/'), name=i<0?h:h.slice(0,i), arg=i<0?'':h.slice(i+1);
@@ -3413,7 +3630,7 @@ function render(){
   document.querySelectorAll('nav.tabs a').forEach(a=>{if(a.dataset.v===tab) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');});
   const cb=document.getElementById('calBtn');if(cb){if(VIEW==='cal') cb.setAttribute('aria-current','page'); else cb.removeAttribute('aria-current');}
   const slot=document.getElementById('topslot');
-  slot.replaceChildren(...(VIEW==='home'?[el('div',{class:'tleft'},el('b',{class:'hdate'},jpDate(today())),statusNode(true))].filter(Boolean):[el('span',{class:'topname'},'芒学')]));
+  slot.replaceChildren(...(VIEW==='home'?[el('div',{class:'tleft'},el('b',{class:'hdate'},String(jpDate(today())).split(/(\d+)/).map((x,i)=>i%2?el('span',{class:'n'},x):x)),statusNode(true))].filter(Boolean):[el('span',{class:'topname'},'芒学')]));
   const main=document.getElementById('main'); main.replaceChildren(); main.className='wrap v-'+VIEW;
   main.append(...[].concat(VIEWS[VIEW](arg)).flat(9).filter(x=>x!=null&&x!==false));
   retOverlay();
@@ -3426,7 +3643,7 @@ window.addEventListener('hashchange',()=>{
   LASTHASH=to;window.scrollTo(0,0);render();});
 window.addEventListener('beforeunload',e=>{if(TDRAFT||CDRAFT){e.preventDefault();e.returnValue='';}});
 
-function brandNode(){return el('p',{class:'brand brandline'},el('ruby',{},'芒',el('rt',{},'まん'),'学',el('rt',{},'しゅぇ')),el('span',{class:'py'},'mángxué'));}
+function brandNode(){return el('p',{class:'brand brandline'},el('ruby',{},'芒',el('rt',{},'まん'),'学',el('rt',{},'しゅぇ')),el('span',{class:'py'},'mángxué',(()=>{const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('viewBox','0 0 24 24');s.setAttribute('class','star');s.setAttribute('aria-hidden','true');const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d','M12 1.5l2.2 8.3 8.3 2.2-8.3 2.2-2.2 8.3-2.2-8.3L1.5 12l8.3-2.2z');s.append(p);return s;})()));}
 function progressCard(label,pct,plan,cls){
   const diff=pct-plan;
   return el('a',{href:'#progress',class:'card',style:'text-decoration:none;color:inherit;gap:6px'},
@@ -3489,7 +3706,7 @@ function viewHome(){
   const routineSec=[
     el('div',{class:'between'},el('h2',{class:'sec'},'ルーティン'),el('span',{class:'xs muted num'},d.off?'':(rs.length?'答えた '+answered.length+' / '+rs.length:'')+(sk>=2?'　記録 '+sk+'日目':''))),
     d.off?el('p',{class:'small muted'},'今日はお休みの日です。ゆっくり休んでください。'):[cards.length?el('div',{class:'rstrip',role:'list','aria-label':'まだ答えていないルーティン'},cards):(rs.length?el('p',{class:'small alldone'},'今日のルーティンには、ぜんぶ答えました。'):null),ansRow],
-    el('div',{class:'qrow'},el('button',{type:'button',class:'hrec',onclick:()=>{TABSTATE.day='life';go('day/'+t);}},'✎ 今日の習慣記録'),(L.quick||[]).slice(0,4).map(q=>el('button',{type:'button',class:'chip sm',onclick:()=>addQuick(q,t)},'＋'+quickLabel(q))))];
+    el('div',{class:'qrow'},el('button',{type:'button',class:'hrec',onclick:()=>{TABSTATE.day='life';go('day/'+t);}},mico('day'),'今日の習慣記録'),(L.quick||[]).slice(0,4).map(q=>el('button',{type:'button',class:'chip sm',onclick:()=>addQuick(q,t)},'＋'+quickLabel(q))))];
   const next=milestones().find(m=>m[0]>=t);
   return [
     comebackCard(t),notice,prog,ciRow,routineSec,
@@ -3567,8 +3784,8 @@ function curItem(){const [docId,qid]=P.queue[P.i];const d=S.qbank[docId];const q
 function confPicker(){
   return el('div',{class:'card row',style:'flex-direction:row;padding:4px 16px;min-height:52px'},
     el('input',{type:'checkbox',id:'kan',checked:P.conf===2,onchange:e=>{P.conf=e.target.checked?2:0;}}),
-    el('label',{for:'kan',style:'flex:1;padding-block:12px;cursor:pointer'},'勘で答える'),
-    el('span',{class:'xs muted'},'当たっても「間違えた問題」に入ります'));
+    el('label',{for:'kan',style:'flex:none;padding-block:12px;cursor:pointer;white-space:nowrap'},'勘で答える'),
+    el('span',{class:'xs muted',style:'flex:1;min-width:0;text-align:right'},'当たっても',el('br'),'「間違えた問題」に追加します'));
 }
 function header(it){
   return el('div',{class:'between'},
@@ -3607,7 +3824,7 @@ function viewQuestion(){
       el('button',{type:'button',class:'x','aria-label':'× と答える',onclick:()=>finish(it,q.answer===false,'×')},'×'));
   }else if(q.type==='mc5'){
     answerUI=el('div',{style:'display:flex;flex-direction:column;gap:8px'},(q.choices||[]).map(c=>
-      el('button',{type:'button',class:'choice',onclick:()=>finish(it,c.k===q.correct,c.k)},el('b',{},c.k),el('span',{style:'min-width:0'},c.text))));
+      el('button',{type:'button',class:'choice qchoice',onclick:()=>finish(it,c.k===q.correct,c.k)},el('b',{},c.k),el('span',{style:'min-width:0'},c.text))));
   }else{
     const sels=(q.blanks||[]).map(b=>{
       const id='blank-'+b.k;
@@ -3645,8 +3862,8 @@ function viewAnswer(){
         el('span',{class:'small muted'},'正解 '+correctText(q)+' ・ あなた '+(Array.isArray(a.ans)?a.ans.map(v=>v||'—').join('・'):a.ans)+confL),
         blanksScore?el('span',{class:'small muted num'},'空欄 '+blanksScore):null,
         el('span',{class:'small muted num'},a.round+'周目 ・ これまで ○'+Math.max(0,(s.c||0)-(s.k||0))+' ×'+(s.w||0)+((s.k||0)?' 勘'+s.k:'')))),
-    el('div',{class:'card'},el('h2',{class:'muted',style:'font-size:13px'},'解説'),el('p',{style:'white-space:pre-wrap;line-height:1.8'},q.expl||'解説は取り込まれていません。'),
-      q.type==='mc5'&&q.choiceNotes?el('div',{style:'display:flex;flex-direction:column;gap:4px'},Object.entries(q.choiceNotes).map(([k,v])=>el('p',{class:'small muted'},k+'：'+v))):null),
+    el('div',{class:'card'},el('h2',{class:'muted',style:'font-size:13px'},'解説'),el('p',{class:'qfont',style:'white-space:pre-wrap;line-height:1.8'},q.expl||'解説は取り込まれていません。'),
+      q.type==='mc5'&&q.choiceNotes?el('div',{style:'display:flex;flex-direction:column;gap:4px'},Object.entries(q.choiceNotes).map(([k,v])=>el('p',{class:'small muted qfont'},k+'：'+v))):null),
     el('div',{class:'card',style:'gap:4px'},el('span',{class:'xs muted'},'紙の本を開く'),
       el('span',{style:'font-weight:700'},q.base?(P_().study.baseBook||'テキスト')+' p.'+q.base:(P_().study.baseBook||'テキスト')+'（目次の取り込み後にページを表示）'),
       el('span',{class:'xs muted'},'出典 '+bookName(it.doc.book)+' No.'+(q.no!=null?q.no:'—')+(q.page?' ・ p.'+q.page:''))),
@@ -3700,7 +3917,7 @@ function planProgressCards(){
   const trk=tr=>{const st=planStats(tr);if(!st) return null;
     return el('div',{class:'card'},el('div',{class:'between',style:'align-items:baseline'},el('h2',{style:'min-width:0'},tname(tr)+'：'+st.goal.name),el('span',{class:'small muted num',style:'white-space:nowrap'},el('b',{style:'font-size:22px;color:var(--ink)'},st.pct+'%'),'　予定 '+st.plan+'%')),
       el('div',{class:'bar'+(tr==='create'?' manga':'')},el('i',{style:'width:'+st.pct+'%'}),el('b',{style:'left:'+Math.min(100,st.plan)+'%'})),
-      el('p',{class:'small num',style:st.gap<=-0.1?'color:#E8590C;font-weight:700':'color:var(--muted)'},gapText(st.gap)+'（期日 '+md(st.goal.date)+'・完走予定 '+md(st.info.T)+'）'));};
+      el('p',{class:'small num',style:st.gap<=-0.1?'color:var(--warn);font-weight:700':'color:var(--muted)'},gapText(st.gap)+'（期日 '+md(st.goal.date)+'・完走予定 '+md(st.info.T)+'）'));};
   const wk=(P.works||[]).map(w=>{const sts=createSteps(P,[w.id],'all'), tot=sts.reduce((a,x)=>a+x.min,0), dn=sts.reduce((a,x)=>a+(done[x.id]?x.min:0),0), nx=sts.find(x=>!done[x.id]);return {w,pct:tot?Math.round(dn/tot*100):0,nx};});
   const goals=(P.goals||[]).slice().sort((a,b)=>a.date<b.date?-1:1);
   const gpct=g=>{const b=B&&B.goals&&B.goals[g.id];if(!b) return null;const tot=b.ids.reduce((a,id)=>a+(B.w[id]||0),0);return tot?Math.round(b.ids.reduce((a,id)=>a+(done[id]?(B.w[id]||0):0),0)/tot*100):100;};
