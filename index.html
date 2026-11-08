@@ -763,8 +763,9 @@ const IDB=(()=>{let p=null;
   function open(){if(p) return p;p=new Promise(res=>{try{const r=indexedDB.open('mangxue',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);}catch(e){res(null);}});return p;}
   async function put(k,v){const d=await open();if(!d) return;try{d.transaction('kv','readwrite').objectStore('kv').put(v,k);}catch(e){}}
   async function all(){const d=await open();if(!d) return {};return new Promise(res=>{const out={};try{const r=d.transaction('kv').objectStore('kv').openCursor();r.onsuccess=()=>{const c=r.result;if(c){out[c.key]=c.value;c.continue();}else res(out);};r.onerror=()=>res(out);}catch(e){res(out);}});}
+  async function del(k){const d=await open();if(!d) return;try{d.transaction('kv','readwrite').objectStore('kv').delete(k);}catch(e){}}
   async function get(k){const d=await open();if(!d) return undefined;return new Promise(res=>{try{const r=d.transaction('kv').objectStore('kv').get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>res(undefined);}catch(e){res(undefined);}});}
-  return {put,all,get};})();
+  return {put,all,get,del};})();
 
 /* ---------- store: device first, synced through the user's private GitHub repository ---------- */
 const S={qbank:{},state:{},meta:{},log:{}};
@@ -855,9 +856,7 @@ async function pull(){
     let data=null;
     try{data=JSON.parse(await gh('GET',repoPath()+'/git/blobs/'+e.sha,{raw:true}));}catch(err){if(err&&err.code&&err.code!=='http500') throw err;}
     let m;
-    if(data&&e.path==='plan.json'){PLAN=data;IDB.put('__plan',PLAN);planChanged=true;}
-    else if(data&&e.path==='plan-v2.json'){PLAN2SEED=data;IDB.put('__plan2seed',data);planChanged=true;}
-    else if(data&&(m=e.path.match(/^materials\/([A-Za-z0-9_.-]+)\.json$/))){MATS[m[1]]=data;IDB.put('__mats',MATS);}
+    if(data&&(m=e.path.match(/^materials\/([A-Za-z0-9_.-]+)\.json$/))){MATS[m[1]]=data;IDB.put('__mats',MATS);}
     else if(data&&e.path==='push/config.json'){const first=!PUSHCFG;PUSHCFG=data;IDB.put('__pushcfg',data);if(first) planChanged=true;}
     else if(data&&((m=e.path.match(/^questions\/([A-Za-z0-9_.-]+)\.json$/))||(m=e.path.match(/^devices\/[^/]+\/q\/([A-Za-z0-9_.-]+)\.json$/)))){
       const cur=S.qbank[m[1]];
@@ -4520,6 +4519,19 @@ function viewMaterials(){
 }
 
 /* ---------- boot ---------- */
+/* one-time clean-up (2026-11): the sample questions and their records, and the old plan files (plan.json, plan-v2.json)
+   that were used while the app was being made. The next sync writes this device's state.json without them. */
+let CLEANED=0;
+function cleanupOnce(){
+  if(CLEANED>=1) return;
+  const sample=Object.keys(S.qbank).filter(id=>id.startsWith('sample-')||(S.qbank[id]||{}).book==='sample');
+  for(const id of sample){delete S.qbank[id];IDB.del('qbank/'+id);}
+  let st=false;for(const id of Object.keys(S.state)) if(id.startsWith('sample-')||sample.includes(id)){delete S.state[id];IDB.del('state/'+id);st=true;}
+  for(const [k,v] of Object.entries(S.log)){const e=(v&&v.e)||[], n=e.filter(x=>!(String(x[1]).startsWith('SAMPLE-')||x[7]==='sample'));if(n.length===e.length) continue;if(n.length){S.log[k]=Object.assign({},v,{e:n});IDB.put('log/'+k,S.log[k]);}else{delete S.log[k];IDB.del('log/'+k);}}
+  PLAN=null;PLAN2SEED=null;for(const k of ['__plan','__plan2seed','__answers']) IDB.del(k);
+  if(st){dirty.add('meta/plan');IDB.put('__dirty',[...dirty]);}
+  CLEANED=1;IDB.put('__cleaned',1);
+}
 (async function boot(){
   const all=await IDB.all();
   for(const [k,v] of Object.entries(all)){
@@ -4537,9 +4549,11 @@ function viewMaterials(){
     if(k==='__pushsub'){PUSHSUB=v||null;continue;}
     if(k==='__pushLast'){pushLast=v||0;continue;}
     if(k==='__answers') continue;
+    if(k==='__cleaned'){CLEANED=v||0;continue;}
     const i=k.indexOf('/'); if(i<0) continue; const c=k.slice(0,i); if(S[c]) S[c][k.slice(i+1)]=v;
   }
   if(!DEVICE){DEVICE='d'+Math.random().toString(36).slice(2,10);IDB.put('__device',DEVICE);}
+  cleanupOnce();
   if(location.hash.indexOf('#sync=')===0){PENDING=parseSyncPayload(location.hash.slice(6));history.replaceState(null,'',location.pathname+'#import');}
   document.getElementById('menuBtn').addEventListener('click',openMenu);
   for(const id of ['menu','sheet']) document.getElementById(id).addEventListener('click',e=>{const m=e.currentTarget;if(e.target!==m) return;const r=m.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) m.close();});
