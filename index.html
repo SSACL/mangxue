@@ -633,6 +633,17 @@ h2{text-wrap:balance}
 @keyframes sc-burst{0%{opacity:0;transform:scale(.45)}30%{opacity:var(--sc-op);transform:scale(1)}100%{opacity:0;transform:scale(1.05)}}
 @keyframes sc-star{0%{opacity:0;transform:scale(.6) rotate(-20deg)}100%{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.donecard>.sc-light{animation:none;opacity:calc(var(--sc-op) * .8)}.donecard>.crystal{animation:none}}
+/* the book editor (教材設定 and 計画を組む) and the check before registering */
+.mated{display:flex;flex-direction:column;gap:10px}
+.mated .tochead{font-size:13.5px;font-weight:700;margin:6px 0 0;color:var(--ink)}
+.tocrow{display:flex;flex-direction:column;gap:6px;padding:10px 0;border-top:1px solid var(--line)}
+.tocrow.chk{background:var(--warn-soft);border-radius:12px;padding:10px;border-top:0;margin:6px -10px 0}
+.tocnums{display:grid;grid-template-columns:minmax(0,1fr) 62px auto 62px 40px;gap:6px;align-items:center}
+.tocnums input{min-width:0;padding-inline:8px;text-align:right}
+.iconbtn.tocdel{width:40px;height:40px;color:var(--muted)}
+.tocchk{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:space-between;color:var(--warn-ink)}
+.toclist{display:flex;flex-direction:column}
+.impitem{display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -3103,19 +3114,59 @@ function targetsEditor(P,up){
     el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id=newId('m');up(x=>{x.goals.push({id,kind:'date',track:'',name:'新しい予定',date:'',gcal:true});});POPEN.add('g:'+id);}},'＋ 日付だけの予定を追加')];
 }
 
-/* ----- 学習の前提 ----- */
-function tocText(m,P){return (m.toc||[]).map(e=>{const s=(P.subjects||[]).find(x=>x.id===e.s);return (s?(s.short||s.name):e.s)+' | '+e.t+' | '+(m.kind==='solve'?(e.q||0):((e.p||[])[0]+'-'+(e.p||[])[1]));}).join('\n');}
-function parseToc(text,m,P){
-  const out=[], bad=[];
-  for(const line of text.split('\n').map(x=>x.trim()).filter(Boolean)){
-    const [a,t,c]=line.split('|').map(x=>(x||'').trim());
-    const s=(P.subjects||[]).find(x=>x.short===a||x.name===a||x.id===a);
-    if(!s||!t||!c){bad.push(line);continue;}
-    if(m.kind==='solve'){const q=parseInt(c,10);if(!(q>0)){bad.push(line);continue;}out.push({s:s.id,t,q});}
-    else{const mm=c.match(/(\d+)\s*[-〜~]\s*(\d+)/);if(!mm){bad.push(line);continue;}out.push({s:s.id,t,p:[+mm[1],+mm[2]]});}
-  }
-  return {out,bad};
+/* ---------- a book's settings and table of contents: edited the same way in 教材設定 and in 計画を組む ---------- */
+const MATOPEN=new Set(), MATCHK=new Set();
+function matRedraw(){const w=document.getElementById('wiz');if(w&&w.open&&WIZ) wizRender(); else render();}
+function matSet(id,fn,redraw){setPlan2(x=>{const m=(x.materials||[]).find(y=>y.id===id);if(m) fn(m,x);});if(WIZ) wizPull();CAPV++;if(redraw) matRedraw();}
+function liveMat(id){return (plan2().materials||[]).find(x=>x.id===id);}
+function tocRow(e){return e.ch==null&&e.sec==null?{ch:'',sec:e.t||''}:{ch:e.ch||'',sec:e.sec||''};}
+function tocRange(m,e){if(m.kind==='solve'){const a=+e.from||1;return [a,+e.to||a+Math.max(1,+e.q||1)-1];}const a=+(e.p||[])[0]||1;return [a,+(e.p||[])[1]||a];}
+function tocSetRange(m,e,a,b){if(m.kind==='solve'){e.from=a;e.to=b;e.q=b-a+1;delete e.p;}else{e.p=[a,b];delete e.from;delete e.to;delete e.q;}}
+// switching between 読む and 解く keeps each row's numbers (pages ⇄ question numbers)
+function matKind(m,k){if(m.kind===k) return;const rs=(m.toc||[]).map(e=>tocRange(m,e));m.kind=k;(m.toc||[]).forEach((e,i)=>tocSetRange(m,e,rs[i][0],rs[i][1]));if(k==='solve'&&!m.book) m.book=newId('b');}
+function matEditor(m,P){
+  const id=m.id, subs=P.subjects||[], toc=m.toc||[], ck=toc.filter(e=>e.check).length, only=ck>0&&MATCHK.has(id), solve=m.kind==='solve';
+  const fld=(fid,label,ctl)=>el('label',{class:'field',for:fid},label,ctl);
+  const num=(fid,val,fn,min)=>el('input',{type:'number',id:fid,inputmode:'decimal',min,step:'any',value:val,onchange:e=>{const v=parseFloat(e.target.value);if(!isFinite(v)||v<min){e.target.value=val;toast('数字で入力してください');return;}fn(v);}});
+  const sel=(fid,cur,opts,fn,label)=>el('select',{id:fid,'aria-label':label||null,onchange:e=>fn(e.target.value)},opts.map(([v,l])=>{const o=el('option',{value:v},l);if(String(cur??'')===String(v)) o.selected=true;return o;}));
+  const books=[...new Set([...Object.values(S.qbank).map(d=>d&&d.book).filter(b=>b&&b!=='sample'),m.book].filter(Boolean))];
+  const setR=(i,ev,k)=>{const lm=liveMat(id), e=lm&&(lm.toc||[])[i];if(!e) return;const r=tocRange(lm,e).slice(), v=parseInt(String(ev.target.value).normalize('NFKC'),10);
+    if(!(v>0)){ev.target.value=r[k];toast('1以上の数字で入力してください');return;}
+    r[k]=v;if(r[1]<r[0]){ev.target.value=tocRange(lm,e)[k];toast('おわりは、はじめと同じか後ろにしてください');return;}
+    matSet(id,x=>tocSetRange(x,x.toc[i],r[0],r[1]));};
+  const rowEd=(i,withCh)=>{const e=toc[i], r=tocRow(e), [a,b]=tocRange(m,e), rid=id+'-'+i;
+    return el('div',{class:'tocrow'+(e.check?' chk':'')},
+      withCh&&r.ch?el('span',{class:'xs muted'},r.ch):null,
+      el('input',{type:'text',id:'ts-'+rid,'aria-label':'節の見出し',value:r.sec,placeholder:'（節なし）',onchange:ev=>matSet(id,x=>{const y=x.toc[i], q=tocRow(y);y.ch=q.ch;y.sec=ev.target.value.trim();y.t=[y.ch,y.sec].filter(Boolean).join(' ');})}),
+      el('div',{class:'tocnums'},
+        sel('tu-'+rid,e.s||'',[['','（単元を選ぶ）'],...subs.map(s=>[s.id,s.short||s.name])],v=>matSet(id,x=>{if(v) x.toc[i].s=v; else delete x.toc[i].s;}),'単元'),
+        el('input',{type:'number',id:'ta-'+rid,'aria-label':solve?'はじめの問題番号':'はじめのページ',inputmode:'numeric',min:1,value:a,onchange:ev=>setR(i,ev,0)}),
+        el('span',{class:'xs muted','aria-hidden':'true'},'〜'),
+        el('input',{type:'number',id:'tb-'+rid,'aria-label':solve?'おわりの問題番号':'おわりのページ',inputmode:'numeric',min:1,value:b,onchange:ev=>setR(i,ev,1)}),
+        el('button',{type:'button',class:'iconbtn tocdel','aria-label':'この行を消す',onclick:()=>matSet(id,x=>{x.toc.splice(i,1);},true)},'×')),
+      e.check?el('div',{class:'tocchk'},el('span',{class:'xs'},'確認：'+e.check),el('button',{type:'button',class:'btn sub sm',onclick:()=>matSet(id,x=>{delete x.toc[i].check;},true)},'確認済みにする')):null);};
+  const addAfter=(i,ch)=>matSet(id,x=>{const t=x.toc, last=t[i], [a,b]=last?tocRange(x,last):[0,0], e={ch,sec:'',t:ch};if(last&&last.s) e.s=last.s;tocSetRange(x,e,b+1,b+1);t.splice(i+1,0,e);},true);
+  const groups=[];toc.forEach((e,i)=>{const r=tocRow(e);let g=groups[groups.length-1];if(!g||g.ch!==r.ch){g={ch:r.ch,idx:[]};groups.push(g);}g.idx.push(i);});
+  const gEd=(g,gi)=>{const key='toc:'+id+':'+gi, c=g.idx.filter(i=>toc[i].check).length, gid='tc-'+id+'-'+gi;
+    return pdet(key,[el('span',{style:'flex:1;min-width:0'},g.ch||'（章の見出しなし）'),el('span',{class:'xs muted num'},g.idx.length+'行'+(c?'・要確認 '+c:''))],
+      el('label',{class:'field',for:gid},'章の見出し',el('input',{type:'text',id:gid,value:g.ch,placeholder:'（なし）',onchange:ev=>{const v=ev.target.value.trim();matSet(id,x=>{for(const i of g.idx){const y=x.toc[i], q=tocRow(y);y.ch=v;y.sec=q.sec;y.t=[v,q.sec].filter(Boolean).join(' ');}},true);}})),
+      el('p',{class:'xs muted'},'1行ずつ：節の見出し／単元／'+(solve?'問題番号（はじめ〜おわり）':'ページ（はじめ〜おわり）')),
+      g.idx.map(i=>rowEd(i,false)),
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>addAfter(g.idx[g.idx.length-1],g.ch)},'＋ この章に行を追加'));};
+  return el('div',{class:'mated'},
+    el('div',{class:'grid2'},
+      fld('mn-'+id,'教材の名前',el('input',{type:'text',id:'mn-'+id,value:m.name,onchange:e=>{const v=e.target.value.trim();if(!v){e.target.value=m.name;toast('名前を入力してください');return;}matSet(id,x=>{x.name=v;},true);}})),
+      fld('mk-'+id,'種類',sel('mk-'+id,m.kind,[['read','読む'],['solve','解く']],v=>matSet(id,x=>matKind(x,v),true)))),
+    solve?[el('div',{class:'grid2'},fld('mq-'+id,'1問の目安（分）',num('mq-'+id,m.perQ||P.perQ||3,v=>matSet(id,x=>{x.perQ=v||3;}),0.5)),fld('mc-'+id,'何問ずつ区切る',num('mc-'+id,m.chunkQ||chunkQ(P,m.perQ||P.perQ||3),v=>matSet(id,x=>{x.chunkQ=Math.max(1,Math.round(v));}),1))),
+        fld('mb-'+id,'アプリの問題集（取り込んだもの）',sel('mb-'+id,m.book||'',[['','（アプリに取り込まない・まだ）'],...books.map(b=>[b,bookName(b)])],v=>matSet(id,x=>{x.book=v||undefined;})))]
+      :el('div',{class:'grid2'},fld('mp-'+id,'1ページを読む時間（分）',num('mp-'+id,m.perPage||P.perPage||4,v=>matSet(id,x=>{x.perPage=v||4;}),0.5)),fld('mc-'+id,'何ページずつ区切る（節より長いとき）',num('mc-'+id,m.chunkPages||20,v=>matSet(id,x=>{x.chunkPages=Math.max(1,Math.round(v));}),1))),
+    el('div',{class:'between'},el('h3',{class:'tochead'},'目次（'+toc.length+'行'+(ck?'・要確認 '+ck:'')+'）'),
+      ck?el('button',{type:'button',class:'chip sm','aria-pressed':String(only),onclick:()=>{only?MATCHK.delete(id):MATCHK.add(id);matRedraw();}},'要確認の行だけ'):null),
+    only?el('div',{class:'toclist'},toc.map((e,i)=>e.check?rowEd(i,true):null))
+      :[groups.map(gEd),el('button',{type:'button',class:'btn sub sm',onclick:()=>addAfter(toc.length-1,'新しい章')},'＋ 章を追加')]);
 }
+
+/* ----- 学習の前提 ----- */
 function phaseMin(P,pid){return studySteps(P,'zz','all').filter(s=>s.phase===pid).reduce((a,s)=>a+s.min,0);}
 function studyEditor(P,up){
   const subs=P.subjects||[], mats=P.materials||[];
@@ -3142,15 +3193,9 @@ function studyEditor(P,up){
       twoStepBtn('この単元を消す',()=>up(x=>{x.subjects=x.subjects.filter(y=>y.id!==s.id);}))),
     s.name,()=>up(x=>upDown(x.subjects,s.id,-1)),()=>up(x=>upDown(x.subjects,s.id,1)),i===0,i===subs.length-1);
   const books=[...new Set(Object.values(S.qbank).map(d=>d&&d.book).filter(b=>b&&b!=='sample'))];
-  const mEdit=(m,i)=>{let draft=tocText(m,P);const n=(m.toc||[]).length;const upM=fn=>up(x=>{fn(x.materials.find(y=>y.id===m.id));});
-    return ordRow(pdet('m:'+m.id,[el('span',{},m.kind==='solve'?'✏️':'📖'),el('span',{style:'flex:1;min-width:0'},m.name),el('span',{class:'xs muted num'},n?'目次 '+n+'項目':'目次なし')],
-      el('div',{class:'grid2'},pfield('mn-'+m.id,'教材名',ptext('mn-'+m.id,m.name,v=>{if(v) upM(x=>{x.name=v;});})),
-        pfield('mk-'+m.id,'使い方',pselect('mk-'+m.id,m.kind,[['read','読む（テキスト）'],['solve','解く（問題集）']],v=>upM(x=>{x.kind=v;})))),
-      m.kind==='solve'?[el('div',{class:'grid2'},pfield('mq-'+m.id,'1問の目安（分）',pnum('mq-'+m.id,m.perQ||P.perQ||3,v=>upM(x=>{x.perQ=v||3;}),0.5,0.5)),pfield('mc-'+m.id,'何問ずつ区切る',pnum('mc-'+m.id,m.chunkQ||chunkQ(P,m.perQ||P.perQ||3),v=>upM(x=>{x.chunkQ=Math.max(1,Math.round(v));}),1,1))),
-          pfield('mb-'+m.id,'アプリの問題集（取り込んだもの）',pselect('mb-'+m.id,m.book||'',[['','（アプリに取り込まない・まだ）'],...books.map(b=>[b,bookName(b)])],v=>upM(x=>{x.book=v||undefined;})))]
-        :el('div',{class:'grid2'},pfield('mp-'+m.id,'1ページを読む時間（分）',pnum('mp-'+m.id,m.perPage||P.perPage||4,v=>upM(x=>{x.perPage=v||4;}),0.5,0.5)),pfield('mc-'+m.id,'何ページずつ区切る（節より長いとき）',pnum('mc-'+m.id,m.chunkPages||20,v=>upM(x=>{x.chunkPages=Math.max(1,Math.round(v));}),1,1))),
-      pfield('mt-'+m.id,'目次（1行に1項目：単元の短い名前 | 見出し | '+(m.kind==='solve'?'問題数':'開始ページ-終了ページ')+'）',el('textarea',{id:'mt-'+m.id,rows:Math.min(12,Math.max(4,n+1)),value:draft,placeholder:m.kind==='solve'?'労基 | 第1章 総則 | 25':'労基 | 第1章 第1節 労働条件の原則 | 12-20',oninput:e=>{draft=e.target.value;}})),
-      el('button',{type:'button',class:'btn sub sm',onclick:()=>{const r=parseToc(draft,m,P);if(r.bad.length){toast('読めない行があります：'+r.bad[0].slice(0,20));return;}upM(x=>{x.toc=r.out;});toast('目次を保存しました（'+r.out.length+'項目）');}},'目次を保存'),
+  const mEdit=(m,i)=>{const n=(m.toc||[]).length, c=(m.toc||[]).filter(e=>e.check).length;
+    return ordRow(pdet('m:'+m.id,[el('span',{},m.kind==='solve'?'✏️':'📖'),el('span',{style:'flex:1;min-width:0'},m.name),el('span',{class:'xs muted num'},(n?'目次 '+n+'項目':'目次なし')+(c?'・要確認 '+c:''))],
+      matEditor(m,P),
       twoStepBtn('この教材を消す',()=>up(x=>{x.materials=x.materials.filter(y=>y.id!==m.id);}))),
       m.name,()=>up(x=>upDown(x.materials,m.id,-1)),()=>up(x=>upDown(x.materials,m.id,1)),i===0,i===mats.length-1);};
   const repo=Object.entries(MATS).filter(([id])=>!mats.some(m=>m.id===id));
@@ -3338,12 +3383,14 @@ function openWizard(at){
   CAPV++;const d=document.getElementById('wiz');wizRender(true);if(!d.open) d.showModal();
 }
 function wizSave(){try{IDB.put('__wiz',WIZ);}catch(e){}}
+// 「続きから」 only once something was entered or a later step was reached (opening and closing, or 最初から, is not a start)
+function wizStarted(){return !!(WIZ&&(WIZ.touched||WIZ.i>0));}
 // units and books are not kept with the half-made plan: 教材設定 and 計画を組む always use the same list, in either order
 const WIZ_LIVE=['subjects','materials'];
 function wizPull(){if(!WIZ) return;const cur=plan2();let ch=false;for(const k of WIZ_LIVE){const v=clone(cur[k]||[]);if(JSON.stringify(v)!==JSON.stringify(WIZ.P[k]||[])){WIZ.P[k]=v;ch=true;}}if(ch) CAPV++;}
 function wizPush(){if(!WIZ) return;const cur=plan2();if(WIZ_LIVE.every(k=>JSON.stringify(cur[k]||[])===JSON.stringify(WIZ.P[k]||[]))) return;
   setPlan2(x=>{for(const k of WIZ_LIVE) x[k]=clone(WIZ.P[k]||[]);});WIZ.src=plan2().t||0;}
-function wizUp(fn){const k=wizSteps()[WIZ.i];if(k==='events'||k==='targets') WIZ.keep=false;fn(WIZ.P);wizPush();CAPV++;wizSave();wizRender();}
+function wizUp(fn){const k=wizSteps()[WIZ.i];if(k==='events'||k==='targets') WIZ.keep=false;WIZ.touched=true;wizPull();fn(WIZ.P);wizPush();CAPV++;wizSave();wizRender();}
 /* 組み直し: use the dates set last time as they are, and go straight to 組み方 */
 function wizKeepDates(){WIZ.P.goals=clone(plan2().goals||[]);WIZ.keep=true;CAPV++;WIZ.i=wizSteps().indexOf('method');wizSave();wizRender(true);}
 function keepCard(){
@@ -3475,7 +3522,7 @@ function planOverview(){
   if(!act) return [
     el('div',{class:'card'},el('h2',{},'まだ組んでいません'),
       el('p',{class:'small'},'「計画を組む」を押すと、当日 → 目標日 → 組み方 → '+tname('study')+'・'+tname('create')+'の前提 → 時間割 → 見通しの順に聞きながら組みます。途中で閉じても、続きから再開できます。'),
-      el('button',{type:'button',class:'btn',onclick:()=>openWizard()},WIZ?'計画を組む（続きから）':'計画を組む')),
+      el('button',{type:'button',class:'btn',onclick:()=>openWizard()},wizStarted()?'計画を組む（続きから）':'計画を組む')),
     PLAN&&(PLAN.schedule||[]).length?el('p',{class:'xs muted'},'組むまでは、これまでの計画で「今日やること」を出しています。'):null];
   const B=P.baseline, A=adjOf(P);
   const goals=(P.goals||[]).filter(g=>g.date).sort(byDate), last=goals.reduce((m,g)=>g.date>m?g.date:m,addDays(t,30)), span=Math.max(1,diffDays(B.made,last));
@@ -4140,6 +4187,8 @@ function csvRows(header,rows){return [header].concat(rows).map(r=>r.map(csvCell)
 function impList(v){if(Array.isArray(v)) return v.map(x=>String(x==null?'':x).trim()).filter(Boolean);return String(v==null?'':v).split(/[／\n]/).map(x=>x.trim()).filter(Boolean);}
 function impNum(v){if(v==null||v==='') return null;const n=parseInt(String(v).normalize('NFKC').trim(),10);return isFinite(n)?n:null;}
 function impStr(v){return v==null?'':String(v).trim();}
+// the name as written; the placeholders of the examples count as no name
+function impBook(v){const t=impStr(v);return /^（[^）]*の名前）$/.test(t)?'':t;}
 function saveFile(name,text,type){
   try{const url=URL.createObjectURL(new Blob([text],{type}));const a=el('a',{href:url,download:name});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);toast('保存しました（ダウンロード）');}
   catch(_){toast('保存できませんでした');}
@@ -4185,17 +4234,16 @@ function impToc(rows){
   const errs=[], notes=[], mats=[];let prev={};
   rows.forEach((r,i)=>{
     const line=r._line||i+1, g=k=>impStr(r[k]);
-    const book=g('教材')||prev.book, kindW=g('種類')||(g('教材')?'':prev.kindW), ch=g('章')||(g('節')?prev.ch:''), sec=g('節'), unit=g('単元')||prev.unit;
+    const own=impBook(r['教材']), book=own||prev.book||'', kindW=g('種類')||(own?'':prev.kindW), ch=g('章')||(g('節')?prev.ch:''), sec=g('節'), unit=g('単元')||prev.unit;
     const a=impNum(r['はじめ']), b=impNum(r['おわり']);
     prev={book,kindW,ch,unit};
-    if(!book){errs.push(line+'行目：教材の名前がありません。');return;}
     if(kindW!=='読む'&&kindW!=='解く'){errs.push(line+'行目：種類は「読む」か「解く」にしてください。');return;}
     if(!ch&&!sec){errs.push(line+'行目：章か節のどちらかを入力してください。');return;}
     if(!unit){errs.push(line+'行目：単元がありません。');return;}
     if(a==null||b==null||b<a){errs.push(line+'行目：はじめ・おわりは数字で、おわりがはじめより後になるように入力してください。');return;}
     if(g('確認')) notes.push(book+' '+(ch?ch+' ':'')+sec+'：'+g('確認'));
     let m=mats.find(x=>x.name===book);if(!m){m={name:book,kind:kindW==='解く'?'solve':'read',rows:[]};mats.push(m);}
-    m.rows.push({ch,sec,unit,a,b});
+    m.rows.push({ch,sec,unit,a,b,check:g('確認')});
   });
   return {mats,errs,notes};
 }
@@ -4208,7 +4256,7 @@ function applyToc(res){
       let m=(x.materials||[]).find(y=>y.name===mm.name);
       if(!m){m={id:newId('mat'),name:mm.name,kind:mm.kind,perPage:x.perPage||4,chunkPages:20,toc:[]};x.materials.push(m);}
       m.kind=mm.kind;if(m.kind==='solve'&&!m.book) m.book=newId('b');
-      m.toc=mm.rows.map(r=>{const e={s:unitId(x,r.unit),t:[r.ch,r.sec].filter(Boolean).join(' '),ch:r.ch,sec:r.sec};
+      m.toc=mm.rows.map(r=>{const e={s:unitId(x,r.unit),t:[r.ch,r.sec].filter(Boolean).join(' '),ch:r.ch,sec:r.sec};if(r.check) e.check=r.check;
         if(m.kind==='solve'){e.q=r.b-r.a+1;e.from=r.a;e.to=r.b;}else e.p=[r.a,r.b];return e;});
       done.push(mm.name+'（'+(mm.kind==='solve'?'解く':'読む')+'・'+mm.rows.length+'項目）');
     }
@@ -4220,8 +4268,7 @@ function impQs(rows){
   const errs=[], books={};
   rows.forEach((r,i)=>{
     const line=r._line||('問題'+(i+1)), g=k=>impStr(r[k]), at=line+(r._line?'行目':'')+'：';
-    const book=g('教材'), no=impNum(r['番号']), unit=g('単元'), form=IMP_FORMS[g('形')], stem=g('問題');
-    if(!book){errs.push(at+'教材の名前がありません。');return;}
+    const book=impBook(r['教材']), no=impNum(r['番号']), unit=g('単元'), form=IMP_FORMS[g('形')], stem=g('問題');
     if(no==null){errs.push(at+'番号は数字で入力してください。');return;}
     if(!unit){errs.push(at+'単元がありません。');return;}
     if(!form){errs.push(at+'形は「○×」「選択肢」「穴埋め」「並び替え」のどれかにしてください。');return;}
@@ -4269,13 +4316,58 @@ function applyQs(res){
   }
   return {msg:'問題を取り込みました：'+n+'問'+(made.length?'（新しい問題集：'+made.join('、')+'）':''),added:add};
 }
+let IMPDRAFT=null;  // what was read, waiting on the 教材設定 screen to be checked before it is registered
 function impRun(text){
+  IMPDRAFT=null;
   try{
     const r=impRead(text);
-    if(r.kind==='toc'){const p=impToc(r.rows);if(p.errs.length) throw p.errs;const a=applyToc(p);IMPRES={ok:true,msg:a.msg,added:a.added,notes:p.notes};}
-    else {const p=impQs(r.rows);if(p.errs.length) throw p.errs;const a=applyQs(p);const ck=Object.values(p.books).flatMap(u=>Object.values(u).flat()).filter(q=>q.check).length;IMPRES={ok:true,msg:a.msg,added:a.added,notes:ck?['確認してほしい問題が'+ck+'問あります（下の「要確認」）。']:[]};}
+    if(r.kind==='toc'){const p=impToc(r.rows);if(p.errs.length) throw p.errs;impUnits([...new Set(p.mats.flatMap(m=>m.rows.map(x=>x.unit)))]);
+      IMPDRAFT={kind:'toc',p,items:p.mats.map(m=>({orig:m.name,name:m.name,kind:m.kind}))};}
+    else {const p=impQs(r.rows);if(p.errs.length) throw p.errs;impUnits([...new Set(Object.values(p.books).flatMap(u=>Object.keys(u)))]);
+      IMPDRAFT={kind:'q',p,items:Object.keys(p.books).map(b=>({orig:b,name:b}))};}
   }catch(e){IMPRES={ok:false,errs:Array.isArray(e)?e:[String(e)]};}
   render();window.scrollTo(0,0);
+}
+function impCommit(){
+  const D=IMPDRAFT;if(!D) return;
+  if(D.items.some(it=>!it.name.trim())){toast('教材の名前を手入力してください');return;}
+  try{
+    if(D.kind==='toc'){
+      const mats=D.p.mats.map((m,i)=>Object.assign({},m,{name:D.items[i].name.trim(),kind:D.items[i].kind}));
+      const merged=[];for(const m of mats){const o=merged.find(x=>x.name===m.name);if(o) o.rows=o.rows.concat(m.rows); else merged.push(Object.assign({},m,{rows:m.rows.slice()}));}
+      const a=applyToc({mats:merged});const ck=merged.reduce((n,m)=>n+m.rows.filter(r=>r.check).length,0);
+      IMPRES={ok:true,msg:a.msg,added:a.added,notes:ck?['確認してほしい行が'+ck+'行あります。下の「教材」の「直す」から、本と見くらべて直せます。']:[]};
+    }else{
+      const books={};D.items.forEach(it=>{const nm=it.name.trim(), src=D.p.books[it.orig];const dst=books[nm]||(books[nm]={});for(const [u,qs] of Object.entries(src)) dst[u]=(dst[u]||[]).concat(qs);});
+      const a=applyQs({books});const ck=Object.values(books).flatMap(u=>Object.values(u).flat()).filter(q=>q.check).length;
+      IMPRES={ok:true,msg:a.msg,added:a.added,notes:ck?['確認してほしい問題が'+ck+'問あります（下の「要確認」）。']:[]};
+    }
+  }catch(e){IMPRES={ok:false,errs:Array.isArray(e)?e:[String(e)]};}
+  IMPDRAFT=null;render();window.scrollTo(0,0);
+}
+function impDraftCard(){
+  const D=IMPDRAFT, P=plan2(), have=new Set((P.subjects||[]).flatMap(s=>[s.name,s.short]));
+  const unitsOf=i=>D.kind==='toc'?[...new Set(D.p.mats[i].rows.map(r=>r.unit))]:Object.keys(D.p.books[D.items[i].orig]);
+  const row=(it,i)=>{
+    const us=unitsOf(i), fresh=us.filter(u=>!have.has(u)), id='impn-'+i;
+    const n=D.kind==='toc'?D.p.mats[i].rows.length:Object.values(D.p.books[it.orig]).reduce((a,q)=>a+q.length,0);
+    const ck=D.kind==='toc'?D.p.mats[i].rows.filter(r=>r.check).length:Object.values(D.p.books[it.orig]).flat().filter(q=>q.check).length;
+    const same=(P.materials||[]).some(m=>m.name===it.name.trim());
+    return el('div',{class:'impitem'},
+      el('label',{class:'field',for:id},D.kind==='toc'?'教材の名前':'問題集の名前',
+        el('input',{type:'text',id,value:it.name,placeholder:'書名を手入力してください',oninput:e=>{it.name=e.target.value;}})),
+      !it.orig?el('p',{class:'xs',style:'color:var(--warn-ink)'},'写真から名前が読み取れませんでした。書名を手入力してください。'):null,
+      D.kind==='toc'?el('div',{class:'seg',style:'grid-template-columns:1fr 1fr',role:'group','aria-label':'種類'},
+        [['read','読む（テキスト）'],['solve','解く（問題集）']].map(([k,l])=>el('button',{type:'button','aria-pressed':String(it.kind===k),onclick:()=>{it.kind=k;render();}},l))):null,
+      el('p',{class:'small'},(D.kind==='toc'?'目次 '+n+'項目':'問題 '+n+'問')+'　単元：'+us.join('・')),
+      fresh.length?el('p',{class:'xs muted'},'新しくできる単元：'+fresh.join('・')+(have.size?'（いまの単元と名前が違うものは、別の単元になります）':'')):null,
+      ck?el('p',{class:'xs',style:'color:var(--warn-ink)'},'AIが「確認」を付けた'+(D.kind==='toc'?'行':'問題')+'：'+ck+(D.kind==='toc'?'行（登録したあと、「教材」の「直す」で本と見くらべられます）':'問（登録したあと、下の「要確認」に出ます）')):null,
+      same?el('p',{class:'xs muted'},D.kind==='toc'?'同じ名前の教材があります。登録すると、その教材の目次を置き換えます。':'同じ名前の問題集があります。登録すると、その問題集に追加します（同じ単元・番号の問題は上書きします）。'):null);};
+  return el('div',{class:'card',style:'border-color:var(--accent)'},
+    el('h2',{},'登録する前に確かめてください'),
+    el('p',{class:'small muted'},'名前と中身を確かめてから登録します。名前はここで直せます。'),
+    D.items.map(row),
+    el('div',{class:'grid2'},el('button',{type:'button',class:'btn',onclick:impCommit},'登録する'),el('button',{type:'button',class:'btn sub',onclick:()=>{IMPDRAFT=null;render();}},'やめる')));
 }
 
 /* what to hand to one's own AI, with the units already entered so that it uses the same names */
@@ -4292,6 +4384,7 @@ function tocPrompt(){return [
   'この画像（またはPDF）は、私が持っている教材の目次です。学習計画アプリ「芒学」に取り込むためのJSONを作ってください。',
   '',
   '決まり：',
+  '- 「教材」には、写真に写っている書名をそのまま書いてください。書名が写っていなければ "" にしてください（名前はアプリで聞きます）。',
   '- 出力は、下の形のJSONだけにしてください。説明の文はいりません。',
   '- 1冊につき1つのJSONにします。',
   '- 「種類」は、読むもの（テキスト・入門書）なら「読む」、問題集なら「解く」です。',
@@ -4306,6 +4399,7 @@ function qPrompt(){return [
   'この画像（またはPDF）は、私が持っている問題集のページです。学習計画アプリ「芒学」の演習に取り込むためのJSONを作ってください。',
   '',
   '決まり：',
+  '- 「教材」には、写真に写っている問題集の名前をそのまま書いてください。名前が写っていなければ "" にしてください（名前はアプリで聞きます）。',
   '- 出力は、下の形のJSONだけにしてください。説明の文はいりません。',
   '- 問題文・選択肢・答え・解説は、本のとおりに書き写します。言い換えたり、足したりしないでください。',
   '- 「形」は「○×」「選択肢」「穴埋め」「並び替え」のどれかです。',
@@ -4337,7 +4431,8 @@ function formHelp(){openSheet('取り込みの形',
   el('ul',{class:'small',style:'margin:0;padding-left:1.2em'},el('li',{},'教材・種類（読む／解く）：空欄なら上の行と同じ'),el('li',{},'章・節：節がない章は節を空欄に。章が空欄なら上の行と同じ'),el('li',{},'単元：空欄なら上の行と同じ'),el('li',{},'はじめ・おわり：読むものはページ、解くものは問題番号'),el('li',{},'確認：読み取りに自信のない所のメモ（任意）')),
   el('p',{class:'small',style:'margin-top:8px'},el('b',{},'問題の列')),
   el('ul',{class:'small',style:'margin:0;padding-left:1.2em'},el('li',{},'形：○× ／ 選択肢 ／ 穴埋め ／ 並び替え'),el('li',{},'答え：○×は「○」「×」、選択肢は正しい番号、穴埋めは空欄の順、並び替えは正しい順'),el('li',{},'選択肢・語群：選択肢の問題は選択肢、穴埋めは語群（任意）'),el('li',{},'いくつも書く所は「／」（全角）か改行で区切る'),el('li',{},'穴埋めの問題文は、空欄を ［A］［B］… と書く'),el('li',{},'確認：読み取りに自信のない所のメモ。取り込むと「要確認」に並びます')),
-  el('p',{class:'xs muted'},'同じ教材の目次を取り込み直すと、目次は置き換わります。同じ問題集・単元・番号の問題は、上書きされます。'));}
+  el('p',{class:'small',style:'margin-top:8px'},el('b',{},'登録する前に：'),'取り込むと、すぐには登録せず、教材の名前・種類・単元・確認の数を出します。写真に書名がなくAIが名前を書けなかったときは、ここで書名を手入力します。'),
+  el('p',{class:'xs muted'},'同じ教材の目次を取り込み直すと、目次は置き換わります。同じ問題集・単元・番号の問題は、上書きされます。AIが「確認」を付けた目次の行は、「教材」の「直す」で本と見くらべて直せます。'));}
 
 function unitHelp(){const ST='「計画を組む」の「'+tname('study')+'」の段', H=t=>el('p',{class:'small',style:'margin-top:10px'},el('b',{},t)), UL=(...xs)=>el('ul',{class:'small',style:'margin:0;padding-left:1.2em'},xs.map(x=>el('li',{},x)));
   openSheet('単元のしくみと、取り込む順番',
@@ -4357,7 +4452,7 @@ function unitHelp(){const ST='「計画を組む」の「'+tname('study')+'」�
   H('単元の名前を、先に自分で決めたいとき'),
   UL(ST+'にある「単元」の「＋ 単元を追加」で作ってから、プロンプトをコピーします。','または、プロンプトの最後に「単元は○○・○○・○○の名前で」と1行書き足して、AIに渡します。','単元が20を超えそうなときは、いくつかをまとめた名前にしてください。'),
   H('あとから直すとき'),
-  UL('単元の名前と順番は、'+ST+'で直せます。','同じ本の目次を取り込み直すと、その本の目次は置き換わります。','別々になった2つの単元を、1つにまとめることはまだできません。'));}
+  UL('教材の名前・種類・目次は、この画面の「教材」の「直す」と、'+ST+'の「教材」の、どちらでも直せます。','単元の名前と順番は、'+ST+'で直せます。','同じ本の目次を取り込み直すと、その本の目次は置き換わります。','別々になった2つの単元を、1つにまとめることはまだできません。'));}
 
 function viewMaterials(){
   const P=plan2(), mats=P.materials||[];
@@ -4388,6 +4483,7 @@ function viewMaterials(){
   return [
     el('h1',{},'教材設定'),
     el('p',{class:'small muted'},'教材の目次と問題を、このアプリに取り込みます。目次は計画づくりに、問題は演習に使います。'),
+    IMPDRAFT?impDraftCard():null,
     R?el('div',{class:'card notice'+(R.ok?' good':''),role:'status'},
       R.ok?[el('p',{class:'small'},el('b',{},R.msg)),R.added&&R.added.length?el('p',{class:'xs'},'新しく足した単元：'+R.added.join('、')):null,(R.notes||[]).map(t=>el('p',{class:'xs'},t))]
         :[el('p',{class:'small'},el('b',{},'取り込めませんでした。何も変えていません。')),el('ul',{class:'small'},R.errs.slice(0,12).map(t=>el('li',{},t))),R.errs.length>12?el('p',{class:'xs'},'ほか'+(R.errs.length-12)+'件'):null]):null,
@@ -4407,7 +4503,10 @@ function viewMaterials(){
     mats.length?mats.map(m=>{const us=[...new Set((m.toc||[]).map(e=>e.s))].map(id=>subj(id).short).filter(Boolean), n=m.book?qn(m.book):0;
       return el('div',{class:'card'},el('div',{class:'between'},el('h2',{style:'min-width:0'},(m.kind==='solve'?'✏️ ':'📖 ')+m.name),el('span',{class:'xs muted',style:'white-space:nowrap'},m.kind==='solve'?'解く':'読む')),
         el('p',{class:'small muted'},'目次 '+(m.toc||[]).length+'項目'+(us.length?'（単元：'+us.join('・')+'）':'')+(m.kind==='solve'?'　問題 '+n+'問':'')),
-        twoStepBtn('この教材を消す',()=>setPlan2(x=>{x.materials=x.materials.filter(y=>y.id!==m.id);})));})
+        (()=>{const c=(m.toc||[]).filter(e=>e.check).length;return c?el('p',{class:'small',style:'color:var(--warn-ink)'},'要確認 '+c+'行：「直す」から、本と見くらべて直してください。'):null;})(),
+        MATOPEN.has(m.id)?matEditor(m,P):null,
+        el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm','aria-expanded':String(MATOPEN.has(m.id)),onclick:()=>{if(MATOPEN.has(m.id)) MATOPEN.delete(m.id); else{MATOPEN.add(m.id);if((m.toc||[]).some(e=>e.check)) MATCHK.add(m.id);}render();}},MATOPEN.has(m.id)?'閉じる':'直す'),
+          twoStepBtn('この教材を消す',()=>{setPlan2(x=>{x.materials=x.materials.filter(y=>y.id!==m.id);});render();})));})
       :el('p',{class:'small muted'},'まだありません。最初の1冊は、単元の分け方の元にしたい本がおすすめです（くわしくは「自分のAIで作る」の「?」）。'),
     el('div',{class:'card'},el('h2',{},'取り込んだ問題'),
       docs.length?el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'問題集'),el('th',{},'単元'),el('th',{},'問題数'),el('th',{},'要確認'))),
