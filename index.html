@@ -4451,8 +4451,10 @@ function unitHelp(){const ST='「計画を組む」の「'+tname('study')+'」�
   H('単元の名前を、先に自分で決めたいとき'),
   UL(ST+'にある「単元」の「＋ 単元を追加」で作ってから、プロンプトをコピーします。','または、プロンプトの最後に「単元は○○・○○・○○の名前で」と1行書き足して、AIに渡します。','単元が20を超えそうなときは、いくつかをまとめた名前にしてください。'),
   H('あとから直すとき'),
-  UL('教材の名前・種類・目次は、この画面の「教材」の「直す」と、'+ST+'の「教材」の、どちらでも直せます。','単元の名前と順番は、'+ST+'で直せます。','同じ本の目次を取り込み直すと、その本の目次は置き換わります。','別々になった2つの単元を、1つにまとめることはまだできません。'));}
+  UL('教材を消しても、単元は残ります。どの教材にも使われていない単元は、この画面の下に出て、まとめて消せます。','教材の名前・種類・目次は、この画面の「教材」の「直す」と、'+ST+'の「教材」の、どちらでも直せます。','単元の名前と順番は、'+ST+'で直せます。','同じ本の目次を取り込み直すと、その本の目次は置き換わります。','別々になった2つの単元を、1つにまとめることはまだできません。'));}
 
+// units no book uses: what is left after books are deleted (questions count as use too)
+function unusedUnits(P){const used=new Set();for(const m of P.materials||[]) for(const e of m.toc||[]) if(e.s) used.add(e.s);for(const d of Object.values(S.qbank)) if(d&&d.subject) used.add(d.subject);return (P.subjects||[]).filter(s=>!used.has(s.id));}
 function viewMaterials(){
   const P=plan2(), mats=P.materials||[];
   const docs=Object.entries(S.qbank).filter(([,d])=>d&&Array.isArray(d.items)).sort((a,b)=>a[0]>b[0]?1:-1);
@@ -4507,6 +4509,10 @@ function viewMaterials(){
         el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm','aria-expanded':String(MATOPEN.has(m.id)),onclick:()=>{if(MATOPEN.has(m.id)) MATOPEN.delete(m.id); else{MATOPEN.add(m.id);if((m.toc||[]).some(e=>e.check)) MATCHK.add(m.id);}render();}},MATOPEN.has(m.id)?'閉じる':'直す'),
           twoStepBtn('この教材を消す',()=>{setPlan2(x=>{x.materials=x.materials.filter(y=>y.id!==m.id);});render();})));})
       :el('p',{class:'small muted'},'まだありません。最初の1冊は、単元の分け方の元にしたい本がおすすめです（くわしくは「自分のAIで作る」の「?」）。'),
+    (()=>{const un=unusedUnits(P);if(!un.length) return null;const ids=new Set(un.map(s=>s.id));
+      return el('div',{class:'card'},el('h2',{},'どの教材にも使われていない単元（'+un.length+'個）'),el('p',{class:'small'},un.map(s=>s.name).join('・')),
+        el('p',{class:'xs muted'},'教材を消しても、単元は残ります。消すと、次に取り込むときのプロンプトにも書かれなくなります。'),
+        twoStepBtn('この'+un.length+'個の単元を消す',()=>{setPlan2(x=>{x.subjects=(x.subjects||[]).filter(s=>!ids.has(s.id));});if(WIZ) wizPull();toast('単元を'+un.length+'個消しました');render();}));})(),
     el('div',{class:'card'},el('h2',{},'取り込んだ問題'),
       docs.length?el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'問題集'),el('th',{},'単元'),el('th',{},'問題数'),el('th',{},'要確認'))),
         el('tbody',{},docs.map(([id,d])=>el('tr',{},el('td',{},bookName(d.book)),el('td',{},subj(d.subject).short),el('td',{class:'num'},String(d.items.length)),el('td',{class:'num'},String(d.items.filter(q=>q.check).length)))))))
