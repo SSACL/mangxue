@@ -653,6 +653,10 @@ h2{text-wrap:balance}
 .ailinks{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
 .ailink{font-size:12.5px;padding:4px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);text-decoration:none}
 .ailink:hover,.ailink:focus-visible{color:var(--accent-ink);border-color:var(--accent)}
+.helpt{border-top:1px solid var(--line);padding:2px 0}
+.helpt:first-of-type{border-top:0}
+.helpt>summary{cursor:pointer;padding:10px 0;font-size:14px;font-weight:600;list-style-position:inside}
+.helpt>ul{padding-bottom:10px}
 </style>
 </head>
 <body>
@@ -4371,13 +4375,12 @@ function impDraftCard(){
       D.kind==='toc'?el('div',{class:'seg',style:'grid-template-columns:1fr 1fr',role:'group','aria-label':'種類'},
         [['read','読む（テキスト）'],['solve','解く（問題集）']].map(([k,l])=>el('button',{type:'button','aria-pressed':String(it.kind===k),onclick:()=>{it.kind=k;render();}},l))):null,
       el('p',{class:'small'},(D.kind==='toc'?'目次 '+n+'項目':'問題 '+n+'問')+'　単元：'+us.join('・')),
-      (()=>{const nu=D.kind==='toc'?D.p.mats[i].rows.filter(r=>!r.unit).length:0;return nu?el('p',{class:'xs',style:'color:var(--warn-ink)'},'単元が決まっていない行：'+nu+'行。単元は全部で'+UNIT_MAX+'個までで、いまは'+(P.subjects||[]).length+'個です。この画面の下の「単元」で近い単元をまとめると空きができます。空きを作ってからプロンプトをコピーし直して取り込み直すか、登録したあと「直す」で単元を選んでください。'):null;})(),
-      fresh.length?el('p',{class:'xs muted'},'新しくできる単元：'+fresh.join('・')+(have.size?'（いまの単元と名前が違うものは、別の単元になります）':'')):null,
-      ck?el('p',{class:'xs',style:'color:var(--warn-ink)'},'AIが「確認」を付けた'+(D.kind==='toc'?'行':'問題')+'：'+ck+(D.kind==='toc'?'行（登録したあと、「教材」の「直す」で本と見くらべられます）':'問（登録したあと、下の「要確認」に出ます）')):null,
+      (()=>{const nu=D.kind==='toc'?D.p.mats[i].rows.filter(r=>!r.unit).length:0;return nu?el('p',{class:'xs',style:'color:var(--warn-ink)'},'単元が決まっていない行：'+nu+'行（単元 '+(P.subjects||[]).length+'／'+UNIT_MAX+'個。下の「単元」でまとめて空きを作るか、登録後に「直す」で選べます）'):null;})(),
+      fresh.length?el('p',{class:'xs muted'},'新しくできる単元：'+fresh.join('・')):null,
+      ck?el('p',{class:'xs',style:'color:var(--warn-ink)'},'要確認：'+ck+(D.kind==='toc'?'行':'問')):null,
       same?el('p',{class:'xs muted'},D.kind==='toc'?'同じ名前の教材があります。登録すると、その教材の目次を置き換えます。':'同じ名前の問題集があります。登録すると、その問題集に追加します（同じ単元・番号の問題は上書きします）。'):null);};
   return el('div',{class:'card',style:'border-color:var(--accent)'},
     el('h2',{},'登録する前に確かめてください'),
-    el('p',{class:'small muted'},'名前と中身を確かめてから登録します。名前はここで直せます。'),
     D.items.map(row),
     el('div',{class:'grid2'},el('button',{type:'button',class:'btn',onclick:impCommit},'登録する'),el('button',{type:'button',class:'btn sub',onclick:()=>{IMPDRAFT=null;render();}},'やめる')));
 }
@@ -4441,39 +4444,23 @@ function qTemplate(){return csvRows(IMP_Q_COLS,[
   ['（例）問題集B','2','単元の名前','選択肢','問題文','3','選択肢1／選択肢2／選択肢3／選択肢4','解説','','',''],
   ['（例）問題集B','3','単元の名前','穴埋め','…［A］…［B］…','Aの語句／Bの語句','語群1／語群2／語群3','解説','','',''],
   ['（例）問題集B','4','単元の名前','並び替え','何を並べるか','1番目／2番目／3番目','','解説','','','']]);}
-function formHelp(){openSheet('取り込みの形',
-  el('p',{class:'small'},el('b',{},'JSON（おすすめ）：'),'「自分のAIで作る」のプロンプトをコピーし、目次や問題のページの写真と一緒に、自分のAIに渡します。返ってきたJSONを、ファイルにして選ぶか、そのまま貼り付けます。'),
-  el('p',{class:'small'},el('b',{},'CSV（手入力する）：'),'テンプレートを保存し、表計算アプリで1行ずつ手入力して、CSVで保存してから選びます。「（例）」で始まる行は読み込みません。'),
-  el('p',{class:'small',style:'margin-top:8px'},el('b',{},'目次の列')),
-  el('ul',{class:'small',style:'margin:0;padding-left:1.2em'},el('li',{},'教材・種類（読む／解く）：空欄なら上の行と同じ'),el('li',{},'章・節：節がない章は節を空欄に。章が空欄なら上の行と同じ'),el('li',{},'単元：空欄なら上の行と同じ'),el('li',{},'はじめ・おわり：読むものはページ、解くものは問題番号'),el('li',{},'確認：読み取りに自信のない所のメモ（任意）')),
-  el('p',{class:'small',style:'margin-top:8px'},el('b',{},'問題の列')),
-  el('ul',{class:'small',style:'margin:0;padding-left:1.2em'},el('li',{},'形：○× ／ 選択肢 ／ 穴埋め ／ 並び替え'),el('li',{},'答え：○×は「○」「×」、選択肢は正しい番号、穴埋めは空欄の順、並び替えは正しい順'),el('li',{},'選択肢・語群：選択肢の問題は選択肢、穴埋めは語群（任意）'),el('li',{},'いくつも書く所は「／」（全角）か改行で区切る'),el('li',{},'穴埋めの問題文は、空欄を ［A］［B］… と書く'),el('li',{},'確認：読み取りに自信のない所のメモ。取り込むと「要確認」に並びます')),
-  el('p',{class:'small',style:'margin-top:8px'},el('b',{},'登録する前に：'),'取り込むと、すぐには登録せず、教材の名前・種類・単元・確認の数を出します。写真に書名がなくAIが名前を書けなかったときは、ここで書名を手入力します。'),
-  el('p',{class:'xs muted'},'同じ教材の目次を取り込み直すと、目次は置き換わります。同じ問題集・単元・番号の問題は、上書きされます。AIが「確認」を付けた目次の行は、「教材」の「直す」で本と見くらべて直せます。'));}
-
-function unitHelp(){const ST='「計画を組む」の「'+tname('study')+'」の段', H=t=>el('p',{class:'small',style:'margin-top:10px'},el('b',{},t)), UL=(...xs)=>el('ul',{class:'small',style:'margin:0;padding-left:1.2em'},xs.map(x=>el('li',{},x)));
-  openSheet('単元のしくみと、取り込む順番',
-  H('単元とは'),
-  UL('教材の中身を、進み具合や得手不得手を見るために分けたまとまりです。科目・分野・章など、自分が見たい分け方にします。','計画は、単元の順に進みます。','全部で20個までです。'),
-  H('単元のでき方'),
-  UL('単元は、取り込んだ目次や問題の「単元」の列から作られます。','名前がまったく同じなら、同じ単元にまとまります。違う名前なら、新しい単元が増えます。「文法」と「英文法」のように少しでも違うと、別の単元になります。','本は何冊でも、どの順番でも取り込めます。'),
-  H('単元が足りなくなったとき'),
-  UL('プロンプトには、新しく作れる単元の残りの数が書かれます。','残りがないときは、合う単元がない行を空欄にするようAIに頼みます。無理に、ほかの単元には当てはめません。','教材設定の「単元」で近い単元を選んでまとめると、空きができます。空きを作ってからプロンプトをコピーし直して取り込み直すか、「直す」で行ごと・章ごとに単元を選びます。'),
-  H('難しさの段階がある教材'),
-  UL('初級・中級や基礎編・応用編のように段階がある教材は、段階ごとに別の教材として登録するのがおすすめです。','プロンプトでも、目次に段階の分かれ目があれば、段階ごとに別の教材に分けるようAIに頼んでいます。分けたときの名前は「書名（基礎編）」のようになります。','1冊の中に段階の分かれ目が書かれていないときは、そのまま1つの教材にします。'),
-  H('教材設定と「計画を組む」は、同じ単元と教材を使います'),
-  UL(ST+'で単元を追加したり名前を直したりすると、'+'教材設定にもすぐ同じものが出ます。','教材設定で取り込んだ本も、「計画を組む」にすぐ出ます。途中まで組んだ計画があっても、そのまま続けられます。','どちらを先に使ってもかまいません。'),
-  H('プロンプトは、1冊ごとにコピーし直す'),
-  UL('目次用・問題用のプロンプトには、コピーしたときにある単元の名前が書かれ、自分のAIに「この中から選んでください」と頼む文になります。','1冊目は単元がまだないので、AIが名前を考えます。','2冊目からは、そのつどコピーし直すと、前の本と同じ名前にそろいます。'),
-  H('最初に取り込む1冊の選び方'),
-  UL('単元の分け方の元にしたい本を、最初に取り込むのがおすすめです。その本の章立てをもとに、単元が決まります。',
-    el('span',{},'向いているのは、次のような本です。',el('ul',{style:'margin:4px 0 0;padding-left:1.2em'},el('li',{},'範囲のはじめから終わりまでを、ひととおり扱っている本（基本書・テキストなど）'),el('li',{},'章立てが、自分が進み具合や得手不得手を見たい分け方に近い本'))),
-    '問題集から始めてもかまいません。その場合は、問題集の章立てが単元の元になります。',
-    '取り込んだら、この画面の下の「教材」で、単元の名前と分け方を確かめてから2冊目に進むと安心です。'),
-  H('単元の名前を、先に自分で決めたいとき'),
-  UL(ST+'にある「単元」の「＋ 単元を追加」で作ってから、プロンプトをコピーします。','または、プロンプトの最後に「単元は○○・○○・○○の名前で」と1行書き足して、AIに渡します。','単元が20を超えそうなときは、いくつかをまとめた名前にしてください。'),
-  H('あとから直すとき'),
-  UL('教材を消しても、単元は残ります。どの教材にも使われていない単元は、この画面の下に出て、まとめて消せます。','教材の名前・種類・目次は、この画面の「教材」の「直す」と、'+ST+'の「教材」の、どちらでも直せます。','単元の名前と順番は、'+ST+'で直せます。','同じ本の目次を取り込み直すと、その本の目次は置き換わります。','別々になった単元は、教材設定の「単元」で選んで1つにまとめられます。'));}
+// help topics fold, so each one is opened only when needed
+function helpTopics(title,topics){const UL=xs=>el('ul',{class:'small',style:'margin:0;padding-left:1.2em'},xs.map(x=>el('li',{},x)));
+  openSheet(title,topics.map(([t,...xs])=>el('details',{class:'helpt'},el('summary',{},t),UL(xs))));}
+function formHelp(){helpTopics('取り込みの形',[
+  ['JSON（おすすめ）','「自分のAIで作る」のプロンプトを写真と一緒にAIに渡し、返ってきたJSONを貼り付けるか、ファイルにして選びます。'],
+  ['CSV（手入力）','テンプレートに手入力し、CSVで保存して選びます。','「（例）」で始まる行は読み込みません。'],
+  ['目次の列','教材・種類（読む／解く）：空欄なら上の行と同じ','章・節：節がない章は節を空欄に。章が空欄なら上の行と同じ','単元：空欄なら上の行と同じ','はじめ・おわり：読むものはページ、解くものは問題番号','確認：読み取りに自信のない所のメモ（任意）'],
+  ['問題の列','形：○× ／ 選択肢 ／ 穴埋め ／ 並び替え','答え：○×は「○」「×」、選択肢は正しい番号、穴埋めは空欄の順、並び替えは正しい順','選択肢・語群：選択肢の問題は選択肢、穴埋めは語群（任意）','いくつも書く所は「／」（全角）か改行で区切る','穴埋めの問題文は、空欄を ［A］［B］… と書く','確認：読み取りに自信のない所のメモ（任意）'],
+  ['取り込み直すとき','同じ教材の目次は置き換わります。','同じ問題集・単元・番号の問題は上書きされます。']]);}
+function unitHelp(){const ST='「計画を組む」の「'+tname('study')+'」の段';helpTopics('単元と取り込む順番',[
+  ['単元とは','進み具合や得手不得手を見るためのまとまりです（科目・分野・章など）。','全部で'+UNIT_MAX+'個までです。'],
+  ['単元のでき方','取り込んだ「単元」の列から作られます。','名前がまったく同じものだけが、1つにまとまります。'],
+  ['最初に取り込む1冊','単元の分け方の元にしたい本がおすすめです（範囲をひととおり扱う本など）。','2冊目からは、プロンプトをコピーし直します。'],
+  ['単元が足りないとき','教材設定の「単元」で近い単元を選んでまとめると、空きができます。','空きを作ったらプロンプトをコピーし直して取り込み直すか、「直す」で単元を選びます。'],
+  ['難しさの段階がある教材','初級・中級などは、段階ごとに別の教材にするのがおすすめです。'],
+  ['単元を先に決めたいとき',ST+'の「単元」で追加してから、プロンプトをコピーします。','または、プロンプトの最後に「単元は○○・○○の名前で」と書き足します。'],
+  ['あとから直すとき','教材は「直す」、単元の名前と順番は'+ST+'で直せます。','教材を消しても単元は残ります。使われていない単元は「単元」のカードで消せます。']]);}
 
 // units no book uses: what is left after books are deleted (questions count as use too)
 function unusedUnits(P){const used=new Set();for(const m of P.materials||[]) for(const e of m.toc||[]) if(e.s) used.add(e.s);for(const d of Object.values(S.qbank)) if(d&&d.subject) used.add(d.subject);return (P.subjects||[]).filter(s=>!used.has(s.id));}
@@ -4501,8 +4488,8 @@ function unitsCard(P){
   const sel=subs.filter(s=>UNITSEL.has(s.id)), un=unusedUnits(P);
   if(sel.length&&!UNITNAME) UNITNAME=sel[0].name;
   return el('div',{class:'card'},
-    el('div',{class:'between'},el('h2',{},'単元（'+subs.length+'／'+UNIT_MAX+'個）'),el('button',{type:'button',class:'help','aria-label':'単元のしくみと、取り込む順番',onclick:unitHelp},'?')),
-    el('p',{class:'xs muted'},'近い単元を2つ以上選ぶと、1つにまとめられます。目次の行と問題は、まとめた単元に移ります。'),
+    el('div',{class:'between'},el('h2',{},'単元（'+subs.length+'／'+UNIT_MAX+'個）'),el('button',{type:'button',class:'help','aria-label':'単元と取り込む順番',onclick:unitHelp},'?')),
+    el('p',{class:'xs muted'},'2つ以上選ぶと、1つにまとめられます。'),
     el('div',{class:'unitlist'},subs.map(s=>{const id='us-'+s.id, r=rows.get(s.id), q=qs.get(s.id);
       return el('label',{class:'unitrow',for:id},el('input',{type:'checkbox',id,checked:UNITSEL.has(s.id),onchange:e=>{if(e.target.checked) UNITSEL.add(s.id); else UNITSEL.delete(s.id);if(UNITSEL.size<2) UNITNAME='';render();}}),
         el('span',{class:'unitname'},s.name),el('span',{class:'xs muted num'},r||q?[r?'目次 '+r+'行':'',q?'問題 '+q+'問':''].filter(Boolean).join('・'):'使われていない'));})),
@@ -4540,7 +4527,7 @@ function viewMaterials(){
   const qn=b=>docs.filter(([,d])=>d.book===b).reduce((a,[,d])=>a+d.items.length,0);
   return [
     el('h1',{},'教材設定'),
-    el('p',{class:'small muted'},'教材の目次と問題を、このアプリに取り込みます。目次は計画づくりに、問題は演習に使います。'),
+    el('p',{class:'small muted'},'教材の目次と問題を取り込みます。'),
     IMPDRAFT?impDraftCard():null,
     R?el('div',{class:'card notice'+(R.ok?' good':''),role:'status'},
       R.ok?[el('p',{class:'small'},el('b',{},R.msg)),R.added&&R.added.length?el('p',{class:'xs'},'新しく足した単元：'+R.added.join('、')):null,(R.notes||[]).map(t=>el('p',{class:'xs'},t))]
@@ -4550,26 +4537,28 @@ function viewMaterials(){
       el('label',{class:'btn sub sm',for:'imp-file',style:'cursor:pointer'},'ファイルを選ぶ（JSON・CSV）',el('input',{type:'file',id:'imp-file',accept:'.json,.csv,.txt,application/json,text/csv,text/plain',style:'display:none',onchange:pick})),
       el('label',{class:'field',for:'imp-paste'},'または貼り付け',paste),
       el('button',{type:'button',class:'btn sub sm',onclick:async()=>{try{const t=await navigator.clipboard.readText();if(!t){toast('クリップボードが空です');return;}paste.value=t;toast('貼り付けました（'+t.length+'文字）');}catch(_){toast('ここからは貼り付けられませんでした。欄を長押しして「ペースト」を選んでください');}}},'クリップボードから貼り付ける'),
-      el('p',{class:'xs muted'},'キーボードの中のクリップボードからだと、長い文は途中までしか貼り付けられないことがあります。上のボタンか、欄を長押しして「ペースト」を選んでください。'),
+      el('p',{class:'xs muted'},'長い文は、このボタンか、欄の長押しで貼り付けてください。'),
       el('button',{type:'button',class:'btn sm',onclick:()=>impRun(paste.value)},'貼り付けた中身を取り込む')),
-    el('div',{class:'card'},el('div',{class:'between'},el('h2',{},'自分のAIで作る（おすすめ）'),el('button',{type:'button',class:'help','aria-label':'単元のしくみと、取り込む順番',onclick:unitHelp},'?')),
-      el('p',{class:'small'},'プロンプトをコピーし、目次や問題のページの写真と一緒に、自分のAIに渡してください。返ってきたJSONを、上の「取り込む」に貼り付けるか、ファイルにして選びます。'),
-      el('button',{type:'button',class:'btn sub sm',onclick:()=>copyText(tocPrompt(),'目次用のプロンプト')},'目次用のプロンプトをコピー'),el('button',{type:'button',class:'btn sub sm',onclick:()=>copyText(qPrompt(),'問題用のプロンプト')},'問題用のプロンプトをコピー'),
+    el('div',{class:'card'},el('div',{class:'between'},el('h2',{},'自分のAIで作る（おすすめ）'),el('button',{type:'button',class:'help','aria-label':'単元と取り込む順番',onclick:unitHelp},'?')),
+      el('p',{class:'small'},'プロンプトを写真と一緒にAIに渡し、返ってきたJSONを上に貼り付けます。'),
+      el('p',{class:'xs muted'},'プロンプトをコピー'),
+      el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>copyText(tocPrompt(),'目次用のプロンプト')},'目次用'),el('button',{type:'button',class:'btn sub sm',onclick:()=>copyText(qPrompt(),'問題用のプロンプト')},'問題用')),
       el('div',{class:'ailinks'},el('span',{class:'xs muted'},'新しいチャットを開く：'),
         [['ChatGPT','https://chatgpt.com/'],['Claude','https://claude.ai/new'],['Gemini','https://gemini.google.com/app'],['Copilot','https://copilot.microsoft.com/']].map(([n,u])=>el('a',{href:u,target:'_blank',rel:'noopener noreferrer',class:'ailink'},n))),
-      el('p',{class:'xs muted'},'プロンプトには、コピーしたときにある単元の名前が書かれるので、1冊ごとにコピーし直してください。目次を先に取り込むと、問題も同じ単元にそろいます。単元のしくみと、最初に取り込む本の選び方は「?」にあります。')),
+      el('p',{class:'xs muted'},'1冊ごとにコピーし直してください。')),
     el('div',{class:'card'},el('h2',{},'自分で入力する（CSV）'),
-      el('p',{class:'small'},'テンプレートを保存し、表計算アプリで手入力して、CSVで保存してから「ファイルを選ぶ」で取り込みます。'),
-      el('button',{type:'button',class:'btn sub sm',onclick:()=>saveFile('mangxue-toc-template.csv','\uFEFF'+tocTemplate(),'text/csv')},'目次のテンプレートを保存'),el('button',{type:'button',class:'btn sub sm',onclick:()=>saveFile('mangxue-questions-template.csv','\uFEFF'+qTemplate(),'text/csv')},'問題のテンプレートを保存')),
+      el('p',{class:'small'},'テンプレートに手入力し、CSVで保存して「ファイルを選ぶ」で取り込みます。'),
+      el('p',{class:'xs muted'},'テンプレートを保存'),
+      el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>saveFile('mangxue-toc-template.csv','\uFEFF'+tocTemplate(),'text/csv')},'目次用'),el('button',{type:'button',class:'btn sub sm',onclick:()=>saveFile('mangxue-questions-template.csv','\uFEFF'+qTemplate(),'text/csv')},'問題用'))),
     el('h2',{class:'sec'},'教材'),
     mats.length?mats.map(m=>{const us=[...new Set((m.toc||[]).map(e=>e.s))].map(id=>subj(id).short).filter(Boolean), n=m.book?qn(m.book):0;
       return el('div',{class:'card'},el('div',{class:'between'},el('h2',{style:'min-width:0'},(m.kind==='solve'?'✏️ ':'📖 ')+m.name),el('span',{class:'xs muted',style:'white-space:nowrap'},m.kind==='solve'?'解く':'読む')),
         el('p',{class:'small muted'},'目次 '+(m.toc||[]).length+'項目'+(us.length?'（単元：'+us.join('・')+'）':'')+(m.kind==='solve'?'　問題 '+n+'問':'')),
-        (()=>{const c=(m.toc||[]).filter(e=>e.check).length;return c?el('p',{class:'small',style:'color:var(--warn-ink)'},'要確認 '+c+'行：「直す」から、本と見くらべて直してください。'):null;})(),
+        (()=>{const c=(m.toc||[]).filter(e=>e.check).length;return c?el('p',{class:'small',style:'color:var(--warn-ink)'},'要確認 '+c+'行'):null;})(),
         MATOPEN.has(m.id)?matEditor(m,P):null,
         el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm','aria-expanded':String(MATOPEN.has(m.id)),onclick:()=>{if(MATOPEN.has(m.id)) MATOPEN.delete(m.id); else{MATOPEN.add(m.id);if((m.toc||[]).some(e=>e.check)) MATCHK.add(m.id);}render();}},MATOPEN.has(m.id)?'閉じる':'直す'),
           twoStepBtn('この教材を消す',()=>{setPlan2(x=>{x.materials=x.materials.filter(y=>y.id!==m.id);});render();})));})
-      :el('p',{class:'small muted'},'まだありません。最初の1冊は、単元の分け方の元にしたい本がおすすめです（くわしくは「自分のAIで作る」の「?」）。'),
+      :el('p',{class:'small muted'},'まだありません。'),
     unitsCard(P),
     el('div',{class:'card'},el('h2',{},'取り込んだ問題'),
       docs.length?el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'問題集'),el('th',{},'単元'),el('th',{},'問題数'),el('th',{},'要確認'))),
