@@ -650,6 +650,9 @@ h2{text-wrap:balance}
 .unitrow input{width:20px;height:20px;flex:none;accent-color:var(--accent)}
 .unitrow .unitname{flex:1;min-width:0}
 .unitmerge{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;background:var(--accent-soft)}
+.ailinks{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.ailink{font-size:12.5px;padding:4px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);text-decoration:none}
+.ailink:hover,.ailink:focus-visible{color:var(--accent-ink);border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -4552,6 +4555,8 @@ function viewMaterials(){
     el('div',{class:'card'},el('div',{class:'between'},el('h2',{},'自分のAIで作る（おすすめ）'),el('button',{type:'button',class:'help','aria-label':'単元のしくみと、取り込む順番',onclick:unitHelp},'?')),
       el('p',{class:'small'},'プロンプトをコピーし、目次や問題のページの写真と一緒に、自分のAIに渡してください。返ってきたJSONを、上の「取り込む」に貼り付けるか、ファイルにして選びます。'),
       el('button',{type:'button',class:'btn sub sm',onclick:()=>copyText(tocPrompt(),'目次用のプロンプト')},'目次用のプロンプトをコピー'),el('button',{type:'button',class:'btn sub sm',onclick:()=>copyText(qPrompt(),'問題用のプロンプト')},'問題用のプロンプトをコピー'),
+      el('div',{class:'ailinks'},el('span',{class:'xs muted'},'新しいチャットを開く：'),
+        [['ChatGPT','https://chatgpt.com/'],['Claude','https://claude.ai/new'],['Gemini','https://gemini.google.com/app'],['Copilot','https://copilot.microsoft.com/']].map(([n,u])=>el('a',{href:u,target:'_blank',rel:'noopener noreferrer',class:'ailink'},n))),
       el('p',{class:'xs muted'},'プロンプトには、コピーしたときにある単元の名前が書かれるので、1冊ごとにコピーし直してください。目次を先に取り込むと、問題も同じ単元にそろいます。単元のしくみと、最初に取り込む本の選び方は「?」にあります。')),
     el('div',{class:'card'},el('h2',{},'自分で入力する（CSV）'),
       el('p',{class:'small'},'テンプレートを保存し、表計算アプリで手入力して、CSVで保存してから「ファイルを選ぶ」で取り込みます。'),
