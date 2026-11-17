@@ -657,6 +657,23 @@ h2{text-wrap:balance}
 .helpt:first-of-type{border-top:0}
 .helpt>summary{cursor:pointer;padding:10px 0;font-size:14px;font-weight:600;list-style-position:inside}
 .helpt>ul{padding-bottom:10px}
+/* explanations: limited HTML (emphasis, lists, tables) */
+.rich{line-height:1.8;font-size:15px}
+.rich>:is(h4,h5,p,ul,ol,.richtable){margin-top:8px}
+.rich>:first-child{margin-top:0}
+.rich h4,.rich h5{margin:8px 0 0;font-size:13.5px;font-weight:700;color:var(--accent-ink)}
+.rich mark{background:transparent;color:var(--bad);font-weight:600}
+.rich ul,.rich ol{margin:0;padding-left:1.3em}
+.rich p{margin:0}
+.richtable{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.richtable table{border-collapse:collapse;font-size:13.5px;line-height:1.5;min-width:100%}
+.richtable th,.richtable td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.richtable th{background:var(--chip);font-weight:600}
+details.detail{border-top:1px solid var(--line);padding-top:6px}
+details.detail>summary{cursor:pointer;padding:8px 0;font-size:14px;font-weight:600;color:var(--accent-ink)}
+.wordlist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:4px 12px;font-size:14.5px;line-height:1.5}
+.wordlist li{display:flex;gap:6px}
+.wordlist .wn{flex:none;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -3904,6 +3921,24 @@ function tags(it){
   if(it.doc.book==='sample') out.push(el('span',{class:'pill gray'},'サンプル'));
   return el('div',{class:'row',style:'flex-wrap:wrap;gap:6px'},out);
 }
+const RICH_TAGS=new Set(['B','STRONG','EM','I','U','MARK','BR','P','UL','OL','LI','TABLE','THEAD','TBODY','TR','TH','TD','CAPTION','H4','H5','SMALL','SUP','SUB']);
+function richNode(src){
+  const t=String(src||'');
+  if(!/<\/?[a-zA-Z][^>]*>/.test(t)) return el('div',{class:'rich qfont',style:'white-space:pre-wrap'},t);
+  const doc=new DOMParser().parseFromString('<div>'+t+'</div>','text/html'), out=el('div',{class:'rich qfont'});
+  const walk=(from,to)=>{for(const n of [...from.childNodes]){
+    if(n.nodeType===3){to.append(n.nodeValue);continue;}
+    if(n.nodeType!==1) continue;
+    if(/^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE|IFRAME|OBJECT|EMBED|SVG|MATH)$/i.test(n.tagName)) continue;
+    if(!RICH_TAGS.has(n.tagName)){walk(n,to);continue;}
+    const e=document.createElement(n.tagName.toLowerCase());
+    if(n.tagName==='TD'||n.tagName==='TH') for(const a of ['colspan','rowspan']){const v=parseInt(n.getAttribute(a),10);if(v>1&&v<20) e.setAttribute(a,v);}
+    walk(n,e);
+    if(n.tagName==='TABLE'){const w=el('div',{class:'richtable'});w.append(e);to.append(w);} else to.append(e);}};
+  walk(doc.body.firstChild,out);return out;
+}
+// the word list of a blank question, numbered as in the book (①…⑳)
+function wordNo(i){return i<20?String.fromCharCode(0x2460+i):'('+(i+1)+')';}
 function stemNode(q){
   if(q.type!=='blank') return el('p',{class:'qtext'},q.stem);
   const parts=String(q.stem).split(/\{([A-Z])\}/);
@@ -3929,7 +3964,7 @@ function viewQuestion(){
   }else{
     const sels=(q.blanks||[]).map(b=>{
       const id='blank-'+b.k;
-      const ctl=(q.words&&q.words.length)?el('select',{id},el('option',{value:''},'選ぶ'),q.words.map(w=>el('option',{value:w},w))):el('input',{type:'text',id,autocomplete:'off'});
+      const ctl=(q.words&&q.words.length)?el('select',{id},el('option',{value:''},'選ぶ'),q.words.map((w,i)=>el('option',{value:w},q.order?w:wordNo(i)+' '+w))):el('input',{type:'text',id,autocomplete:'off'});
       return el('label',{class:'field',for:id},q.order?b.k+'番目':'空欄 '+b.k,ctl);});
     const norm=s=>String(s||'').normalize('NFKC').replace(/\s/g,'');
     answerUI=el('div',{style:'display:flex;flex-direction:column;gap:10px'},sels,
@@ -3938,14 +3973,15 @@ function viewQuestion(){
         const score=res.filter(r=>r.ok).length;
         finish(it,score===res.length,res.map(r=>r.v),res.map(r=>r.ok?1:0));}},'答え合わせ'));
   }
+  const wl=q.type==='blank'&&!q.order&&q.words&&q.words.length?el('ol',{class:'wordlist qfont'},q.words.map((w,i)=>el('li',{},el('span',{class:'wn'},wordNo(i)),el('span',{},w)))):null;
   return [header(it),el('div',{class:'bar',style:'height:4px'},el('i',{style:'width:'+Math.round(P.i/P.queue.length*100)+'%'})),tags(it),
-    el('div',{class:'card',style:'padding:20px;gap:14px'},el('span',{class:'xs muted'},q.type==='tf'?'○か×か':q.type==='mc5'?'正しいもの（問題の指示どおり）を選ぶ':q.order?'正しい順に並べる':'空欄に入る語句'),stemNode(q),src),
+    el('div',{class:'card',style:'padding:20px;gap:14px'},el('span',{class:'xs muted'},q.type==='tf'?'○か×か':q.type==='mc5'?'正しいもの（問題の指示どおり）を選ぶ':q.order?'正しい順に並べる':'空欄に入る語句'),stemNode(q),wl,src),
     confPicker(),answerUI];
 }
 function correctText(q){
   if(q.type==='tf') return q.answer?'○':'×';
   if(q.type==='mc5') return q.correct;
-  return (q.blanks||[]).map(b=>(q.order?b.k+'番目':b.k)+'：'+b.answer).join('　');
+  return (q.blanks||[]).map(b=>{const i=!q.order&&q.words?q.words.indexOf(b.answer):-1;return (q.order?b.k+'番目':b.k)+'：'+(i>=0?wordNo(i)+' ':'')+b.answer;}).join('　');
 }
 function viewAnswer(){
   const it=curItem(), q=it.q, a=P.ans, s=stOf(it.docId,q.id)||{};
@@ -3963,11 +3999,10 @@ function viewAnswer(){
         el('span',{class:'small muted'},'正解 '+correctText(q)+' ・ あなた '+(Array.isArray(a.ans)?a.ans.map(v=>v||'—').join('・'):a.ans)+confL),
         blanksScore?el('span',{class:'small muted num'},'空欄 '+blanksScore):null,
         el('span',{class:'small muted num'},a.round+'周目 ・ これまで ○'+Math.max(0,(s.c||0)-(s.k||0))+' ×'+(s.w||0)+((s.k||0)?' 勘'+s.k:'')))),
-    el('div',{class:'card'},el('h2',{class:'muted',style:'font-size:13px'},'解説'),el('p',{class:'qfont',style:'white-space:pre-wrap;line-height:1.8'},q.expl||'解説は取り込まれていません。'),
+    el('div',{class:'card'},el('h2',{class:'muted',style:'font-size:13px'},'解説'),q.expl?richNode(q.expl):el('p',{class:'small muted'},'解説は取り込まれていません。'),
+      q.detail?el('details',{class:'detail'},el('summary',{},'詳しい解説'),richNode(q.detail)):null,
       q.type==='mc5'&&q.choiceNotes?el('div',{style:'display:flex;flex-direction:column;gap:4px'},Object.entries(q.choiceNotes).map(([k,v])=>el('p',{class:'small muted qfont'},k+'：'+v))):null),
-    el('div',{class:'card',style:'gap:4px'},el('span',{class:'xs muted'},'紙の本を開く'),
-      el('span',{style:'font-weight:700'},q.base?(P_().study.baseBook||'テキスト')+' p.'+q.base:(P_().study.baseBook||'テキスト')+'（目次の取り込み後にページを表示）'),
-      el('span',{class:'xs muted'},'出典 '+bookName(it.doc.book)+' No.'+(q.no!=null?q.no:'—')+(q.page?' ・ p.'+q.page:''))),
+    el('span',{class:'xs muted'},'出典 '+bookName(it.doc.book)+' No.'+(q.no!=null?q.no:'—')+(q.page?' ・ p.'+q.page:'')),
     el('label',{class:'field',for:memoId},'自分のことばでメモ',el('textarea',{id:memoId,rows:2,value:s.memo||'',oninput:e=>{const v=e.target.value;clearTimeout(memoTimer);memoTimer=setTimeout(()=>{const sd=S.state[it.docId];sd.s[q.id].memo=v;sd.s[q.id].t=Date.now();save('state/'+it.docId);},600);}})),
     el('div',{class:'row'},el('input',{type:'checkbox',id:noteId,checked:!!s.note,onchange:e=>{const sd=S.state[it.docId];sd.s[q.id].note=e.target.checked;sd.s[q.id].t=Date.now();save('state/'+it.docId);}}),el('label',{for:noteId},'間違いノートに追加する')),
     el('button',{type:'button',class:'btn',onclick:next},P.i+1>=P.queue.length?'結果を見る':'次の問題')];
@@ -4184,7 +4219,7 @@ function viewImport(){
 /* ---------- 教材設定: the table of contents and the questions come in from the app itself
    (JSON made with one's own AI, recommended; or a CSV template filled in by hand) ---------- */
 const IMP_TOC_COLS=['教材','種類','章','節','単元','はじめ','おわり','確認'];
-const IMP_Q_COLS=['教材','番号','単元','形','問題','答え','選択肢・語群','解説','論点','ページ','確認'];
+const IMP_Q_COLS=['教材','番号','単元','形','問題','答え','選択肢・語群','解説','詳しい解説','論点','ページ','確認'];
 const IMP_FORMS={'○×':'tf','◯×':'tf','○✕':'tf','選択肢':'mc5','穴埋め':'blank','並び替え':'order','並べ替え':'order'};
 let IMPRES=null;   // the result of the last import, shown on the 教材設定 screen
 function csvParse(text){
@@ -4282,7 +4317,7 @@ function applyToc(res){
 }
 
 function impQs(rows){
-  const errs=[], books={};
+  const errs=[], books={}, seen=new Set();
   rows.forEach((r,i)=>{
     const line=r._line||('問題'+(i+1)), g=k=>impStr(r[k]), at=line+(r._line?'行目':'')+'：';
     const book=impBook(r['教材']), no=impNum(r['番号']), unit=g('単元'), form=IMP_FORMS[g('形')], stem=g('問題');
@@ -4306,9 +4341,13 @@ function impQs(rows){
     else {const a=impList(ans);if(a.length<2){errs.push(at+'並び替えの答えを、正しい順に2つ以上入力してください。');return;}
       q.order=true;q.blanks=a.map((t,j)=>({k:String(j+1),answer:t}));q.words=a.slice().sort(()=>Math.random()-0.5);}
     if(g('解説')) q.expl=g('解説');
+    if(g('詳しい解説')) q.detail=g('詳しい解説');
     const tg=impList(r['論点']).flatMap(x=>x.split(/[、,]/)).map(x=>x.trim()).filter(Boolean);if(tg.length) q.tags=tg;
     const pg=impNum(r['ページ']);if(pg!=null) q.page=pg;
     if(g('確認')) q.check=g('確認');
+    const key=book+'\u0000'+unit+'\u0000'+no;
+    if(seen.has(key)){errs.push(at+'「'+(book||'名前なし')+'」の'+unit+'に、番号'+no+'の問題が2つあります。Basic・Step-Up のように番号が1から始まり直すときは、段階ごとに別の問題集にしてください。');return;}
+    seen.add(key);
     (books[book]||(books[book]={}))[unit]=((books[book]||{})[unit]||[]).concat([q]);
   });
   return {books,errs};
@@ -4372,7 +4411,7 @@ function impDraftCard(){
     const same=(P.materials||[]).some(m=>m.name===it.name.trim());
     return el('div',{class:'impitem'},
       el('label',{class:'field',for:id},D.kind==='toc'?'教材の名前':'問題集の名前',
-        el('input',{type:'text',id,value:it.name,placeholder:'書名を手入力してください',oninput:e=>{it.name=e.target.value;}})),
+        el('input',{type:'text',id,value:it.name,list:'impnames',placeholder:'書名を手入力してください',oninput:e=>{it.name=e.target.value;}})),
       !it.orig?el('p',{class:'xs',style:'color:var(--warn-ink)'},'写真から名前が読み取れませんでした。書名を手入力してください。'):null,
       D.kind==='toc'?el('div',{class:'seg',style:'grid-template-columns:1fr 1fr',role:'group','aria-label':'種類'},
         [['read','読む（テキスト）'],['solve','解く（問題集）']].map(([k,l])=>el('button',{type:'button','aria-pressed':String(it.kind===k),onclick:()=>{it.kind=k;render();}},l))):null,
@@ -4383,6 +4422,7 @@ function impDraftCard(){
       same?el('p',{class:'xs muted'},D.kind==='toc'?'同じ名前の教材があります。登録すると、その教材の目次を置き換えます。':'同じ名前の問題集があります。登録すると、その問題集に追加します（同じ単元・番号の問題は上書きします）。'):null);};
   return el('div',{class:'card',style:'border-color:var(--accent)'},
     el('h2',{},'登録する前に確かめてください'),
+    el('datalist',{id:'impnames'},(P.materials||[]).map(m=>el('option',{value:m.name}))),
     D.items.map(row),
     el('div',{class:'grid2'},el('button',{type:'button',class:'btn',onclick:impCommit},'登録する'),el('button',{type:'button',class:'btn sub',onclick:()=>{IMPDRAFT=null;render();}},'やめる')));
 }
@@ -4397,7 +4437,7 @@ const IMP_TOC_EX={'形式':'芒学の目次','教材':'（教材の名前）','�
   {'章':'第1章 （章の見出し）','節':'1 （節の見出し）','単元':'（単元の名前）','はじめ':1,'おわり':8},
   {'章':'第1章 （章の見出し）','節':'2 （節の見出し）','単元':'（単元の名前）','はじめ':9,'おわり':20}]};
 const IMP_Q_EX={'形式':'芒学の問題','教材':'（問題集の名前）','問題':[
-  {'番号':1,'単元':'（単元の名前）','形':'○×','問題':'（問題文）','答え':'○','解説':'（解説）','論点':'（論点）','ページ':12},
+  {'番号':1,'単元':'（単元の名前）','形':'○×','問題':'（問題文）','答え':'○','解説':'（短い解説）','詳しい解説':'<h4>（本の囲みの見出し）</h4>（本の文。赤字は<mark>このように</mark>）<br>（表は<table><tr><th>見出し</th><td>中身</td></tr></table>）','論点':'（論点）','ページ':12},
   {'番号':2,'単元':'（単元の名前）','形':'選択肢','問題':'（問題文）','選択肢':['（選択肢1）','（選択肢2）','（選択肢3）','（選択肢4）'],'答え':3,'解説':'（解説）'},
   {'番号':3,'単元':'（単元の名前）','形':'穴埋め','問題':'（…［A］…［B］…）','答え':['（Aの語句）','（Bの語句）'],'語群':['（語群1）','（語群2）','（語群3）'],'解説':'（解説）'},
   {'番号':4,'単元':'（単元の名前）','形':'並び替え','問題':'（何を並べるか）','答え':['（1番目）','（2番目）','（3番目）'],'解説':'（解説）'}]};
@@ -4418,16 +4458,24 @@ function tocPrompt(){return [
   '形：',
   JSON.stringify(IMP_TOC_EX,null,1)].join('\n');}
 function qPrompt(){return [
-  'この画像（またはPDF）は、私が持っている問題集のページです。学習計画アプリ「芒学」の演習に取り込むためのJSONを作ってください。',
+  'これから、私が持っている問題集のページの写真を、何回かに分けて送ります。学習計画アプリ「芒学」の演習に取り込むためのJSONを作ってください。',
+  '',
+  '進め方：',
+  '1. 最初の写真を見たら、JSONを作る前に、次の2つの案を私に出して、答えを待ってください。',
+  '  - 解説の分け方：本の解説を「解説」（短いもの）と「詳しい解説」のどちらに置くか。全部を「解説」に置く案でもかまいません。',
+  '  - 問題集の分け方：Basic・Step-Up や初級・中級のように、段階ごとに問題番号が1から始まり直すときは、段階ごとに別の問題集にします（「教材」は「書名（Basic）」のように）。',
+  '2. 私が答えたら、それ以降は、送られた写真の分ごとにJSONを返してください。',
   '',
   '決まり：',
   '- 「教材」には、写真に写っている問題集の名前をそのまま書いてください。名前が写っていなければ "" にしてください（名前はアプリで聞きます）。',
   '- 出力は、下の形のJSONだけにしてください。説明の文はいりません。',
   '- 問題文・選択肢・答え・解説は、本のとおりに書き写します。言い換えたり、足したりしないでください。',
+  '- 「詳しい解説」には、本の紙面の順に、囲みや見出し（例：これも覚える、根拠条文、アドバイス）も含めて、解説の部分をすべて書き写します。「解説」と「詳しい解説」の2つより細かくは分けません。',
+  '- 解説の書式は、次のHTMLだけを使います：見出し <h4>、太字 <b>、赤字や強調 <mark>、改行 <br>、箇条書き <ul><li>、表 <table><tr><th><td>。それ以外のタグは使いません。',
   '- 「形」は「○×」「選択肢」「穴埋め」「並び替え」のどれかです。',
   '  - ○×：答えは「○」か「×」。',
   '  - 選択肢：選択肢を順に「選択肢」に書き、答えは正しい選択肢の番号（1から数える）。',
-  '  - 穴埋め：問題文の空欄を ［A］［B］… と書き、答えを「答え」に順に書きます。語群があれば「語群」に書きます。',
+  '  - 穴埋め：問題文の空欄を ［A］［B］… と書き、答えを「答え」に順に書きます。語群があれば、本の番号の順に「語群」に書きます（番号は付けず語句だけ）。答えは語群と同じ語句にします。',
   '  - 並び替え：正しい順を「答え」に書きます。',
   '- 記述や計算の問題は含めないでください。',
   '- 「番号」は本の問題番号（数字）です。「ページ」は本のページで、分からなければ省きます。',
@@ -4442,10 +4490,10 @@ function tocTemplate(){return csvRows(IMP_TOC_COLS,[
   ['（例）テキストA','','','2 定義','','9','20',''],
   ['（例）問題集B','解く','第1章 総則','','単元の名前','1','24','']]);}
 function qTemplate(){return csvRows(IMP_Q_COLS,[
-  ['（例）問題集B','1','単元の名前','○×','問題文','○','','解説','論点','12',''],
-  ['（例）問題集B','2','単元の名前','選択肢','問題文','3','選択肢1／選択肢2／選択肢3／選択肢4','解説','','',''],
-  ['（例）問題集B','3','単元の名前','穴埋め','…［A］…［B］…','Aの語句／Bの語句','語群1／語群2／語群3','解説','','',''],
-  ['（例）問題集B','4','単元の名前','並び替え','何を並べるか','1番目／2番目／3番目','','解説','','','']]);}
+  ['（例）問題集B','1','単元の名前','○×','問題文','○','','短い解説','本の解説をすべて（<b>太字</b>・<mark>赤字</mark>・<br>改行・表も使えます）','論点','12',''],
+  ['（例）問題集B','2','単元の名前','選択肢','問題文','3','選択肢1／選択肢2／選択肢3／選択肢4','解説','','','',''],
+  ['（例）問題集B','3','単元の名前','穴埋め','…［A］…［B］…','Aの語句／Bの語句','語群1／語群2／語群3','解説','','','',''],
+  ['（例）問題集B','4','単元の名前','並び替え','何を並べるか','1番目／2番目／3番目','','解説','','','','']]);}
 // help topics fold, so each one is opened only when needed
 function helpTopics(title,topics){const UL=xs=>el('ul',{class:'small',style:'margin:0;padding-left:1.2em'},xs.map(x=>el('li',{},x)));
   openSheet(title,topics.map(([t,...xs])=>el('details',{class:'helpt'},el('summary',{},t),UL(xs))));}
@@ -4453,7 +4501,7 @@ function formHelp(){helpTopics('取り込みの形',[
   ['JSON（おすすめ）','「自分のAIで作る」のプロンプトを写真と一緒にAIに渡し、返ってきたJSONを貼り付けるか、ファイルにして選びます。'],
   ['CSV（手入力）','テンプレートに手入力し、CSVで保存して選びます。','「（例）」で始まる行は読み込みません。'],
   ['目次の列','教材・種類（読む／解く）：空欄なら上の行と同じ','章・節：節がない章は節を空欄に。章が空欄なら上の行と同じ','単元：空欄なら上の行と同じ','はじめ・おわり：読むものはページ、解くものは問題番号','確認：読み取りに自信のない所のメモ（任意）'],
-  ['問題の列','形：○× ／ 選択肢 ／ 穴埋め ／ 並び替え','答え：○×は「○」「×」、選択肢は正しい番号、穴埋めは空欄の順、並び替えは正しい順','選択肢・語群：選択肢の問題は選択肢、穴埋めは語群（任意）','いくつも書く所は「／」（全角）か改行で区切る','穴埋めの問題文は、空欄を ［A］［B］… と書く','確認：読み取りに自信のない所のメモ（任意）'],
+  ['問題の列','形：○× ／ 選択肢 ／ 穴埋め ／ 並び替え','答え：○×は「○」「×」、選択肢は正しい番号、穴埋めは空欄の順、並び替えは正しい順','選択肢・語群：選択肢の問題は選択肢、穴埋めは語群（任意）','いくつも書く所は「／」（全角）か改行で区切る','穴埋めの問題文は、空欄を ［A］［B］… と書く','解説・詳しい解説：太字 <b>・赤字 <mark>・改行 <br>・箇条書き・表 <table> が使えます。詳しい解説は、演習で開いたときだけ出ます','確認：読み取りに自信のない所のメモ（任意）'],
   ['取り込み直すとき','同じ教材の目次は置き換わります。','同じ問題集・単元・番号の問題は上書きされます。']]);}
 function unitHelp(){const ST='「計画を組む」の「'+tname('study')+'」の段';helpTopics('単元と取り込む順番',[
   ['単元とは','進み具合や得手不得手を見るためのまとまりです（科目・分野・章など）。','全部で'+UNIT_MAX+'個までです。'],
