@@ -4248,12 +4248,25 @@ function saveFile(name,text,type){
 async function copyText(text,what){try{await navigator.clipboard.writeText(text);toast(what+'をコピーしました');}catch(_){toast('コピーできませんでした');}}
 
 /* the text that came in → {kind:'toc'|'q', rows:[{…the Japanese column names…}]} */
+// the JSON in an AI reply, even when the whole reply was copied (```json blocks, words before or after)
+function impJsonList(s){
+  const P=t=>{try{return JSON.parse(t);}catch(e){return undefined;}};
+  const ours=j=>j!==undefined&&(Array.isArray(j)?j:[j]).some(o=>o&&typeof o==='object'&&(Array.isArray(o['目次'])||Array.isArray(o['問題'])));
+  if(/^[\[{]/.test(s)){const j=P(s);if(ours(j)) return [j];}
+  const fs=[...s.matchAll(/```[^\n`]*\n?([\s\S]*?)```/g)].map(m=>P(m[1].trim())).filter(ours);
+  if(fs.length) return fs;
+  const a=s.search(/[\[{]/), b=Math.max(s.lastIndexOf('}'),s.lastIndexOf(']'));
+  if(a>=0&&b>a){const j=P(s.slice(a,b+1));if(ours(j)) return [j];}
+  return null;
+}
 function impRead(text){
   const s=String(text||'').replace(/^\uFEFF/,'').trim();
   if(!s) throw '中身がありません。';
-  if(/^[\[{]/.test(s)){
-    let j;try{j=JSON.parse(s);}catch(e){throw 'JSONとして読めませんでした。AIの答えから、{ から } までだけを貼り付けてください。';}
-    const list=Array.isArray(j)?j:[j], out={toc:[],q:[]};
+  const js=impJsonList(s);
+  if(js||/^[\[{]/.test(s)){
+    if(!js){let ok=true;try{JSON.parse(s);}catch(e){ok=false;}
+      throw ok?'「目次」も「問題」も見つかりませんでした。形は、この画面の「形の説明」を見てください。':'JSONとして読めませんでした。AIの返事が途中で切れていないか確かめてください。';}
+    const list=js.flatMap(j=>Array.isArray(j)?j:[j]), out={toc:[],q:[]};
     for(const o of list){
       if(!o||typeof o!=='object') continue;
       if(Array.isArray(o['目次'])){for(const r of o['目次']) out.toc.push(Object.assign({'教材':o['教材'],'種類':o['種類'],_json:1},r));}
@@ -4395,6 +4408,8 @@ function impCommit(){
       IMPRES={ok:true,msg:a.msg,added:a.added,notes:ck?['確認してほしい行が'+ck+'行あります。下の「教材」の「直す」から、本と見くらべて直せます。']:[]};
     }else{
       const books={};D.items.forEach(it=>{const nm=it.name.trim(), src=D.p.books[it.orig];const dst=books[nm]||(books[nm]={});for(const [u,qs] of Object.entries(src)) dst[u]=(dst[u]||[]).concat(qs);});
+      for(const [nm,us] of Object.entries(books)) for(const [u,qs] of Object.entries(us)){const nos=new Set();
+        for(const q of qs){if(nos.has(q.no)){toast('「'+nm+'」の'+u+'で、番号'+q.no+'の問題が2つになります。問題集の名前を分けてください');return;}nos.add(q.no);}}
       const a=applyQs({books});const ck=Object.values(books).flatMap(u=>Object.values(u).flat()).filter(q=>q.check).length;
       IMPRES={ok:true,msg:a.msg,added:a.added,notes:ck?['確認してほしい問題が'+ck+'問あります（下の「要確認」）。']:[]};
     }
@@ -4408,18 +4423,25 @@ function impDraftCard(){
     const us=unitsOf(i), fresh=us.filter(u=>!have.has(u)), id='impn-'+i;
     const n=D.kind==='toc'?D.p.mats[i].rows.length:Object.values(D.p.books[it.orig]).reduce((a,q)=>a+q.length,0);
     const ck=D.kind==='toc'?D.p.mats[i].rows.filter(r=>r.check).length:Object.values(D.p.books[it.orig]).flat().filter(q=>q.check).length;
-    const same=(P.materials||[]).some(m=>m.name===it.name.trim());
+    // what registering under this name does to a book already there; redrawn as the name is typed
+    const sameNote=()=>{if(!it.name.trim()) return [el('p',{class:'xs',style:'color:var(--warn-ink)'},it.orig?'名前を手入力してください。':'写真から名前が読み取れませんでした。書名を手入力してください。')];
+      const m=(P.materials||[]).find(x=>x.name===it.name.trim());if(!m) return [];
+      if(D.kind==='toc') return [el('p',{class:'xs muted'},'同じ名前の教材があります。登録すると、その教材の目次を置き換えます。')];
+      let ov=0;for(const [u,qs] of Object.entries(D.p.books[it.orig])){const sid=unitId(P,u), d=m.book&&sid&&S.qbank[m.book+'-'+sid];
+        if(d&&Array.isArray(d.items)){const nos=new Set(d.items.map(q=>q.no));ov+=qs.filter(q=>nos.has(q.no)).length;}}
+      return [ov?el('p',{class:'xs',style:'color:var(--warn-ink)'},'同じ名前の問題集に、単元と番号が同じ問題が'+ov+'問あります。登録すると上書きします。')
+        :el('p',{class:'xs muted'},'同じ名前の問題集に追加します。')];};
+    const noteBox=el('div',{},sameNote());
     return el('div',{class:'impitem'},
       el('label',{class:'field',for:id},D.kind==='toc'?'教材の名前':'問題集の名前',
-        el('input',{type:'text',id,value:it.name,list:'impnames',placeholder:'書名を手入力してください',oninput:e=>{it.name=e.target.value;}})),
-      !it.orig?el('p',{class:'xs',style:'color:var(--warn-ink)'},'写真から名前が読み取れませんでした。書名を手入力してください。'):null,
+        el('input',{type:'text',id,value:it.name,list:'impnames',placeholder:'書名を手入力してください',oninput:e=>{it.name=e.target.value;noteBox.replaceChildren(...sameNote());}})),
+      noteBox,
       D.kind==='toc'?el('div',{class:'seg',style:'grid-template-columns:1fr 1fr',role:'group','aria-label':'種類'},
         [['read','読む（テキスト）'],['solve','解く（問題集）']].map(([k,l])=>el('button',{type:'button','aria-pressed':String(it.kind===k),onclick:()=>{it.kind=k;render();}},l))):null,
       el('p',{class:'small'},(D.kind==='toc'?'目次 '+n+'項目':'問題 '+n+'問')+'　単元：'+us.join('・')),
       (()=>{const nu=D.kind==='toc'?D.p.mats[i].rows.filter(r=>!r.unit).length:0;return nu?el('p',{class:'xs',style:'color:var(--warn-ink)'},'単元が決まっていない行：'+nu+'行（単元 '+(P.subjects||[]).length+'／'+UNIT_MAX+'個。下の「単元」でまとめて空きを作るか、登録後に「直す」で選べます）'):null;})(),
       fresh.length?el('p',{class:'xs muted'},'新しくできる単元：'+fresh.join('・')):null,
-      ck?el('p',{class:'xs',style:'color:var(--warn-ink)'},'要確認：'+ck+(D.kind==='toc'?'行':'問')):null,
-      same?el('p',{class:'xs muted'},D.kind==='toc'?'同じ名前の教材があります。登録すると、その教材の目次を置き換えます。':'同じ名前の問題集があります。登録すると、その問題集に追加します（同じ単元・番号の問題は上書きします）。'):null);};
+      ck?el('p',{class:'xs',style:'color:var(--warn-ink)'},'要確認：'+ck+(D.kind==='toc'?'行':'問')):null);};
   return el('div',{class:'card',style:'border-color:var(--accent)'},
     el('h2',{},'登録する前に確かめてください'),
     el('datalist',{id:'impnames'},(P.materials||[]).map(m=>el('option',{value:m.name}))),
@@ -4443,12 +4465,13 @@ const IMP_Q_EX={'形式':'芒学の問題','教材':'（問題集の名前）','
   {'番号':4,'単元':'（単元の名前）','形':'並び替え','問題':'（何を並べるか）','答え':['（1番目）','（2番目）','（3番目）'],'解説':'（解説）'}]};
 function tocPrompt(){return [
   'この画像（またはPDF）は、私が持っている教材の目次です。学習計画アプリ「芒学」に取り込むためのJSONを作ってください。',
+  '写真を何回かに分けて送るときは、最後に「以上です」と送ります。そのあとに、それまでの写真をまとめて1つのJSONにしてください。',
   '',
   '決まり：',
   '- 「教材」には、写真に写っている書名をそのまま書いてください。書名が写っていなければ "" にしてください（名前はアプリで聞きます）。',
   '- 出力は、下の形のJSONだけにしてください。説明の文はいりません。',
   '- 1冊につき1つのJSONにします。',
-  '- 目次の中で、難しさの段階（基礎編・応用編、初級・中級など）が分かれているときは、段階ごとに別の教材にして、JSONを段階の数だけ [ ] の中に並べてください。「教材」は「書名（基礎編）」のようにします。',
+  '- 問題集で、同じ単元の中で問題番号が1から始まり直すとき（Basic・Step-Up、初級・中級などの段階ごと）は、段階ごとに別の教材にして、JSONを段階の数だけ [ ] の中に並べてください。「教材」は「書名（Basic）」のようにします。番号が重ならなければ、1冊を1つの教材のままにします。',
   '- 「種類」は、読むもの（テキスト・入門書）なら「読む」、問題集なら「解く」です。',
   '- 「目次」には、いちばん細かい見出し（節）を1つずつ、本の順に書きます。節がない章は、「節」を "" にして章を1つ書きます。',
   '- 「はじめ」「おわり」は数字です。読むものはページ、問題集は問題番号です。',
@@ -4461,14 +4484,15 @@ function qPrompt(){return [
   'これから、私が持っている問題集のページの写真を、何回かに分けて送ります。学習計画アプリ「芒学」の演習に取り込むためのJSONを作ってください。',
   '',
   '進め方：',
-  '1. 最初の写真を見たら、JSONを作る前に、次の2つの案を私に出して、答えを待ってください。',
+  '1. 最初の写真を見たら（この文より前に写真を送っていたら、この文を読んだら）、JSONを作る前に、次の2つの案を私に出して、答えを待ってください。',
   '  - 解説の分け方：本の解説を「解説」（短いもの）と「詳しい解説」のどちらに置くか。全部を「解説」に置く案でもかまいません。',
-  '  - 問題集の分け方：Basic・Step-Up や初級・中級のように、段階ごとに問題番号が1から始まり直すときは、段階ごとに別の問題集にします（「教材」は「書名（Basic）」のように）。',
-  '2. 私が答えたら、それ以降は、送られた写真の分ごとにJSONを返してください。',
+  '  - 問題集の分け方：同じ単元の中で問題番号が1から始まり直すとき（Basic・Step-Up、初級・中級などの段階ごと）は、段階ごとに別の問題集にします（「教材」は「書名（Basic）」のように）。番号が重ならなければ、1つの問題集のままにします。',
+  '2. 私が答えたら、それ以降は、送られた写真の分ごとにJSONを返してください。決めた分け方と名前は、最後まで変えません。',
+  '3. 1回の返事に収まらないときは、問題の切れ目でJSONを閉じて、そのあとに「続きがあります」とだけ書いてください。私が「続き」と送ったら、次の問題から新しいJSONで返してください。',
   '',
   '決まり：',
-  '- 「教材」には、写真に写っている問題集の名前をそのまま書いてください。名前が写っていなければ "" にしてください（名前はアプリで聞きます）。',
-  '- 出力は、下の形のJSONだけにしてください。説明の文はいりません。',
+  '- 「教材」には、写真に写っている問題集の名前をそのまま書いてください。名前が写っていなければ "" にしてください（名前はアプリで聞きます）。私が名前を伝えたら、それ以降はその名前にします。',
+  '- JSONの返事には、説明の文はいりません。',
   '- 問題文・選択肢・答え・解説は、本のとおりに書き写します。言い換えたり、足したりしないでください。',
   '- 「詳しい解説」には、本の紙面の順に、囲みや見出し（例：これも覚える、根拠条文、アドバイス）も含めて、解説の部分をすべて書き写します。「解説」と「詳しい解説」の2つより細かくは分けません。',
   '- 解説の書式は、次のHTMLだけを使います：見出し <h4>、太字 <b>、赤字や強調 <mark>、改行 <br>、箇条書き <ul><li>、表 <table><tr><th><td>。それ以外のタグは使いません。',
@@ -4502,13 +4526,14 @@ function formHelp(){helpTopics('取り込みの形',[
   ['CSV（手入力）','テンプレートに手入力し、CSVで保存して選びます。','「（例）」で始まる行は読み込みません。'],
   ['目次の列','教材・種類（読む／解く）：空欄なら上の行と同じ','章・節：節がない章は節を空欄に。章が空欄なら上の行と同じ','単元：空欄なら上の行と同じ','はじめ・おわり：読むものはページ、解くものは問題番号','確認：読み取りに自信のない所のメモ（任意）'],
   ['問題の列','形：○× ／ 選択肢 ／ 穴埋め ／ 並び替え','答え：○×は「○」「×」、選択肢は正しい番号、穴埋めは空欄の順、並び替えは正しい順','選択肢・語群：選択肢の問題は選択肢、穴埋めは語群（任意）','いくつも書く所は「／」（全角）か改行で区切る','穴埋めの問題文は、空欄を ［A］［B］… と書く','解説・詳しい解説：太字 <b>・赤字 <mark>・改行 <br>・箇条書き・表 <table> が使えます。詳しい解説は、演習で開いたときだけ出ます','確認：読み取りに自信のない所のメモ（任意）'],
+  ['教材を分けるとき','同じ単元の中で問題番号が1から始まり直すとき（Basic・Step-Up など）は、段階ごとに別の教材にします。','番号が重ならなければ、1冊を1つの教材のまま取り込めます。','目次と問題は、同じ教材の名前で取り込みます。'],
+  ['写真が多いとき','AIが1回に送れる枚数ずつ、何回かに分けて送ります。','問題：返ってきたJSONを、その都度取り込みます。2回目からは、同じ問題集の名前を選びます。','目次：最後に「以上です」と送り、まとめて返ってきたJSONを取り込みます。'],
   ['取り込み直すとき','同じ教材の目次は置き換わります。','同じ問題集・単元・番号の問題は上書きされます。']]);}
 function unitHelp(){const ST='「計画を組む」の「'+tname('study')+'」の段';helpTopics('単元と取り込む順番',[
   ['単元とは','進み具合や得手不得手を見るためのまとまりです（科目・分野・章など）。','全部で'+UNIT_MAX+'個までです。'],
   ['単元のでき方','取り込んだ「単元」の列から作られます。','名前がまったく同じものだけが、1つにまとまります。'],
   ['最初に取り込む1冊','単元の分け方の元にしたい本がおすすめです（範囲をひととおり扱う本など）。','2冊目からは、プロンプトをコピーし直します。'],
   ['単元が足りないとき','教材設定の「単元」で近い単元を選んでまとめると、空きができます。','空きを作ったらプロンプトをコピーし直して取り込み直すか、「直す」で単元を選びます。'],
-  ['難しさの段階がある教材','初級・中級などは、段階ごとに別の教材にするのがおすすめです。'],
   ['単元を先に決めたいとき',ST+'の「単元」で追加してから、プロンプトをコピーします。','または、プロンプトの最後に「単元は○○・○○の名前で」と書き足します。'],
   ['あとから直すとき','教材は「直す」、単元の名前と順番は'+ST+'で直せます。','教材を消しても単元は残ります。使われていない単元は「単元」のカードで消せます。']]);}
 
