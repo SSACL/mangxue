@@ -3691,15 +3691,25 @@ function wizBuildView(){
   const near=gp.filter(({g,steps})=>g.date>=t&&diffDays(t,g.date)<=14&&g.buffer!==false&&steps.some(s=>!done[s.id])).map(x=>x.g);
   for(const g of near) if(pick[g.id]==null) pick[g.id]=true;
   const missing=(P.goals||[]).filter(g=>g.kind==='target'&&!g.date);
-  const over=wizOver();
+  // 組める計画は2年まで (仕様 6): a goal further off is not built as it is; its first half within the limit is offered instead
+  const lim=addDays(t,730), far=(P.goals||[]).filter(g=>isWork(g)&&g.date>lim);
+  const over=wizOver()||far.length>0;
   return [
     missing.length?el('div',{class:'warn'},missing.map(g=>g.name).join('・')+'の日付がまだです。決めないまま組むと、その分の作業は計画に入りません。'):null,
+    far.length?el('div',{class:'card'},el('h2',{},'2年より先の目標'),el('p',{class:'small'},'組める計画は2年先（'+lim.replace(/-/g,'/')+'）までです。'),
+      far.map(g=>el('div',{class:'gl'},el('div',{class:'between'},el('b',{class:'small'},g.name),el('span',{class:'xs muted num'},g.date.replace(/-/g,'/'))),
+        el('button',{type:'button',class:'btn sub sm',onclick:()=>wizUp(x=>farHalf(x,g.id,lim))},g.track==='study'?'前半を2年以内の目標にする':'2年以内の目標にする')))):null,
     near.length?el('div',{class:'card'},el('h2',{},'期日まで2週間以内の節目'),el('p',{class:'small'},'期日が近いときは、予備日を取ると作業の時間が足りなくなりやすいので、予備日なしで組むのがおすすめです。'),
       near.map(g=>el('label',{class:'row',for:'nb-'+g.id,style:'min-height:44px'},el('input',{type:'checkbox',id:'nb-'+g.id,checked:!!pick[g.id],onchange:e=>{pick[g.id]=e.target.checked;wizSave();}}),el('span',{},g.name+'（'+md(g.date)+'）を予備日なしで組む')))):null,
     el('p',{class:'xs muted'},gcalReady()?'組んだあと、節目・期日をGoogleカレンダー（「'+GCALNAME+'」）に書き出すか聞きます。':gcalCfg().clientId?'設定で「書き出し用のアカウント」を選ぶと、組んだあとにGoogleカレンダーへ書き出せます（メニューの「問題の取り込み・同期・バックアップ」）。':'Googleとの連携を設定すると、組んだあとにGoogleカレンダーへ書き出せます（メニューの「問題の取り込み・同期・バックアップ」）。'),
-    over?el('div',{class:'warn'},'はみ出す節目があるので、まだ組めません。「見通し」で直してください。',el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf('outlook'))},'見通しへ')):null,
+    over&&!far.length?el('div',{class:'warn'},'はみ出す節目があるので、まだ組めません。「見通し」で直してください。',el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf('outlook'))},'見通しへ')):null,
     el('button',{type:'button',class:'btn',disabled:over,onclick:wizBuild},'この内容で組む（今日から）')];
 }
+function farHalf(x,gid,lim){const g=x.goals.find(y=>y.id===gid);if(!g) return;
+  if(g.track==='study'){const subs=x.subjects||[], tot=subs.reduce((a,s)=>a+(+s.hours||1),0)||1, pick=[];let acc=0;
+    for(const s of subs){if(acc>=tot/2&&pick.length) break;pick.push(s.id);acc+=(+s.hours||1);}
+    x.goals.push({id:newId('g'),kind:'mid',track:'study',name:g.name+'（前半）',date:lim,buffer:true,reward:'',gcal:true,scope:{upto:(g.scope||{}).upto||'p3',subjects:pick}});g.date='';}
+  else {const ws=(x.works||[]).map(w=>w.id);if(ws.length>1){x.goals.push({id:newId('g'),kind:'mid',track:'create',name:g.name+'（前半）',date:lim,buffer:true,reward:'',gcal:true,scope:{works:ws.slice(0,Math.ceil(ws.length/2)),part:'all'}});g.date='';} else g.date=lim;}}
 function keepRewards(dst,cur){for(const g of dst.goals||[]){const c=(cur.goals||[]).find(x=>x.id===g.id);if(c&&c.reward&&!g.reward){g.reward=c.reward;if(c.got) g.got=c.got;}}}
 function wizBuild(){
   wizPull();
