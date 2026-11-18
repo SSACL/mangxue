@@ -135,6 +135,7 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);margin:0;
 .gauge .gtick:focus-visible{outline:3px solid var(--accent-ink);outline-offset:2px}
 .cutrow{padding:10px 0;border-top:1px solid var(--line)}
 .qb{margin:14px 0}
+.stp2{display:grid;grid-template-columns:1fr auto;gap:6px}
 .qb.later{opacity:.75}
 .qbh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
 .qbh .chip{flex:none}
@@ -1388,12 +1389,14 @@ function createSteps(P,workIds,part){
   const out=[];
   for(const w of P.works||[]){
     if(workIds!=='all'&&!(workIds||[]).includes(w.id)) continue;
-    for(const sd of w.steps||[]){
-      if(sd.off) continue;const cov=!!sd.cover;if((part==='body'&&cov)||(part==='cover'&&!cov)) continue;
-      if(sd.perPage){const pages=Math.max(1,+w.pages||1), ch=Math.max(1,+w.chunk||4);
-        for(let a=1;a<=pages;a+=ch){const b=Math.min(pages,a+ch-1);out.push({id:w.id+':'+sd.id+':'+a,title:w.name+'　'+sd.name+' p.'+a+'〜'+b,sub:'',min:Math.round((b-a+1)*(+sd.hours||1)*60),work:w.id,kind:sd.id});}}
-      else out.push({id:w.id+':'+sd.id,title:w.name+'　'+sd.name,sub:'',min:Math.round((+sd.hours||1)*60),work:w.id,kind:sd.id});
-    }
+    const ss=(w.steps||[]), ci=w.cur&&w.cur.step?ss.findIndex(x=>x.id===w.cur.step):-1, goods=wkKind(w)==='goods';
+    const hrs=sd=>sd.hours===''||sd.hours==null?1:Math.max(0,+sd.hours||0);
+    ss.forEach((sd,si)=>{
+      if(sd.off||sd.days||(ci>=0&&si<ci)) return;const cov=!!sd.cover;if((part==='body'&&cov)||(part==='cover'&&!cov)) return;
+      const h=hrs(sd);if(!h) return;
+      if(sd.perPage){const pages=Math.max(1,+w.pages||1), ch=Math.max(1,+w.chunk||4), a0=si===ci?Math.max(0,Math.round(+w.cur.pages||0))+1:1;
+        for(let a=a0;a<=pages;a+=ch){const b=Math.min(pages,a+ch-1);out.push({id:w.id+':'+sd.id+':'+a,title:w.name+'　'+sd.name+(goods?' デザイン'+a+'〜'+b:' p.'+a+'〜'+b),sub:'',min:Math.round((b-a+1)*h*60),work:w.id,kind:sd.id});}}
+      else if(!(si===ci&&+w.cur.pages>0)) out.push({id:w.id+':'+sd.id,title:w.name+'　'+sd.name,sub:'',min:Math.round(h*60),work:w.id,kind:sd.id});});
   }
   return out;
 }
@@ -1565,7 +1568,7 @@ function planTasks(ds){
       if(used.has(x.id)) continue;const st=x.st;
       if(st.kind==='solve'){const y=other.find(y=>y.left>=x.part*0.6)||other.find(y=>y.left>0)||other[other.length-1]||ss[ss.length-1];if(y){const L=lab(y),t0=atOf(y);y.left-=x.part;pushQ(x,y,L,t0);}else pushQ(x,{s:{label:'',time:''}},'','');continue;}
       let need=x.part;const us=[];
-      for(const y of other){if(need<=0.5) break;if(y.left<5) continue;const k=Math.min(y.left,need);const L=lab(y),t0=atOf(y);y.left-=k;need-=k;us.push([y,k,L,t0]);}
+      for(const y of headOrder(P,ds,tr,st,other)){if(need<=0.5) break;if(y.left<5) continue;const k=Math.min(y.left,need);const L=lab(y),t0=atOf(y);y.left-=k;need-=k;us.push([y,k,L,t0]);}
       if(need>0.5){if(us.length) us[us.length-1][1]+=need; else{const y=other[other.length-1];if(y){const L=lab(y),t0=atOf(y);us.push([y,need,L,t0]);} else us.push([{s:{label:'今日は入るコマがありません',time:''}},need,'今日は入るコマがありません','']);}}
       us.forEach(([y,k,L,t0],i)=>{const fin=x.last&&i===us.length-1, whole=Math.round(x.part)<st.min-1||us.length>1;
         T.push({id:fin?'st:'+x.id:'sp:'+ds+':'+i+':'+x.id,step:x.id,time:(L?L+'・':'')+fmtMin(k)+(whole?'（全'+fmtMin(st.min)+'）':''),kind:tr==='study'?'study':'manga',
@@ -3559,7 +3562,7 @@ function wizRender(top){
   const d=document.getElementById('wiz'), st=wizSteps(), k=st[WIZ.i], P=WIZ.P, body=d.querySelector('.wizbody'), y=body&&!top?body.scrollTop:0;
   const steps=el('ol',{class:'wizsteps','aria-label':'組み方の道順'},st.map((s,i)=>el('li',{class:i===WIZ.i?'cur':i<WIZ.i?'done':''},el('button',{type:'button',onclick:()=>wizGo(i),'aria-current':i===WIZ.i?'step':null},el('span',{class:'num'},String(i+1)),wizName(s)+(WIZ.keep&&(s==='what'||s==='dates')?'（前回のまま）':'')))));
   const T=(k==='what'||k==='dates'||k==='method')?null:wizTotals();
-  const view={what:wizWhat,dates:wizDates,method:wizMethod,study:()=>((P.setup||{}).study||{}).kind?wizStudy():studyEditor(P,wizUp),create:()=>createEditor(P,wizUp),need:wizNeed,time:wizTime,outlook:wizOutlook,build:wizBuildView}[k];
+  const view={what:wizWhat,dates:wizDates,method:wizMethod,study:()=>((P.setup||{}).study||{}).kind?wizStudy():studyEditor(P,wizUp),create:()=>((P.setup||{}).create||{}).kinds?wizCreate():createEditor(P,wizUp),need:wizNeed,time:wizTime,outlook:wizOutlook,build:wizBuildView}[k];
   const askKeep=k==='what'&&planActive()&&WIZ.keep==null;
   const nb=el('div',{class:'wizbody'},askKeep?keepCard():null,el('h2',{class:'wizh'},(WIZ.i+1)+'. '+wizName(k)),WIZ.keep&&(k==='what'||k==='dates')?el('p',{class:'xs',style:'color:var(--good)'},'前回の期日をそのまま使っています。ここで直すと、直した期日で組みます。'):null,view());
   d.replaceChildren(
@@ -3733,7 +3736,7 @@ function setupWorks(x){const c=(x.setup||{}).create||{};x.works=x.works||[];
     have.forEach((w,i)=>{w.kind=k;const nm=(names[i]||'').trim();w.name=nm||wkLabel(k)+(i+1);});}}
 function setupTargetDate(st){if(st.target) return st.target;if(st.date&&st.weeks!==''&&st.weeks!=null&&isFinite(+st.weeks)) return addDays(st.date,-7*(+st.weeks));return '';}
 function setupMockN(st){return st.mockN==='3+'?Math.max(3,Math.round(+st.mockMany||3)):(+st.mockN||0);}
-function setupApply(x){setupStudy(x);
+function setupApply(x){setupStudy(x);setupCreate(x);
   const S0=x.setup||{}, st=S0.study||{}, evs=S0.events||[], old={}, out=[], lastPh=((x.phases||[]).slice(-1)[0]||{}).id||'p3';
   for(const g of x.goals||[]) if(g.src==='setup') old[g.key]=g;
   const put=(key,o)=>{const g0=old[key], g=Object.assign({id:g0?g0.id:newId('g'),src:'setup',key,gcal:true,reward:''},o);if(g0){if(g0.reward) g.reward=g0.reward;if(g0.got) g.got=g0.got;if(g0.gcal===false) g.gcal=false;}out.push(g);};
@@ -3754,7 +3757,9 @@ function setupApply(x){setupStudy(x);
       put('c-body-'+w.id,{kind:'target',track:'create',name:w.name+(sep?' 本文入稿':' 入稿'),date:mode==='no'?bn:be,buffer:true,scope:{works:[w.id],part:sep?'body':'all'}});
       if(mode==='try'){if(+d.decide>0) put('c-decide-'+w.id,{kind:'date',track:'',name:w.name+' 早割で出すか決める日',date:addDays(be,-Math.round(+d.decide))});if(bn) put('c-normal-'+w.id,{kind:'date',track:'',name:w.name+' 通常の締切',date:bn});}
       if(sep){const cn=dead(d.cover), ce=(d.cover||{}).early;put('c-cover-'+w.id,{kind:'mid',track:'create',name:w.name+' 表紙入稿',date:mode==='no'?cn:(ce||cn),buffer:true,scope:{works:[w.id],part:'cover'}});}}
-    else put('c-done-'+w.id,{kind:'target',track:'create',name:w.name+(k==='other'?' 納期':' 完成'),date:(k==='other'?d.done:base)||'',buffer:true,scope:{works:[w.id],part:'all'}});}
+    else {let due=(k==='other'?d.done:base)||'';
+      if(k==='other'&&due){const ss=(w.steps||[]);for(let i=ss.length-1;i>=0&&ss[i].days!=null;i--){put('c-days-'+w.id+'-'+ss[i].id,{kind:'date',track:'',name:w.name+' '+ss[i].name+'の終わり',date:due});due=addDays(due,-Math.max(0,Math.round(+ss[i].days||0)));}}
+      put('c-done-'+w.id,{kind:'target',track:'create',name:w.name+(k==='other'?' 納期':' 完成'),date:due,buffer:true,scope:{works:[w.id],part:'all'}});}}
   let keep=(x.goals||[]).filter(g=>g.src!=='setup');
   if(st.kind==='none') keep=keep.filter(g=>g.track!=='study');
   if((S0.create||{}).none) keep=keep.filter(g=>g.track!=='create');
@@ -3892,6 +3897,45 @@ function wizStudy(){
         pfield('qi-w','何週間',pnum('qi-w',(st.intro||{}).weeks,v=>up(o=>{o.intro=Object.assign({},o.intro,{weeks:Math.max(1,Math.round(v))});}),1,1))):null]):null,
     sm.length?qb('3-12','問題集ごとに、何周しますか？（あとで直せます）',sm.map(roundRow)):null,
     bands.length?qb('3-13','学び方の段階',[bandTable(bands,today()),el('p',{class:'xs muted'},'区切りの日は、見通しの「節目の案」で直せます。')]):null];}
+/* ----- 計画づくりの質問 4：制作の中身（作品ごと）----- */
+function setupCreate(x){for(const w of x.works||[]){const k=wkKind(w), d=w.dl||{};if(!WK_BOOK.includes(k)) continue;
+  for(const sd of w.steps||[]) if(sd.cover){if(w.cover==='no') sd.off=true; else delete sd.off;}
+  let ds=(w.steps||[]).find(sd=>sd.id==='data');
+  if(d.nyuko!=='no'&&!ds){ds={id:'data',name:'入稿データ作り',perPage:false,hours:0};w.steps.push(ds);}
+  if(ds){if(d.nyuko==='no') ds.off=true; else delete ds.off;}}}
+function wizCreate(){
+  const P=WIZ.P, ws=P.works||[], C=(P.setup||{}).create||{};
+  const upW=(id,fn)=>wizS((S,x)=>{const w=x.works.find(y=>y.id===id);if(w) fn(w,S);});
+  const work=w=>{const k=wkKind(w), book=WK_BOOK.includes(k), goods=k==='goods', unit=goods?'デザイン':'ページ', q=n=>n+'@'+w.id, st=w.steps||[], on=st.filter(x=>!x.off);
+    if(k==='other') return el('div',{class:'card'},el('h2',{},w.name),
+      qb(q('4-8'),'工程と、それぞれにかかる時間（上から順に進めます）',[st.map((sd,si)=>ordRow(el('div',{class:'stp'},
+          el('input',{type:'text','aria-label':'工程の名前',value:sd.name,onchange:e=>{const v=e.target.value.trim();if(v) upW(w.id,x=>{x.steps[si].name=v;});}}),
+          el('input',{type:'number','aria-label':'かかる時間',class:'num',min:0,step:'0.5',value:sd.days||sd.hours||'',onchange:e=>upW(w.id,x=>{const v=Math.max(0,parseFloat(e.target.value)||0);if(x.steps[si].days!=null) x.steps[si].days=v; else x.steps[si].hours=v;})}),
+          el('select',{'aria-label':'単位',onchange:e=>upW(w.id,x=>{const o=x.steps[si], v=+(o.days||o.hours||0);if(e.target.value==='d'){o.days=v||1;delete o.hours;} else {o.hours=v;delete o.days;}})},el('option',{value:'h',selected:sd.days==null},'時間'),el('option',{value:'d',selected:sd.days!=null},'日'))),
+        sd.name,()=>upW(w.id,x=>upDown(x.steps,sd.id,-1)),()=>upW(w.id,x=>upDown(x.steps,sd.id,1)),si===0,si===st.length-1)),
+        el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>upW(w.id,x=>{x.steps.push({id:newId('st'),name:'工程'+(x.steps.length+1),perPage:false,hours:0});})},'＋ 工程を追加'),
+          st.length?el('button',{type:'button',class:'btn sub sm',onclick:()=>upW(w.id,x=>{x.steps.pop();})},'最後の工程を消す'):el('span',{})),
+        el('p',{class:'xs muted'},'時間で測れないもの（印刷所の作業など）は日数にします。')]));
+    return el('div',{class:'card'},el('h2',{},w.name),
+      qb(q('4-1'),book?'本文は何ページですか？（表紙は数えない）':'何を、いくつのデザインで作りますか？',goods?el('div',{class:'grid2'},pfield('wg-'+w.id,'何を',ptext('wg-'+w.id,w.what,v=>upW(w.id,x=>{x.what=v;}),'例：アクリルキーホルダー')),pfield('wp-'+w.id,'デザインの数',pnum('wp-'+w.id,w.pages,v=>upW(w.id,x=>{x.pages=Math.max(1,Math.round(v));}),1,1)))
+        :pnum('wp-'+w.id,w.pages,v=>upW(w.id,x=>{x.pages=Math.max(1,Math.round(v));}),1,1)),
+      book?qb(q('4-2'),'表紙はありますか？',segQ('表紙',w.cover||'',[['yes','ある'],['no','ない']],v=>upW(w.id,x=>{x.cover=v;}))):null,
+      qb(q('4-3'),'工程（上から順に進めます）',[st.map((sd,si)=>sd.off?null:ordRow(el('div',{class:'stp2'},
+          el('input',{type:'text','aria-label':'工程の名前',value:sd.name,onchange:e=>{const v=e.target.value.trim();if(!v) return;if(st.some(y=>y.id!==sd.id&&y.name===v)){toast('同じ名前の工程があります');return;}upW(w.id,x=>{x.steps[si].name=v;});}}),
+          el('select',{'aria-label':'時間の数え方',onchange:e=>upW(w.id,x=>{x.steps[si].perPage=e.target.value==='p';})},el('option',{value:'p',selected:!!sd.perPage},'1'+unit+'ごと'),el('option',{value:'t',selected:!sd.perPage},'作品で1回'))),
+        sd.name,()=>upW(w.id,x=>upDown(x.steps,sd.id,-1)),()=>upW(w.id,x=>upDown(x.steps,sd.id,1)),si===0,si===st.length-1)),
+        el('button',{type:'button',class:'btn sub sm',onclick:()=>upW(w.id,x=>{let n='新しい工程',kk=2;while(x.steps.some(y=>y.name===n)) n='新しい工程'+(kk++);x.steps.push({id:newId('st'),name:n,perPage:true,hours:0});})},'＋ 工程を追加'),
+        on.length?el('details',{class:'set'},el('summary',{},el('span',{class:'small'},'工程を外す')),el('div',{class:'chips'},on.map(sd=>el('button',{type:'button',class:'chip sm',onclick:()=>upW(w.id,x=>{x.steps=x.steps.filter(y=>y.id!==sd.id);})},sd.name+' ×')))):null]),
+      qb(q('4-4'),'いまどの工程ですか？',[pselect('wc-'+w.id,(w.cur||{}).step||'',[['','まだ始めていない'],...on.map(sd=>[sd.id,sd.name])],v=>upW(w.id,x=>{if(v) x.cur=Object.assign({},x.cur,{step:v}); else delete x.cur;})),
+        (w.cur||{}).step?pfield('wcp-'+w.id,'その工程で済んだ'+unit+'の数',pnum('wcp-'+w.id,(w.cur||{}).pages||0,v=>upW(w.id,x=>{x.cur=Object.assign({},x.cur,{pages:Math.max(0,Math.round(v))});}),1,0)):null]),
+      qb(q('4-5'),'工程ごとに、どれくらいかかりますか？',el('div',{class:'grid2'},on.map(sd=>pfield('wh-'+w.id+'-'+sd.id,sd.name+'（'+(sd.perPage?'1'+unit+'あたり':'1回あたり')+'・時間）',pnum('wh-'+w.id+'-'+sd.id,sd.hours||'',v=>upW(w.id,x=>{x.steps.find(y=>y.id===sd.id).hours=Math.max(0,v);}),0.25,0))))));};
+  const heads=[...new Set(ws.flatMap(w=>(w.steps||[]).filter(sd=>!sd.off&&!sd.days).map(sd=>sd.name)))], H=C.head||{};
+  const slots=(P.dayTypes||[]).flatMap(d=>(d.slots||[]).filter(sl=>sl.track==='create').map(sl=>({k:d.id+':'+sl.id,l:d.name+' '+(sl.time||'')+' '+(sl.label||'')})));
+  const upH=fn=>wizS(S=>{S.create=Object.assign({},S.create);S.create.head=Object.assign({},S.create.head);fn(S.create.head);});
+  return [ws.map(work),
+    ws.length?qb('4-7','頭を使う工程を、決まったコマに寄せますか？',[segQ('頭を使う工程',H.on||'',[['yes','寄せる'],['no','寄せない']],v=>upH(o=>{o.on=v;})),
+      H.on==='yes'?[el('p',{class:'small'},'頭を使う工程'),el('div',{class:'chips'},heads.map(n=>el('button',{type:'button',class:'chip sm','aria-pressed':String((H.steps||[]).includes(n)),onclick:()=>upH(o=>{const a=(o.steps||[]).slice();const i=a.indexOf(n);if(i>=0) a.splice(i,1); else a.push(n);o.steps=a;})},n))),
+        el('p',{class:'small'},'寄せるコマ'),slots.length?el('div',{class:'chips'},slots.map(sl=>el('button',{type:'button',class:'chip sm','aria-pressed':String((H.slots||[]).includes(sl.k)),onclick:()=>upH(o=>{const a=(o.slots||[]).slice();const i=a.indexOf(sl.k);if(i>=0) a.splice(i,1); else a.push(sl.k);o.slots=a;})},sl.l))):el('p',{class:'xs muted'},'時間割に制作のコマがまだありません。')]:null]):null];}
 function wizWhat(){
   const P=WIZ.P, S0=P.setup||{}, st=S0.study||{}, c=S0.create||{};
   const kinds=c.kinds||[];
@@ -4224,6 +4268,10 @@ function rvCard(rv){const m=rv.m;
       m.book?el('button',{type:'button',class:'btn sub sm',onclick:()=>rvSet(m,r,o=>next(o,{range:'all',wrongFrom:r+1}))},'間違えた問題だけ'):null,
       el('button',{type:'button',class:'btn sub sm',onclick:()=>{rvSet(m,r,o=>{o.n=r;o.pending=true;});go('materials');}},'次の教材に替える'),
       el('button',{type:'button',class:'btn sub sm',onclick:()=>rvSet(m,r,o=>{o.n=r;o.pending=true;})},'やめる')));}
+// 4-7: 頭を使う工程 into the コマ chosen for them first, the other work into the other コマ first
+function headOrder(P,ds,tr,st,other){const H=((P.setup||{}).create||{}).head||{};if(tr!=='create'||H.on!=='yes'||!(H.slots||[]).length) return other;
+  const w=(P.works||[]).find(x=>x.id===st.work), sd=w&&(w.steps||[]).find(x=>x.id===st.kind), isH=!!sd&&(H.steps||[]).includes(sd.name), dt=dayTypeOf(ds,P), inH=y=>(H.slots||[]).includes(dt+':'+y.s.id);
+  return isH?other.filter(inH).concat(other.filter(y=>!inH(y))):other.filter(y=>!inH(y)).concat(other.filter(inH));}
 function viewHome(){
   const t=today(), L=life(), d=dayRec(t);
   // progress and the two main buttons first
