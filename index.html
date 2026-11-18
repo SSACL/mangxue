@@ -10,7 +10,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="まんしゅぇ">
+<meta name="apple-mobile-web-app-title" content="芒学 mángxué">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Truculenta:wght@300..700&display=swap">
 <script>try{var mxT=localStorage.getItem('mx-theme');if(mxT==='light'||mxT==='dark')document.documentElement.setAttribute('data-theme',mxT);var mxQ=localStorage.getItem('mx-qfont');if(mxQ)document.documentElement.setAttribute('data-qfont',mxQ);}catch(e){}</script>
@@ -2650,13 +2650,18 @@ async function applyAnswers(){
   render();
   if(cm){toast('次の便に乗る予定に組み直しました');pushUpload();}
 }
+// 通知の許可の道順は端末ごとに出し分ける（2026-11-18）。iPhone・iPad の道順は実機ではまだ確かめていない
+function pushAllowPath(){const ua=navigator.userAgent||'';
+  if(/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)) return 'iPhone・iPadの「設定」→「通知」→「芒学 mángxué」';
+  if(/Android/.test(ua)) return 'Android の「設定」→「アプリ」→「芒学 mángxué」→「通知」';
+  return 'ブラウザの、このサイトの設定';}
 function pushCard(){
   if(!PUSHCFG&&pushSupported()) return el('div',{class:'card'},el('h2',{},'通知'),el('p',{class:'small muted'},'時刻に通知を受け取るには、Cloudflareの設定が要ります。'),el('button',{type:'button',class:'btn sub sm',onclick:pushGuide},'設定の手順を見る'));
   const st=!pushSupported()?'unsupported':!PUSHCFG?'nocfg':(Notification.permission==='denied'?'denied':(PUSHSUB?'on':'off'));
   const n=st==='on'?pushItems().length:0;
-  const msg={unsupported:'この画面では通知を使えません。ホーム画面の「まんしゅぇ」から開いてください。',
+  const msg={unsupported:'この画面では通知を使えません。ホーム画面の「芒学 mángxué」から開いてください。',
     nocfg:'Cloudflareの設定がまだです。',
-    denied:'通知がブロックされています。Android の「設定」→「アプリ」→「まんしゅぇ」→「通知」で許可してから、もう一度開いてください。',
+    denied:'通知がブロックされています。'+pushAllowPath()+'で許可してから、もう一度開いてください。',
     off:'ルーティンの「何分前」「時刻ちょうど」と、チェックイン・レポートの時刻に、この端末へ通知が届くようになります。',
     on:'通知を受け取っています。これから2週間で '+n+' 件の予定です'+(pushLast?'（Cloudflareに渡した時刻 '+md(ymd(new Date(pushLast)))+' '+hm(pushLast)+'）':'')+'。'}[st];
   return el('div',{class:'card'},el('div',{class:'between'},el('h2',{},'この端末の通知'),el('span',{class:'pill'+(st==='on'?'':' gray')},st==='on'?'オン':'オフ')),
