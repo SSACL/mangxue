@@ -2317,7 +2317,7 @@ function ciTomorrow(c){
     cmOn()&&!d.off?[el('h3',{class:'sub'},'通勤'),
       o.none?el('p',{class:'small muted'},'この日の通勤設定は、すべてスキップします（カレンダーで戻せます）。'):rows.length?[p?el('p',{class:'xs muted'},cmDiaText(ds,p)):null,rows]:el('p',{class:'small muted'},'この時間割には通勤がありません。')]:null,
     bringFold(ds,'cib'),
-    el('button',{type:'button',class:'btn sub sm',onclick:()=>{CIRET={id:c.id,label:ciTitle(c)};CAL.sel=ds;CAL.ym=ds.slice(0,7);CAL.focus=true;go('cal');}},'時間割や通勤のパターンをカレンダーで変更する'))];
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>{CIRET={id:c.id,label:ciTitle(c)};CAL.sel=ds;CAL.ym=ds.slice(0,7);CAL.focus=true;go('cal');}},'カレンダーで変更する'))];
 }
 /* back to the check-in from the calendar: a button over the page while the calendar is open */
 function retOverlay(){
