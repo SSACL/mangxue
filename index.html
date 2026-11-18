@@ -147,10 +147,11 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);margin:0;
 .table th{color:var(--muted);font-weight:500}
 .scroll{overflow-x:auto}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
-  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding-bottom:env(safe-area-inset-bottom,0px);
+  display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);padding-bottom:env(safe-area-inset-bottom,0px);
   padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);z-index:5}
 nav.tabs a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:64px;font-size:11px;color:var(--muted);text-decoration:none}
 nav.tabs a[aria-current="page"]{color:var(--accent-ink);font-weight:700}
+nav.tabs a[hidden]{display:none}
 nav.tabs svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:9;max-width:calc(100% - 32px)}
 .brand{display:flex;align-items:baseline;gap:.4em;flex-wrap:wrap}
@@ -1245,7 +1246,7 @@ function daySlots(ds,P){
     const blocks=privEvents(ds).filter(e=>e.s&&e.e).map(e=>ivl(e.s,e.e));
     for(const m of P.goals||[]) if(m.kind==='mock'&&m.date===ds&&m.from&&m.to) blocks.push(ivl(m.from,m.to));
     out=base.map(s=>{const min=+s.min||0, bl=s.cm?blocks:blocks.concat(cmBlocks), cut=cutBy(s,blocks)+(s.cm?0:cutBy(s,cmBlocks));
-      return Object.assign({},s,{base:min,min:Math.max(0,min-cut),cut,free:freeOf(s,bl)});});
+      return Object.assign({},s,{base:min,min:Math.max(0,min-cut),cut,free:freeOf(s,bl)},s.use==='app'&&!appOn(P)?{use:'any'}:{});});
     const a=+((P.alloc||{})[ds]||0);
     if(a){const from=a>0?'study':'create', to=a>0?'create':'study', k=Math.min(1,Math.abs(a));let moved=0;
       // commute time cannot become 制作 time, so it is not moved
@@ -1272,12 +1273,21 @@ function capOf(ds,tr,P){P=P||plan2();let m=daySlots(ds,P).filter(s=>s.track===tr
 function capSum(P,tr,a,b){let c=0;for(let ds=a;ds<=b;ds=addDays(ds,1)) c+=capOf(ds,tr,P);return c;}
 
 /* steps: study (three 段階) and 制作 */
+function appOn(P){return (((P||plan2()).setup||{}).study||{}).app!=='no';}
 function appSlotMin(P){const a=[];for(const d of P.dayTypes||[]) for(const s of d.slots||[]) if(s.track==='study'&&s.use==='app'&&+s.min>0) a.push(+s.min);return a.length?Math.min(...a):30;}
 function chunkQ(P,per){return Math.max(1,Math.floor(appSlotMin(P)/Math.max(0.5,per)));}
 /* 区切り (2026-11-05): by 章 or 節; each is cut into n pieces (n starts from 1つの作業の分数, the ratios move on a gauge or as 40/40/20);
    the last piece can go with the next one's first, even into another unit (the piece counts for the unit it mostly holds). */
 function studySlotMin(P){const a=[];for(const d of P.dayTypes||[]) for(const s of d.slots||[]) if(s.track==='study'&&+s.min>0) a.push(+s.min);return a.length?Math.min(...a):30;}
-function cutUnits(m){const toc=m.toc||[], solve=m.kind==='solve', byCh=(m.cut||{}).by==='ch', out=[];let gi=-1,lastCh=null;
+/* 3-8: a book without a 目次 but with its amount is spread over the units by 3-6's shares (equal when not answered);
+   the middle of the answered range is used. The real 目次 replaces it when taken in. */
+const AMT_MID={'50':75,'100':150,'200':300,'400':600,'800':1200};
+function matAmount(m){const a=m.amount||{};if(a.b==='n'||a.b==='u') return Math.max(0,Math.round(+a.n||0));return AMT_MID[a.b]||0;}
+function matToc(P,m){if((m.toc||[]).length) return m.toc;const n=matAmount(m), subs=P.subjects||[];if(!n||!subs.length) return [];
+  const any=subs.some(x=>+x.share>0), w=subs.map(x=>any?Math.max(0,+x.share||0):1), tot=w.reduce((a,b)=>a+b,0)||1, out=[];let acc=0,prev=0;
+  subs.forEach((x,i)=>{acc+=w[i];const end=Math.round(n*acc/tot), k=end-prev;if(k>0) out.push(m.kind==='solve'?{t:'（目次なし）',s:x.id,q:k}:{t:'（目次なし）',s:x.id,p:[prev+1,end]});prev=end;});
+  return out;}
+function cutUnits(m,P){const toc=P?matToc(P,m):(m.toc||[]), solve=m.kind==='solve', byCh=(m.cut||{}).by==='ch', out=[];let gi=-1,lastCh=null;
   toc.forEach((e,ei)=>{const r=tocRow(e), p0=+(e.p||[])[0]||1, size=solve?Math.max(0,+e.q||0):Math.max(1,(+(e.p||[])[1]||p0)-p0+1);
     if(r.ch!==lastCh){gi++;lastCh=r.ch;}
     const key=byCh&&r.ch?'c'+gi:'r'+ei;let u=out[out.length-1];
@@ -1288,7 +1298,7 @@ function cutRatios(r,n){if(Array.isArray(r)&&r.length===n&&r.every(x=>+x>0)){con
 function cutN(P,m,u){const c=m.cut||{}, cfg=(c.parts||{})[u.key]||{}, per=m.kind==='solve'?(+m.perQ||+P.perQ||3):(+m.perPage||+P.perPage||4), unit=Math.max(5,+c.unit||studySlotMin(P));
   return Math.min(Math.max(1,u.size),Math.max(1,Math.round(+cfg.n||Math.ceil(u.size*per/unit))));}
 function cutPieces(P,m){
-  const c=m.cut||{}, toc=m.toc||[], U=cutUnits(m), off={}, rowOff={};
+  const c=m.cut||{}, toc=matToc(P,m), U=cutUnits(m,P), off={}, rowOff={};
   toc.forEach((e,ei)=>{rowOff[ei]=off[e.s]||0;off[e.s]=(off[e.s]||0)+(+e.q||0);});
   const pcs=[];
   U.forEach((u,ui)=>{const n=cutN(P,m,u), r=cutRatios(((c.parts||{})[u.key]||{}).r,n);let acc=0,prev=0;
@@ -1301,22 +1311,22 @@ function cutPieces(P,m){
   return pcs.map(x=>{const by={};for(const g of x.segs) by[g.s]=(by[g.s]||0)+(g.l1-g.l0);
     const subject=Object.keys(by).reduce((a,k)=>a==null||by[k]>=by[a]?k:a,null), size=Object.values(by).reduce((a,v)=>a+v,0), g0=x.segs[0], g1=x.segs[x.segs.length-1];
     const one=Object.keys(by).length===1, cnt=pcs.filter(y=>y.ui===x.ui).length;
-    return {id:'c'+x.ui+':'+x.k,subject,size,label:x.label+(!x.joined&&cnt>1?'（'+(x.k+1)+'/'+x.n+'）':''),
+    return {id:'c'+x.ui+':'+x.k,ei0:g0.ei,subject,size,label:x.label+(!x.joined&&cnt>1?'（'+(x.k+1)+'/'+x.n+'）':''),
       pages:[g0.p0+g0.l0,g1.p0+g1.l1-1],app:one?{from:rowOff[g0.ei]+g0.l0+1,to:rowOff[g1.ei]+g1.l1}:null};});}
 function readSteps(P,s,ph){const out=[];
   for(const m of P.materials||[]) if(m.kind!=='solve'&&m.cut){const per=+m.perPage||+P.perPage||4;
     for(const x of cutPieces(P,m)) if(x.subject===s.id) out.push({id:'t:'+m.id+':'+x.id,title:(s.short||s.name)+'　'+x.label,sub:m.name+' p.'+x.pages[0]+'〜'+x.pages[1],min:Math.max(5,Math.round(x.size*per)),subject:s.id,kind:'read',phase:ph});}
-  for(const m of P.materials||[]) if(m.kind!=='solve'&&!m.cut) (m.toc||[]).forEach((e,ei)=>{if(e.s!==s.id) return;
+  for(const m of P.materials||[]) if(m.kind!=='solve'&&!m.cut) matToc(P,m).forEach((e,ei)=>{if(e.s!==s.id) return;
     const p0=+(e.p||[])[0]||1, p1=+(e.p||[])[1]||p0, ch=Math.max(1,+m.chunkPages||20), n=Math.ceil((p1-p0+1)/ch), per=+m.perPage||+P.perPage||4;
     for(let k=0;k<n;k++){const a=p0+k*ch,b=Math.min(p1,a+ch-1);out.push({id:'t:'+m.id+':'+ei+':'+k,title:(s.short||s.name)+'　'+e.t+(n>1?'（'+(k+1)+'/'+n+'）':''),sub:m.name+' p.'+a+'〜'+b,min:Math.max(5,Math.round((b-a+1)*per)),subject:s.id,kind:'read',phase:ph});}});
   return out;}
-function qSteps(P,s,round,ph){const out=[];
-  for(const m of P.materials||[]) if(m.kind==='solve'&&m.cut){const per=+m.perQ||+P.perQ||3;
-    for(const x of cutPieces(P,m)) if(x.subject===s.id) out.push({id:'q'+round+':'+m.id+':'+x.id,title:(s.short||s.name)+'　'+x.label,sub:m.name+(round>1?'（'+round+'周目）':''),min:Math.round(x.size*per),n:x.size,subject:s.id,kind:'solve',phase:ph,app:m.book&&x.app?{book:m.book,subject:s.id,from:x.app.from,to:x.app.to,round}:null});}
-  for(const m of P.materials||[]) if(m.kind==='solve'&&!m.cut) (m.toc||[]).forEach((e,ei)=>{if(e.s!==s.id) return;
+function qSteps(P,s,round,ph,it){const out=[], inR=m=>!it||!it.mats||it.mats.includes(m.id), rowOk=(m,ei)=>round<2||!Array.isArray(m.rr)||m.rr.includes(ei);
+  for(const m of P.materials||[]) if(m.kind==='solve'&&m.cut&&inR(m)){const per=+m.perQ||+P.perQ||3, T=matToc(P,m);
+    for(const x of cutPieces(P,m)) if(x.subject===s.id&&rowOk(m,x.ei0)) out.push({id:'q'+round+':'+m.id+':'+x.id,title:(s.short||s.name)+'　'+x.label,sub:m.name+(round>1?'（'+round+'周目）':''),min:Math.round(x.size*per),n:x.size,subject:s.id,kind:'solve',phase:ph,app:m.book&&x.app?{book:m.book,subject:s.id,from:x.app.from,to:x.app.to,round}:null});}
+  for(const m of P.materials||[]) if(m.kind==='solve'&&!m.cut&&inR(m)){const T=matToc(P,m);T.forEach((e,ei)=>{if(e.s!==s.id||!rowOk(m,ei)) return;
     const q=+e.q||0, per=+m.perQ||+P.perQ||3, ch=Math.max(1,+m.chunkQ||chunkQ(P,per));let off=0;
-    for(let j=0;j<ei;j++) if(m.toc[j].s===e.s) off+=(+m.toc[j].q||0);
-    for(let a=1,k=0;a<=q;a+=ch,k++){const b=Math.min(q,a+ch-1);out.push({id:'q'+round+':'+m.id+':'+ei+':'+k,title:(s.short||s.name)+'　'+e.t+' 問'+a+'〜'+b,sub:m.name+(round>1?'（'+round+'周目）':''),min:Math.round((b-a+1)*per),n:b-a+1,subject:s.id,kind:'solve',phase:ph,app:m.book?{book:m.book,subject:s.id,from:off+a,to:off+b,round}:null});}});
+    for(let j=0;j<ei;j++) if(T[j].s===e.s) off+=(+T[j].q||0);
+    for(let a=1,k=0;a<=q;a+=ch,k++){const b=Math.min(q,a+ch-1);out.push({id:'q'+round+':'+m.id+':'+ei+':'+k,title:(s.short||s.name)+'　'+e.t+' 問'+a+'〜'+b,sub:m.name+(round>1?'（'+round+'周目）':''),min:Math.round((b-a+1)*per),n:b-a+1,subject:s.id,kind:'solve',phase:ph,app:m.book?{book:m.book,subject:s.id,from:off+a,to:off+b,round}:null});}});}
   return out;}
 function phSteps(P,s,round,ph,what){
   const H=Math.round((+s.hours||10)*60), share=Math.min(0.9,Math.max(0.1,+(P.readShare??0.5)));
@@ -1331,8 +1341,9 @@ function baseSteps(P,s,ph,w){
   // w: one group of 教材 by 使う順番 (3-8c); the stand-ins for a unit without a 目次 come only in the first group
   const Pw=w?Object.assign({},P,{materials:w.mats}):P;
   let R=readSteps(Pw,s,ph), Q=qSteps(Pw,s,1,ph);
-  if(!R.length&&(!w||(w.first&&!readSteps(P,s,ph).length))) R=phSteps(P,s,1,ph,'read');
-  if(!Q.length&&(!w||(w.first&&!qSteps(P,s,1,ph).length))) Q=phSteps(P,s,1,ph,'solve');
+  const P0=(w&&w.P0)||P;
+  if(!R.length&&(!w||(w.first&&!readSteps(P0,s,ph).length))) R=phSteps(P,s,1,ph,'read');
+  if(!Q.length&&(!w||(w.first&&!qSteps(P0,s,1,ph).length))) Q=phSteps(P,s,1,ph,'solve');
   if(!R.length) return Q.map(q=>Object.assign(q,{after:null}));if(!Q.length) return R;
   const TR=R.reduce((a,x)=>a+x.min,0)||1, TQ=Q.reduce((a,x)=>a+x.min,0)||1, out=[];let j=0,qa=0,ra=0,prev=0;
   for(let i=0;i<R.length;i++){out.push(R[i]);
@@ -1354,10 +1365,13 @@ function hourSteps(P,it,ph){const tot=Math.round((+it.hours||0)*60);if(!tot) ret
 function studySteps(P,upto,subs){
   const c=cacheOf(P), key='ss:'+upto+':'+(subs==='all'?'all':[].concat(subs).join(','));if(c[key]) return c[key];
   const ph=P.phases||[], lim=ph.findIndex(p=>p.id===upto), okS=id=>subs==='all'||[].concat(subs).includes(id), out=[];
+  const intro=((ph.flatMap(p=>p.items||[]).find(i=>i.type==='intro'))||{}).mat||null;
   ph.forEach((p,pi)=>{if(lim>=0&&pi>lim) return;
     for(const it of p.items||[]){
-      if(it.type==='base'){const W=matWaves(P);W.forEach((mats,k)=>{for(const s of P.subjects||[]) if(okS(s.id)) out.push(...baseSteps(P,s,p.id,W.length>1?{mats,first:k===0}:null));});}
-      else if(it.type==='round'){for(const s of P.subjects||[]) if(okS(s.id)){let Q=qSteps(P,s,it.round||2,p.id);if(!Q.length) Q=phSteps(P,s,it.round||2,p.id,'solve');out.push(...Q);}}
+      if(it.type==='intro'){const m=(P.materials||[]).find(x=>x.id===it.mat);if(m){const Pi=Object.assign({},P,{materials:[m]});for(const s of P.subjects||[]) if(okS(s.id)) out.push(...readSteps(Pi,s,p.id));}}
+      else if(it.type==='base'){const PB=intro?Object.assign({},P,{materials:(P.materials||[]).filter(m=>m.id!==intro)}):P, W=matWaves(PB);
+        W.forEach((mats,k)=>{for(const s of P.subjects||[]) if(okS(s.id)) out.push(...baseSteps(PB,s,p.id,W.length>1||intro?{mats,first:k===0,P0:P}:null));});}
+      else if(it.type==='round'){for(const s of P.subjects||[]) if(okS(s.id)){let Q=qSteps(P,s,it.round||2,p.id,it);if(!Q.length&&!it.mats) Q=phSteps(P,s,it.round||2,p.id,'solve');out.push(...Q);}}
       else if(it.type==='hours'&&subs==='all') out.push(...hourSteps(P,it,p.id));
     }});
   return c[key]=out;
@@ -3490,7 +3504,8 @@ function timeEditor(P,up,rr){
 /* ----- the wizard ----- */
 let WIZ=null;
 const TIMEKEYS=['dayTypes','week','dates','alloc','mode','dflt','weekStart','cycle'];
-function wizSteps(){return WIZ.method==='time'?['what','dates','method','time','study','create','outlook','build']:['what','dates','method','study','create','need','time','outlook','build'];}
+function wizSteps(){const S0=(WIZ&&WIZ.P&&WIZ.P.setup)||{}, noS=(S0.study||{}).kind==='none', noC=!!(S0.create||{}).none;
+  return (WIZ.method==='time'?['what','dates','method','time','study','create','outlook','build']:['what','dates','method','study','create','need','time','outlook','build']).filter(k=>!(k==='study'&&noS)&&!(k==='create'&&noC));}
 function wizName(k){return {what:'何を計画するか',dates:'期日',method:'組み方',study:tname('study'),create:tname('create'),need:'必要な時間',time:'時間割',outlook:'見通し',build:'組む'}[k];}
 function openWizard(at){
   const cur=plan2();
@@ -3510,7 +3525,7 @@ const WIZ_LIVE=['subjects','materials'];
 function wizPull(){if(!WIZ) return;const cur=plan2();let ch=false;for(const k of WIZ_LIVE){const v=clone(cur[k]||[]);if(JSON.stringify(v)!==JSON.stringify(WIZ.P[k]||[])){WIZ.P[k]=v;ch=true;}}if(ch) CAPV++;}
 function wizPush(){if(!WIZ) return;const cur=plan2();if(WIZ_LIVE.every(k=>JSON.stringify(cur[k]||[])===JSON.stringify(WIZ.P[k]||[]))) return;
   setPlan2(x=>{for(const k of WIZ_LIVE) x[k]=clone(WIZ.P[k]||[]);});WIZ.src=plan2().t||0;}
-function wizUp(fn){const k=wizSteps()[WIZ.i];if(k==='what'||k==='dates') WIZ.keep=false;WIZ.touched=true;wizPull();fn(WIZ.P);wizPush();CAPV++;wizSave();wizRender();}
+function wizUp(fn){const k=wizSteps()[WIZ.i];if(k==='what'||k==='dates') WIZ.keep=false;WIZ.touched=true;wizPull();fn(WIZ.P);if(WIZ.P.setup) setupStudy(WIZ.P);wizPush();CAPV++;wizSave();wizRender();}
 /* 組み直し: use the dates set last time as they are, and go straight to 組み方 */
 function wizKeepDates(){const cur=plan2();WIZ.P.goals=clone(cur.goals||[]);if(cur.setup) WIZ.P.setup=clone(cur.setup);WIZ.P.works=clone(cur.works||[]);WIZ.keep=true;CAPV++;WIZ.i=wizSteps().indexOf('method');wizSave();wizRender(true);}
 function keepCard(){
@@ -3531,7 +3546,7 @@ function wizRender(top){
   const d=document.getElementById('wiz'), st=wizSteps(), k=st[WIZ.i], P=WIZ.P, body=d.querySelector('.wizbody'), y=body&&!top?body.scrollTop:0;
   const steps=el('ol',{class:'wizsteps','aria-label':'組み方の道順'},st.map((s,i)=>el('li',{class:i===WIZ.i?'cur':i<WIZ.i?'done':''},el('button',{type:'button',onclick:()=>wizGo(i),'aria-current':i===WIZ.i?'step':null},el('span',{class:'num'},String(i+1)),wizName(s)+(WIZ.keep&&(s==='what'||s==='dates')?'（前回のまま）':'')))));
   const T=(k==='what'||k==='dates'||k==='method')?null:wizTotals();
-  const view={what:wizWhat,dates:wizDates,method:wizMethod,study:()=>studyEditor(P,wizUp),create:()=>createEditor(P,wizUp),need:wizNeed,time:wizTime,outlook:wizOutlook,build:wizBuildView}[k];
+  const view={what:wizWhat,dates:wizDates,method:wizMethod,study:()=>((P.setup||{}).study||{}).kind?wizStudy():studyEditor(P,wizUp),create:()=>createEditor(P,wizUp),need:wizNeed,time:wizTime,outlook:wizOutlook,build:wizBuildView}[k];
   const askKeep=k==='what'&&planActive()&&WIZ.keep==null;
   const nb=el('div',{class:'wizbody'},askKeep?keepCard():null,el('h2',{class:'wizh'},(WIZ.i+1)+'. '+wizName(k)),WIZ.keep&&(k==='what'||k==='dates')?el('p',{class:'xs',style:'color:var(--good)'},'前回の期日をそのまま使っています。ここで直すと、直した期日で組みます。'):null,view());
   d.replaceChildren(
@@ -3598,7 +3613,7 @@ function phaseBands(P,R,qmap){
   const ph={}, sb={};
   for(const [id,r] of Object.entries(rng)){const s=idx[id];if(!s) continue;const o=ph[s.phase]||(ph[s.phase]={a:r[0],b:r[1]});o.a=Math.min(o.a,r[0]);o.b=Math.max(o.b,r[1]);
     if(s.phase==='p1'&&s.subject){const u=sb[s.subject]||(sb[s.subject]={a:r[0],b:r[1]});u.a=Math.min(u.a,r[0]);u.b=Math.max(u.b,r[1]);}}
-  return (P.phases||[]).map((p,i)=>ph[p.id]?{p,i,from:startAt(ph[p.id].a),to:dayAt(ph[p.id].b),subs:i===0?(P.subjects||[]).filter(s=>sb[s.id]).map(s=>({s,from:startAt(sb[s.id].a),to:dayAt(sb[s.id].b)})):[]}:null).filter(Boolean);
+  return (P.phases||[]).map((p,i)=>ph[p.id]?{p,i,from:startAt(ph[p.id].a),to:dayAt(ph[p.id].b),subs:p.id==='p1'?(P.subjects||[]).filter(s=>sb[s.id]).map(s=>({s,from:startAt(sb[s.id].a),to:dayAt(sb[s.id].b)})):[]}:null).filter(Boolean);
 }
 function bandTable(bands,t){return el('div',{class:'scroll'},el('table',{class:'table'},el('tbody',{},bands.flatMap(b=>[
   el('tr',{style:t>=b.from&&t<=b.to?'background:var(--accent-soft)':''},el('td',{},el('b',{},'段階'+(b.i+1)+' '+b.p.name)),el('td',{class:'num'},md(b.from)+'〜'+md(b.to))),
@@ -3705,7 +3720,7 @@ function setupWorks(x){const c=(x.setup||{}).create||{};x.works=x.works||[];
     have.forEach((w,i)=>{w.kind=k;const nm=(names[i]||'').trim();w.name=nm||wkLabel(k)+(i+1);});}}
 function setupTargetDate(st){if(st.target) return st.target;if(st.date&&st.weeks!==''&&st.weeks!=null&&isFinite(+st.weeks)) return addDays(st.date,-7*(+st.weeks));return '';}
 function setupMockN(st){return st.mockN==='3+'?Math.max(3,Math.round(+st.mockMany||3)):(+st.mockN||0);}
-function setupApply(x){
+function setupApply(x){setupStudy(x);
   const S0=x.setup||{}, st=S0.study||{}, evs=S0.events||[], old={}, out=[], lastPh=((x.phases||[]).slice(-1)[0]||{}).id||'p3';
   for(const g of x.goals||[]) if(g.src==='setup') old[g.key]=g;
   const put=(key,o)=>{const g0=old[key], g=Object.assign({id:g0?g0.id:newId('g'),src:'setup',key,gcal:true,reward:''},o);if(g0){if(g0.reward) g.reward=g0.reward;if(g0.got) g.got=g0.got;if(g0.gcal===false) g.gcal=false;}out.push(g);};
@@ -3714,6 +3729,7 @@ function setupApply(x){
     if(st.apply) put('s-apply',{kind:'date',track:'',name:'申込の締切',date:st.apply});
     (st.mocks||[]).slice(0,setupMockN(st)).forEach((m,i)=>{if(m.date) put('s-mock-'+m.id,{kind:'mock',track:'study',name:m.name||'模試'+(i+1),date:m.date,from:'09:30',to:'16:30',reviewH:6,reviewDays:7});});
     put('s-target',{kind:'target',track:'study',name:'修了目標',date:setupTargetDate(st),buffer:true,scope:{upto:lastPh,subjects:'all'}});}
+  if((x.phases||[]).some(p=>p.id==='p0')) put('s-intro',{kind:'mid',track:'study',name:'入門の読み通しの終わり',date:addDays(today(),7*Math.max(1,+((st.intro||{}).weeks)||1)),buffer:false,scope:{upto:'p0',subjects:'all'}});
   else if(st.kind==='other') put('s-target',{kind:'target',track:'study',name:'修了目標',date:st.until||'',buffer:true,scope:{upto:lastPh,subjects:'all'}});
   for(const e of evs){put('c-ev-'+e.id,{kind:'event',track:'create',name:e.name||'イベント',date:e.date||''});
     for(const [k,l] of [['apply','申込の締切'],['result','当落の発表'],['place','配置の発表']]) if(e[k]) put('c-'+k+'-'+e.id,{kind:'date',track:'',name:(e.name||'イベント')+' '+l,date:e[k]});}
@@ -3735,6 +3751,100 @@ function qb(qid,title,body){const L=((WIZ.P.setup||{}).later||{})[qid];
   return el('div',{class:'qb'+(L?' later':'')},el('div',{class:'qbh'},el('b',{class:'small'},title),
     el('button',{type:'button',class:'chip sm','aria-pressed':String(!!L),onclick:()=>wizS(S=>{S.later=S.later||{};if(L) delete S.later[qid]; else S.later[qid]=title;})},'あとで答える')),L?null:body);}
 function segQ(id,cur,opts,fn){return el('div',{class:'seg',style:'grid-template-columns:repeat('+Math.min(opts.length,opts.length>3?2:opts.length)+',1fr)',role:'group','aria-label':id},opts.map(([v,l])=>el('button',{type:'button','aria-pressed':String(cur===v),onclick:()=>fn(cur===v?'':v)},l)));}
+/* ----- 計画づくりの質問 3：学習の中身 ----- */
+const FMT=[['mc','マークシート・選択肢から選ぶ'],['blank','穴埋め（語句を選ぶ・書く）'],['essay','記述・論述'],['calc','計算'],['listen','リスニング'],['oral','実技・口述・面接']];
+function fmtLabel(f){return (FMT.find(x=>x[0]===f)||[,f])[1];}
+function matSize(P,m){return matToc(P,m).reduce((a,e)=>a+(m.kind==='solve'?(+e.q||0):Math.max(1,(+(e.p||[])[1]||+(e.p||[])[0]||1)-(+(e.p||[])[0]||1)+1)),0);}
+function matHours(P,m){const st=((P.setup||{}).study||{}), n=m.kind==='solve'?Math.max(1,Math.round(+(((st.rounds||{})[m.id]||{}).n)||1)):1;
+  return matSize(P,m)*(m.kind==='solve'?(+m.perQ||+P.perQ||3):(+m.perPage||+P.perPage||4))*n/60;}
+function capHours(P,until){if(!until) return 0;const t=today(), end=addDays(t,Math.floor(diffDays(t,until)*0.9));let m=0;for(let ds=t;ds<=end;ds=addDays(ds,1)) m+=capOf(ds,'study',P);return m/60;}
+function setupStudy(x){const st=(x.setup||{}).study||{};if(!st.kind||st.kind==='none') return;
+  const F=st.fmt||{}, mats=x.materials||[];
+  const first=(st.formats||[]).map(f=>+((F[f]||{}).perQ)||0).find(v=>v>0);if(first) x.perQ=first;
+  for(const m of mats){if(m.kind==='solve'&&m.format&&+((F[m.format]||{}).perQ)>0) m.perQ=+F[m.format].perQ;
+    if(m.amount&&m.amount.b==='u'&&+m.amount.per>0){if(m.kind==='solve') m.perQ=+m.amount.per; else m.perPage=+m.amount.per;}}
+  if(st.pattern==='mat') mats.forEach((m,i)=>{if(i) m.after=mats[i-1].id; else delete m.after;});
+  const subs=x.subjects||[], any=subs.some(v=>+v.share>0), w=subs.map(v=>any?Math.max(0,+v.share||0):1), tot=w.reduce((a,b)=>a+b,0)||1;
+  const T=st.total==='known'?(+st.hours||0):st.total==='mat'?mats.reduce((a,m)=>a+matHours(x,m),0):st.total==='unknown'?capHours(x,setupTargetDate(st)||st.until):0;
+  if(T>0) subs.forEach((v,i)=>{v.hours=Math.round(T*w[i]/tot*10)/10;});
+  const ph=x.phases=(x.phases||clone(PHASES_PRESET)).filter(p=>p.id!=='p0'), it=st.intro||{};
+  if(st.status==='new'&&it.on==='yes'&&it.mat&&mats.some(m=>m.id===it.mat)&&+it.weeks>0) ph.unshift({id:'p0',name:'入門の読み通し',items:[{id:'intro',type:'intro',mat:it.mat,name:'入門書を一通り読む'}]});
+  if(st.rounds){const R=st.rounds, sm=mats.filter(m=>m.kind==='solve'), n=m=>Math.max(1,Math.round(+((R[m.id]||{}).n)||1)), max=Math.max(1,...sm.map(n));
+    let p2=ph.find(p=>p.id==='p2');if(!p2){p2={id:'p2',name:'2周目から',items:[]};const k=ph.findIndex(p=>p.id==='p3');ph.splice(k<0?ph.length:k,0,p2);}
+    p2.items=(p2.items||[]).filter(i=>i.type!=='round');
+    for(let r=2;r<=max;r++) p2.items.push({id:'r'+r,type:'round',round:r,name:'問題集 '+r+'周目',mats:sm.filter(m=>n(m)>=r).map(m=>m.id)});
+    for(const m of sm){const o=R[m.id]||{};if(n(m)>1&&o.range==='some'&&Array.isArray(o.rows)) m.rr=o.rows.slice(); else delete m.rr;}}}
+const AMT_OPTS=[['','（選ぶ）'],['50','50〜100'],['100','100〜200'],['200','200〜400'],['400','400〜800'],['800','800〜1600'],['n','それ以外（数を入力）'],['u','ほかの数え方'],['x','分からない']];
+function wizStudy(){
+  const P=WIZ.P, st=(P.setup||{}).study||{}, F=st.fmt||{}, subs=P.subjects||[], mats=P.materials||[], fm=st.formats||[];
+  const up=fn=>wizS((S,x)=>{S.study=Object.assign({},S.study);fn(S.study,x);});
+  const upM=(id,fn)=>wizS((S,x)=>{const m=x.materials.find(y=>y.id===id);if(m) fn(m,S);});
+  const pace=f=>{const o=F[f]||{};return +o.time>0&&+o.n>0?Math.round(o.time/o.n*10)/10:0;};
+  const anyShare=subs.some(v=>+v.share>0), shareSum=subs.reduce((a,v)=>a+(+v.share||0),0);
+  const sm=mats.filter(m=>m.kind==='solve'), rm=mats.filter(m=>m.kind!=='solve');
+  const matRow=(m,i)=>{const toc=(m.toc||[]).length, a=m.amount||{}, unit=m.kind==='solve'?'問':'ページ';
+    return el('div',{class:'card'},
+      el('div',{class:'grid2'},pfield('qm-n-'+m.id,'名前',ptext('qm-n-'+m.id,m.name,v=>{if(v) upM(m.id,x=>{x.name=v;});})),
+        pfield('qm-k-'+m.id,'種類',pselect('qm-k-'+m.id,m.kind,[['read','読むもの（テキスト・入門書）'],['solve','解くもの（問題集）']],v=>upM(m.id,x=>matKind(x,v))))),
+      toc?el('p',{class:'xs muted num'},'目次から：'+matSize(P,m)+unit)
+        :[pfield('qm-a-'+m.id,'量（'+unit+'）',pselect('qm-a-'+m.id,a.b||'',AMT_OPTS,v=>upM(m.id,x=>{x.amount=Object.assign({},x.amount,{b:v});}))),
+          a.b==='n'?pfield('qm-an-'+m.id,unit+'の数',pnum('qm-an-'+m.id,a.n,v=>upM(m.id,x=>{x.amount=Object.assign({},x.amount,{n:Math.max(1,Math.round(v))});}),1,1)):null,
+          a.b==='u'?el('div',{class:'grid2'},pfield('qm-un-'+m.id,'数',pnum('qm-un-'+m.id,a.n,v=>upM(m.id,x=>{x.amount=Object.assign({},x.amount,{n:Math.max(1,Math.round(v))});}),1,1)),
+            pfield('qm-uu-'+m.id,'単位',ptext('qm-uu-'+m.id,a.unit,v=>upM(m.id,x=>{x.amount=Object.assign({},x.amount,{unit:v});}),'例：レッスン')),
+            pfield('qm-up-'+m.id,'1つあたり（分）',pnum('qm-up-'+m.id,a.per,v=>upM(m.id,x=>{x.amount=Object.assign({},x.amount,{per:v});}),1,1))):null],
+      m.kind==='solve'&&fm.length?pfield('qm-f-'+m.id,'本番の形式',pselect('qm-f-'+m.id,m.format||'',[['','（選ぶ）'],...fm.map(f=>[f,fmtLabel(f)])],v=>upM(m.id,x=>{if(v) x.format=v; else delete x.format;}))):null,
+      st.pattern!=='mat'&&mats.length>1?pfield('qm-o-'+m.id,'使う順番',pselect('qm-o-'+m.id,m.after||'',[['','最初から'],...mats.filter(o=>o.id!==m.id&&o.after!==m.id).map(o=>[o.id,o.name+'の1周目を終えてから'])],v=>upM(m.id,x=>{if(v) x.after=v; else delete x.after;}))):null);};
+  const roundRow=m=>{const o=(st.rounds||{})[m.id]||{}, n=Math.max(1,Math.round(+o.n||1)), chs=[];
+    matToc(P,m).forEach((e,ei)=>{const c=tocRow(e).ch||e.t;let g=chs[chs.length-1];if(!g||g.ch!==c){g={ch:c,rows:[]};chs.push(g);}g.rows.push(ei);});
+    const setR=fn=>up(S=>{S.rounds=Object.assign({},S.rounds);S.rounds[m.id]=Object.assign({},S.rounds[m.id]);fn(S.rounds[m.id]);});
+    return el('div',{class:'card'},el('b',{class:'small'},m.name),
+      pfield('qr-'+m.id,'何周しますか',pselect('qr-'+m.id,n>4?'more':String(n),[['1','1周'],['2','2周'],['3','3周'],['4','4周'],['more','それより多い']],v=>setR(r=>{r.n=v==='more'?Math.max(5,+r.n||5):+v;}))),
+      n>4?pfield('qrn-'+m.id,'周の数',pnum('qrn-'+m.id,n,v=>setR(r=>{r.n=Math.max(5,Math.round(v));}),1,5)):null,
+      n>1?[segQ('2周目からの範囲',o.range||'all',[['all','全部'],['some','章を選ぶ']],v=>setR(r=>{r.range=v||'all';})),
+        o.range==='some'?el('div',{class:'chips'},chs.map(g=>{const on=g.rows.every(r=>(o.rows||[]).includes(r));
+          return el('button',{type:'button',class:'chip sm','aria-pressed':String(on),onclick:()=>setR(r=>{const set=new Set(r.rows||[]);g.rows.forEach(x=>on?set.delete(x):set.add(x));r.rows=[...set].sort((a,b)=>a-b);})},g.ch||'（見出しなし）');})):null]:null);};
+  const R=wizSched(), bands=phaseBands(P,R), exam=st.kind!=='other';
+  return [
+    !exam?null:qb('3-1','本番の試験はどんな形で出題されますか？（いくつでも）',el('div',{class:'chips'},FMT.map(([f,l])=>el('button',{type:'button',class:'chip sm','aria-pressed':String(fm.includes(f)),onclick:()=>up(o=>{const a=(o.formats||[]).filter(x=>x!=='x');const i=a.indexOf(f);if(i>=0) a.splice(i,1); else a.push(f);o.formats=a;})},l)),
+      el('button',{type:'button',class:'chip sm','aria-pressed':String(fm.includes('x')),onclick:()=>up(o=>{o.formats=fm.includes('x')?[]:['x'];})},'分からない'))),
+    exam&&fm.length&&!fm.includes('x')?qb('3-2','形式ごとの試験時間と問題数',fm.map(f=>{const o=F[f]||{}, setF=fn=>up(S=>{S.fmt=Object.assign({},S.fmt);S.fmt[f]=Object.assign({},S.fmt[f]);fn(S.fmt[f]);});
+      return el('div',{class:'unitmerge'},el('b',{class:'small'},fmtLabel(f)),el('div',{class:'grid2'},
+        pfield('qf-t-'+f,'試験時間（分）',pnum('qf-t-'+f,o.time,v=>setF(x=>{x.time=v;}),1,0)),pfield('qf-n-'+f,'問題数',pnum('qf-n-'+f,o.n,v=>setF(x=>{x.n=v;}),1,0))),
+        pace(f)?el('p',{class:'xs muted num'},'本番のペース：1問 '+pace(f)+'分'):null,
+        pfield('qf-p-'+f,'演習で1問にかける時間（分。解説を読む時間も含めて）',pnum('qf-p-'+f,o.perQ||'',v=>setF(x=>{x.perQ=v;}),0.5,0)),
+        !(+o.perQ>0)&&pace(f)?el('button',{type:'button',class:'chip sm',onclick:()=>setF(x=>{x.perQ=pace(f);})},'本番のペースにする'):null);})):null,
+    !exam?null:qb('3-3','合格の基準',[segQ('合格の基準',(st.pass||{}).mode||'',[['total','合計点だけ'],['unit','合計点＋単元ごとの最低点'],['x','分からない']],v=>up(o=>{o.pass=Object.assign({},o.pass,{mode:v});})),
+      (st.pass||{}).mode&&(st.pass||{}).mode!=='x'?(fm.filter(f=>f!=='x').length?fm.filter(f=>f!=='x'):['all']).map(f=>{const o=((st.pass||{}).fmt||{})[f]||{}, setP=fn=>up(S=>{S.pass=Object.assign({},S.pass);S.pass.fmt=Object.assign({},S.pass.fmt);S.pass.fmt[f]=Object.assign({},S.pass.fmt[f]);fn(S.pass.fmt[f]);});
+        return el('div',{class:'grid2'},f==='all'?null:el('b',{class:'small',style:'grid-column:1/-1'},fmtLabel(f)),pfield('qp-f-'+f,'満点',pnum('qp-f-'+f,o.full,v=>setP(x=>{x.full=v;}),1,0)),pfield('qp-m-'+f,'合格に要る点',pnum('qp-m-'+f,o.min,v=>setP(x=>{x.min=v;}),1,0)),
+          st.pass.mode==='unit'?pfield('qp-u-'+f,'単元ごとの最低点',pnum('qp-u-'+f,o.unit,v=>setP(x=>{x.unit=v;}),1,0)):null);}):null]),
+    !exam?null:qb('3-3b','演習で目指す点',[segQ('目指す点',(st.aim||{}).mode||'',[['full','満点（全問正解）'],['pass','合格の基準'],['pct','自分で決めた正答率']],v=>up(o=>{o.aim=Object.assign({},o.aim,{mode:v});})),
+      (st.aim||{}).mode==='pct'?pfield('qa-p','正答率（%）',pnum('qa-p',(st.aim||{}).pct,v=>up(o=>{o.aim=Object.assign({},o.aim,{pct:Math.max(1,Math.min(100,Math.round(v)))});}),1,1)):null]),
+    qb('3-4','進め方',segQ('進め方',st.pattern||'',[['unit','単元ごとに進める'],['mat','教材ごとに進める'],['fmt','形式ごとに進める']],v=>up(o=>{o.pattern=v;}))),
+    st.pattern!=='mat'?qb('3-5','単元と学ぶ順（上から。20まで）',[subs.map((v,i)=>ordRow(el('input',{type:'text','aria-label':'単元の名前',value:v.name,onchange:e=>{const nm=e.target.value.trim();if(!nm||subs.some(y=>y.id!==v.id&&y.name===nm)){e.target.value=v.name;toast(nm?'同じ名前の単元があります':'名前を入力してください');return;}wizS((S,x)=>{const y=x.subjects.find(z=>z.id===v.id);y.name=nm;if(!y.short||y.short===v.name) y.short=nm;});}}),
+        v.name,()=>wizS((S,x)=>upDown(x.subjects,v.id,-1)),()=>wizS((S,x)=>upDown(x.subjects,v.id,1)),i===0,i===subs.length-1)),
+      subs.length<UNIT_MAX?el('button',{type:'button',class:'btn sub sm',onclick:()=>wizS((S,x)=>{let n='新しい単元',k=2;while(x.subjects.some(y=>y.name===n)) n='新しい単元'+(k++);x.subjects.push({id:newId('s'),name:n,short:n,hours:10});})},'＋ 単元を追加'):null,
+      st.pattern==='fmt'&&fm.filter(f=>f!=='x').some(f=>!subs.some(v=>v.name===fmtLabel(f)))?el('button',{type:'button',class:'btn sub sm',onclick:()=>wizS((S,x)=>{for(const f of fm.filter(f=>f!=='x')) if(!x.subjects.some(v=>v.name===fmtLabel(f))&&x.subjects.length<UNIT_MAX) x.subjects.push({id:newId('s'),name:fmtLabel(f),short:fmtLabel(f),hours:10});})},'形式を単元にする'):null]):null,
+    subs.length>1?qb('3-6','単元ごとの割合（%）',[el('div',{class:'grid2'},subs.map(v=>pfield('qs-'+v.id,v.short||v.name,pnum('qs-'+v.id,v.share||'',x=>wizS((S,X)=>{X.subjects.find(z=>z.id===v.id).share=Math.max(0,Math.round(x));}),1,0)))),
+      el('p',{class:'xs muted num'},anyShare?'残り '+(100-shareSum)+'%':'入力しないと均等になります')]):null,
+    qb('3-7','学習時間の合計の見込み',[segQ('学習時間の合計',st.total||'',[['known','分かる'],['mat','教材の量から計算する'],['unknown','分からない']],v=>{up(o=>{o.total=v;});WIZ.method=v==='unknown'?'time':'work';wizSave();}),
+      st.total==='known'?pfield('qt-h','合計（時間）',pnum('qt-h',st.hours,v=>up(o=>{o.hours=Math.max(0,v);}),1,0)):null,
+      st.total==='mat'?el('p',{class:'xs muted num'},'教材の量から：約'+Math.round(mats.reduce((a,m)=>a+matHours(P,m),0))+'時間'):null,
+      st.total==='unknown'?el('p',{class:'xs muted'},'時間割で使える時間から組みます。'):null]),
+    qb('3-8','このアプリで管理する教材は何冊ですか？',[pnum('qm-cnt',mats.length,v=>wizS((S,x)=>{const n=Math.max(0,Math.min(30,Math.round(v)));while(x.materials.length<n) x.materials.push({id:newId('mat'),name:'教材'+(x.materials.length+1),kind:'read',perPage:x.perPage||4,chunkPages:20,toc:[]});
+        while(x.materials.length>n){const k=x.materials.map(m=>(m.toc||[]).length).lastIndexOf(0);if(k<0) break;x.materials.splice(k,1);}}),1,0),
+      mats.some(m=>(m.toc||[]).length)?el('p',{class:'xs muted'},'目次を取り込んだ教材は、数を減らしても消えません（教材設定で消せます）。'):null,
+      mats.map(matRow)]),
+    qb('3-10','スキマ演習（アプリの演習機能）を使いますか？',[el('ul',{class:'small'},
+        el('li',{},el('b',{},'使う：'),'問題集をアプリに取り込んで（写真から問題のデータを作る手間がかかります）、アプリで解きます。通勤やスキマ演習のコマで続きから出し、正誤と時間を記録して、単元ごとの正答率と弱いところを出します。'),
+        el('li',{},el('b',{},'使わない：'),'問題は紙の問題集で解きます。今日やることは範囲で出し、終わったらチェックと時間を記録します。演習のタブと問題の取り込みは隠れます（あとで変えられます）。')),
+      segQ('スキマ演習',st.app||'',[['yes','使う'],['no','使わない'],['later','あとで決める']],v=>up(o=>{o.app=v;}))]),
+    st.app==='yes'?qb('3-10b','スキマ演習で解く形（いくつでも）',el('div',{class:'chips'},[['tf','○×（一問一答）'],['mc5','選択肢から選ぶ'],['blank','穴埋め'],['order','並び替え']].map(([k,l])=>el('button',{type:'button',class:'chip sm','aria-pressed':String((st.qtypes||[]).includes(k)),onclick:()=>up(o=>{const a=(o.qtypes||[]).slice();const i=a.indexOf(k);if(i>=0) a.splice(i,1); else a.push(k);o.qtypes=a;})},l)))):null,
+    !exam?null:qb('3-11','この試験の勉強は、いまどの段階ですか？',segQ('いまの段階',st.status||'',[['new','まったく初めて'],['base','入門書などで一通り学んだ'],['retry','一度受けたことがある']],v=>up(o=>{o.status=v;}))),
+    exam&&st.status==='new'?qb('3-11b','1周目の前に、入門書などで全体を一通り読む期間をとりますか？',[segQ('入門の読み通し',(st.intro||{}).on||'',[['yes','とる'],['no','とらない']],v=>up(o=>{o.intro=Object.assign({},o.intro,{on:v});})),
+      (st.intro||{}).on==='yes'?el('div',{class:'grid2'},pfield('qi-m','読む教材',pselect('qi-m',(st.intro||{}).mat||'',[['','（選ぶ）'],...rm.map(m=>[m.id,m.name])],v=>up(o=>{o.intro=Object.assign({},o.intro,{mat:v});}))),
+        pfield('qi-w','何週間',pnum('qi-w',(st.intro||{}).weeks,v=>up(o=>{o.intro=Object.assign({},o.intro,{weeks:Math.max(1,Math.round(v))});}),1,1))):null]):null,
+    sm.length?qb('3-12','問題集ごとに、何周しますか？（あとで直せます）',sm.map(roundRow)):null,
+    bands.length?qb('3-13','学び方の段階',[bandTable(bands,today()),el('p',{class:'xs muted'},'区切りの日は、見通しの「節目の案」で直せます。')]):null];}
 function wizWhat(){
   const P=WIZ.P, S0=P.setup||{}, st=S0.study||{}, c=S0.create||{};
   const kinds=c.kinds||[];
@@ -4016,7 +4126,7 @@ function render(){
   const h=(location.hash||'#home').slice(1), i=h.indexOf('/'), name=i<0?h:h.slice(0,i), arg=i<0?'':h.slice(i+1);
   VIEW=VIEWS[name]?name:'home';
   const tab=TAB_OF[VIEW]||VIEW;
-  document.querySelectorAll('nav.tabs a').forEach(a=>{if(a.dataset.v===tab) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');});
+  document.querySelectorAll('nav.tabs a').forEach(a=>{if(a.dataset.v===tab) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');if(a.dataset.v==='practice') a.hidden=!appOn();});
   const cb=document.getElementById('calBtn');if(cb){if(VIEW==='cal') cb.setAttribute('aria-current','page'); else cb.removeAttribute('aria-current');}
   const slot=document.getElementById('topslot');
   slot.replaceChildren(...(VIEW==='home'?[el('div',{class:'tleft'},el('b',{class:'hdate'},String(jpDate(today())).split(/(\d+)/).map((x,i)=>i%2?el('span',{class:'n'},x):x)),statusNode(true))].filter(Boolean):[el('span',{class:'topname'},'芒学')]));
