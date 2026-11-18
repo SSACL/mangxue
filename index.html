@@ -221,6 +221,9 @@ details.set[open]{padding-bottom:14px;display:flex;flex-direction:column;gap:10p
 .ci{display:flex;flex-direction:column;gap:8px;padding:12px 0;border-top:1px solid var(--line)}
 .ci.first{border-top:none;padding-top:0}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.v-cal .legend,.v-cal .togs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.v-cal .legend::-webkit-scrollbar,.v-cal .togs::-webkit-scrollbar{display:none}
+.v-cal .legend>*,.v-cal .togs>*{flex:none;white-space:nowrap}
 /* home: progress card, orange check-in window, tabs, stamps */
 .topcard{gap:10px;padding:10px 14px 12px}
 .topcard .btn.sm{min-height:42px}
@@ -260,7 +263,7 @@ details.set[open]{padding-bottom:14px;display:flex;flex-direction:column;gap:10p
 .dtc[aria-pressed="true"] b{background:var(--ink);color:var(--surface)}
 .dtc.sm{min-height:38px;min-width:40px;padding:4px 6px;justify-content:center}
 .dtlegend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted)}
-.chips.togs{flex-wrap:wrap}
+.chips.togs{flex-wrap:nowrap}
 .chip.tog{gap:4px;color:var(--muted)}
 .chip.tog .tick{display:inline-block;width:1em;text-align:center;font-weight:700}
 .chip.tog[aria-pressed="true"]{color:var(--ink)}
@@ -2302,10 +2305,9 @@ function gcalCalRow(){
   const open=el('a',{href:gcalUrl(CAL.ym+'-01',true),target:'_blank',rel:'noopener',class:'btn sub sm'},'Googleで開く');
   if(!on) return el('div',{class:'card'},el('div',{class:'grid2',style:'grid-template-columns:1fr'},open,el('button',{type:'button',class:'btn sub sm',onclick:()=>{FOCUS='#gcal-card';go('import');}},'Googleとの連携を設定する')),
     el('p',{class:'xs muted'},'連携すると、Googleカレンダーの予定を取り込んだり、節目・期日を書き出したりできます。それまでは、日の欄からプライベートの予定を手で追加できます。'));
-  return el('div',{class:'card'},el('h2',{},'Googleカレンダー'),el('div',{class:'grid2'},
-      el('button',{type:'button',class:'btn sub sm',onclick:()=>{if(!cfg.imp.acct||!(cfg.imp.cals||[]).length){toast('取り込み用のアカウントとカレンダーを選んでください');FOCUS='#gcal-card';go('import');return;}gRun('取り込んでいます',gcalImport);}},'予定を取り込む'),
-      el('button',{type:'button',class:'btn sub sm',onclick:()=>{if(!cfg.exp.acct){toast('書き出し用のアカウントを選んでください');FOCUS='#gcal-card';go('import');return;}gRun('書き出しています',gcalExport);}},'節目を書き出す')),open,
-    el('p',{class:'xs muted'},'取り込み：今日から8週間の、時刻のある予定。前に取り込んだ分は置き換わり、手で追加した予定は残ります。'+(cfg.lastImport?'前回 '+md(ymd(new Date(cfg.lastImport)))+' '+hm(cfg.lastImport)+'。':'')));
+  return el('div',{class:'card'},el('h2',{},'Googleカレンダー'),
+    el('p',{class:'small'},'予定の取り込みと節目の書き出しは、「同期・Googleカレンダー・バックアップ」でできます。'+(cfg.lastImport?'前回の取り込み：'+md(ymd(new Date(cfg.lastImport)))+' '+hm(cfg.lastImport)+'。':'')),
+    el('div',{class:'grid2',style:'grid-template-columns:1fr'},el('button',{type:'button',class:'btn sub sm',onclick:()=>{FOCUS='#gcal-card';go('import');}},'取り込み・書き出しへ'),open));
 }
 function viewCal(){
   const t=today();if(!CAL.ym) CAL.ym=t.slice(0,7);if(!CAL.sel) CAL.sel=t;
@@ -2739,6 +2741,8 @@ function gcalHelp(){return el('button',{type:'button',class:'help','aria-label':
     el('li',{},'できたクライアントID（…apps.googleusercontent.com）を、この画面に貼る')),
   el('p',{class:'xs muted'},'画面の表記は、Googleの更新で変わることがあります。かっこ内は英語表示のときの名前です。'),
   el('p',{class:'xs muted'},'クライアントIDは公開されても困らない番号です。一緒に出る「クライアントシークレット」は使いません。どこにも貼らないでください。ログインのとき「このアプリは確認されていません」と出ますが、ご自分で登録したものなので、そのまま進めます。'));}},'?');}
+function calAsk(done){const sh=()=>document.getElementById('sheet').close();
+  openSheet(done+'。カレンダーで確かめますか？',el('button',{type:'button',class:'btn',onclick:()=>{sh();go('cal');}},'カレンダーを開く'),el('button',{type:'button',class:'btn sub',onclick:sh},'このまま'));}
 function gcalCard(){
   const cfg=gcalCfg(), id=cfg.clientId||'', imp=cfg.imp, exp=cfg.exp, chosen=new Set((imp.cals||[]).map(c=>c.id));let idv=id;
   gisPreload();
@@ -2758,12 +2762,13 @@ function gcalCard(){
           :((imp.cals||[]).length?el('p',{class:'small'},(imp.cals||[]).map(c=>c.name).join('、')):el('p',{class:'xs muted'},'まだ選んでいません。「カレンダーを選び直す」で選べます。'))]:null,
       el('label',{class:'row',for:'gc-ht',style:'margin-top:10px'},el('input',{type:'checkbox',id:'gc-ht',checked:!!cfg.hideTitle,onchange:e=>setGcal(x=>{x.hideTitle=e.target.checked;})}),el('span',{class:'small'},'予定の名前は取り込まず、「予定あり」にする')),
       el('p',{class:'xs muted'},'取り込むのは、時刻のある予定（今日から8週間）。終日の予定・「予定なし」にした予定・辞退した予定は取り込みません。'+(cfg.lastImport?'前回の取り込み：'+md(ymd(new Date(cfg.lastImport)))+' '+hm(cfg.lastImport)+'。':'')),
-      el('button',{type:'button',class:'btn sub sm',disabled:!imp.acct||!(imp.cals||[]).length,onclick:()=>gRun('取り込んでいます',gcalImport)},'Googleから予定を取り込む'),
+      el('button',{type:'button',class:'btn sub sm',disabled:!imp.acct||!(imp.cals||[]).length,onclick:()=>gRun('取り込んでいます',async()=>{await gcalImport();calAsk('予定を取り込みました');})},'Googleから予定を取り込む'),
       el('h3',{class:'sub'},'書き出し'),
       acctLine('書き出し用のアカウント',exp.acct),
       el('button',{type:'button',class:'btn sub sm',onclick:()=>gRun('Googleにつないでいます',gcalPickExp)},exp.acct?'アカウントを変える':'Googleにログインして、書き出し用のアカウントを選ぶ'),
       el('p',{class:'xs muted'},(exp.acct&&exp.acct===imp.acct?'取り込みと同じアカウントです。':'')+(exp.cal?'このアカウントの「'+GCALNAME+'」カレンダーに、節目・期日を '+Object.keys(exp.ev||{}).length+' 件書き出しています'+(cfg.lastExport?'（'+md(ymd(new Date(cfg.lastExport)))+' '+hm(cfg.lastExport)+'）':'')+'。':'はじめて書き出すとき、書き出し用のアカウントに「'+GCALNAME+'」というカレンダーを作ります。ほかのカレンダーには書き込みません。')+'ログインしたのが書き出し用のアカウントでなければ、書き出さずに止めます。'),
-      el('button',{type:'button',class:'btn sub sm',disabled:!exp.acct,onclick:()=>gRun('書き出しています',gcalExport)},'Googleに節目を書き出す'),
+      el('button',{type:'button',class:'btn sub sm',disabled:!exp.acct,onclick:()=>gRun('書き出しています',async()=>{await gcalExport();calAsk('節目を書き出しました');})},'Googleに節目を書き出す'),
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>go('cal')},'カレンダーを開く'),
       Object.keys(GTOK).length?el('button',{type:'button',class:'chip sm',style:'align-self:flex-start',onclick:()=>{for(const t of Object.values(GTOK)){try{google.accounts.oauth2.revoke(t.token,()=>{});}catch(_){}}GTOK={};GCALS=null;toast('この端末のGoogleのログインを取り消しました');render();}},'この端末のログインを取り消す'):null]:null);
 }
 
@@ -5107,8 +5112,8 @@ function viewImport(){
   };
   return [
     el('h1',{},'同期・Googleカレンダー・バックアップ'),statusNode(),syncCard(),gcalCard(),
-    el('div',{class:'card between',style:'flex-direction:row'},el('span',{class:'small'},'教材の目次と問題の取り込みは、教材設定へ'),el('a',{href:'#materials',class:'btn sub sm',style:'flex:none;white-space:nowrap'},'教材設定')),
-    el('div',{class:'card'},el('h2',{},'バックアップ'),el('p',{class:'small muted'},'同期を設定していれば、記録は自動でほかの端末にもそろいます。書き出しは、念のための控えとして月に1回ほどで十分です。'),
+    el('div',{class:'card'},el('h2',{},'バックアップ'),
+      el('p',{class:'small'},'書き出すと、この端末の次のデータが1つのファイル（JSON）になります：取り込んだ問題と演習の記録、教材設定・計画・時間割、通勤経路、習慣の設定と日々の記録（ルーティン・生活の記録・学習と制作の時間）、Googleカレンダーの設定。同期のトークンとGoogleのログインは含みません。'),el('p',{class:'small muted'},'同期を設定していれば、記録は自動でほかの端末にもそろいます。書き出しは、念のための控えとして月に1回ほどで十分です。'),
       el('button',{type:'button',class:'btn sub sm',onclick:exportAll},'バックアップを書き出す'),
       el('label',{class:'field',for:'restore'},'ファイルを読み込む（問題ファイル・バックアップ）',el('input',{type:'file',id:'restore',accept:'application/json,.json',onchange:importFile})))
   ];
