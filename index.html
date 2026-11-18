@@ -967,7 +967,8 @@ function syncCard(){
   if(!SYNC){
     const f={owner:(PENDING&&PENDING.o)||'',repo:(PENDING&&PENDING.r)||'mangxue-data',token:(PENDING&&PENDING.k)||'',name:''};
     const msg=el('p',{class:'small',role:'status'});
-    const inp=(id,label,key,type,ph)=>el('label',{class:'field',for:id},label,el('input',{type:type||'text',id,value:f[key],placeholder:ph||'',autocomplete:'off',autocapitalize:'off',spellcheck:'false',oninput:e=>{f[key]=e.target.value.trim();}}));
+    const inp=(id,label,key,type,ph)=>el('label',{class:'field',for:id},label,el('input',{type:type||'text',id,value:f[key],placeholder:ph||'',autocomplete:'off',autocapitalize:'off',spellcheck:'false',oninput:e=>{f[key]=e.target.value.trim();syncBtnSet();}}));
+    const syncBtn=el('button',{type:'submit',class:'btn sub'},'保存して同期する'), syncBtnSet=()=>{syncBtn.className='btn'+(f.owner&&f.repo&&f.token&&f.name?'':' sub');};syncBtnSet();
     const submit=async e=>{
       e.preventDefault();
       if(!f.owner||!f.repo||!f.token||!f.name){msg.textContent='4つとも入力してください。';return;}
@@ -985,7 +986,7 @@ function syncCard(){
       el('label',{class:'field',for:'s-paste'},'設定リンクを貼り付け（2台目以降）',el('input',{type:'text',id:'s-paste',autocomplete:'off',placeholder:'https://…#sync=…',oninput:e=>{const v=e.target.value;const i=v.indexOf('#sync=');if(i<0) return;const p=parseSyncPayload(v.slice(i+6).trim());if(p){PENDING=p;render();}else msg.textContent='リンクを読み取れませんでした。もう一度コピーしてください。';}})),
       inp('s-owner','GitHubのユーザー名','owner'),inp('s-repo','データ用のリポジトリ（非公開）','repo'),
       inp('s-token','トークン','token','password','github_pat_…'),inp('s-name','この端末の名前','name','text','スマホ／iPad／PC'),
-      el('button',{type:'submit',class:'btn'},'保存して同期する'),msg);
+      syncBtn,msg);
   }
   const share=el('div',{style:'display:flex;flex-direction:column;gap:8px;align-items:flex-start'});
   return el('div',{class:'card'},
@@ -3571,6 +3572,10 @@ function openWizard(at){
   if(at){const k=wizSteps().indexOf(at);if(k>=0) WIZ.i=k;}
   CAPV++;const d=document.getElementById('wiz');wizRender(true);if(!d.open) d.showModal();
 }
+// 光るボタン（2026-11-18）：答えていない質問（任意のもの、「あとで答える」にしたものを除く）が残っている段
+function wizOpen(body){return [...body.querySelectorAll('.qb')].some(q=>{if(q.classList.contains('later')) return false;const t=(q.querySelector('.qbh b')||{}).textContent||'';if(/任意/.test(t)) return false;
+  if(q.querySelector('[aria-pressed="true"]')) return false;
+  return ![...q.querySelectorAll('input,select,textarea')].some(i=>i.type==='checkbox'||i.type==='radio'?i.checked:String(i.value||'').trim()!=='');});}
 function wizSave(){try{IDB.put('__wiz',WIZ);}catch(e){}}
 // 「続きから」 only once something was entered or a later step was reached (opening and closing, or 最初から, is not a start)
 function wizStarted(){return !!(WIZ&&(WIZ.touched||WIZ.i>0));}
@@ -3626,7 +3631,7 @@ function wizRender(top){
     steps,nb,
     el('div',{class:'wizfoot'},
       T?el('p',{class:'xs muted num'},'作業 '+tnameS('study')+' '+hrs(T.study.W)+'・'+tnameS('create')+' '+hrs(T.create.W)+'　使える時間（予備日を除く） '+tnameS('study')+' '+hrs(T.study.C)+'・'+tnameS('create')+' '+hrs(T.create.C)):el('p',{class:'xs muted'},'閉じても、ここまでの内容は残ります。'),
-      el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub',disabled:WIZ.i===0,onclick:()=>wizGo(WIZ.i-1)},'戻る'),k==='build'?el('span',{}):el('button',{type:'button',class:'btn',onclick:()=>wizGo(WIZ.i+1)},'次へ'))));
+      el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub',disabled:WIZ.i===0,onclick:()=>wizGo(WIZ.i-1)},'戻る'),k==='build'?el('span',{}):el('button',{type:'button',class:'btn'+(askKeep||wizOpen(nb)?' sub':''),onclick:()=>wizGo(WIZ.i+1)},'次へ'))));
   const b2=d.querySelector('.wizbody');if(b2) b2.scrollTop=y;
   const cur=d.querySelector('.wizsteps li.cur');if(cur&&cur.scrollIntoView) cur.scrollIntoView({block:'nearest',inline:'center'});
 }
@@ -3792,7 +3797,7 @@ function wizBuildView(){
     el('p',{class:'xs muted'},gcalReady()?'組んだあと、節目・期日をGoogleカレンダー（「'+GCALNAME+'」）に書き出すか聞きます。':gcalCfg().clientId?'設定で「書き出し用のアカウント」を選ぶと、組んだあとにGoogleカレンダーへ書き出せます（メニューの「問題の取り込み・同期・バックアップ」）。':'Googleとの連携を設定すると、組んだあとにGoogleカレンダーへ書き出せます（メニューの「問題の取り込み・同期・バックアップ」）。'),
     replanQ(P,wizSched()),
     over&&!far.length?el('div',{class:'warn'},'はみ出す節目があるので、まだ組めません。「見通し」で直してください。',el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf('outlook'))},'見通しへ')):null,
-    el('button',{type:'button',class:'btn',disabled:over,onclick:wizBuild},'この内容で組む（今日から）')];
+    el('button',{type:'button',class:'btn'+((P.goals||[]).some(g=>g.open||(g.date&&g.kind!=='date'))?'':' sub'),disabled:over,onclick:wizBuild},'この内容で組む（今日から）')];
 }
 function farHalf(x,gid,lim){const g=x.goals.find(y=>y.id===gid);if(!g) return;
   if(g.track==='study'){const subs=x.subjects||[], tot=subs.reduce((a,s)=>a+(+s.hours||1),0)||1, pick=[];let acc=0;
@@ -4263,8 +4268,10 @@ function planOverview(){
   if(!act) return [
     el('div',{class:'card'},el('h2',{},'まだ組んでいません'),
       el('p',{class:'small muted'},'教材を取り込んでから組みます。'),
-      el('button',{type:'button',class:'btn',onclick:()=>openWizard()},wizStarted()?'計画を組む（続きから）':'計画を組む'),
-      el('button',{type:'button',class:'btn sub sm',onclick:()=>go('materials')},'教材設定')),
+      (plan2().materials||[]).length?[el('button',{type:'button',class:'btn',onclick:()=>openWizard()},wizStarted()?'計画を組む（続きから）':'計画を組む'),
+        el('button',{type:'button',class:'btn sub sm',onclick:()=>go('materials')},'教材設定')]
+      :[el('button',{type:'button',class:'btn',onclick:()=>go('materials')},'教材設定'),
+        el('button',{type:'button',class:'btn sub sm',onclick:()=>openWizard()},wizStarted()?'計画を組む（続きから）':'計画を組む')]),
     PLAN&&(PLAN.schedule||[]).length?el('p',{class:'xs muted'},'組むまでは、これまでの計画で「今日やること」を出しています。'):null];
   const B=P.baseline, A=adjOf(P);
   const goals=(P.goals||[]).filter(g=>g.date).sort(byDate), last=goals.reduce((m,g)=>g.date>m?g.date:m,addDays(t,30)), span=Math.max(1,diffDays(B.made,last));
@@ -4569,7 +4576,7 @@ function viewHome(){
       el('div',{class:'grid2',style:'gap:14px'},
         act&&!ps&&openOf(plan2(),'study').length?openBar('study'):pb(tname('study'),st.pct,st.plan,'',T.study==='time'&&!act?fmtH(trackTotal('study')):'',ps,'study'),
         act&&!pc&&openOf(plan2(),'create').length?openBar('create'):(act?pc:works().length)?pb(tname('create'),mg.pct,mg.plan,'manga',T.manga==='time'&&!act?fmtH(trackTotal('manga')):'',pc,'create'):null),
-      el('div',{class:'grid2'},el('a',{href:'#practice',class:'btn sm'},'演習をはじめる'),el('a',{href:'#plan',class:'btn sub sm'},'計画を見る・直す')));
+      el('div',{class:'grid2'},el('a',{href:'#practice',class:'btn sm'+(realDocs().length?'':' sub')},'演習をはじめる'),el('a',{href:'#plan',class:'btn sub sm'},'計画を見る・直す')));
     const late=[ps,pc].filter(x=>x&&x.gap<=-0.1);
     if(late.length) notice.push(el('div',{class:'card notice'},
       el('p',{class:'small'},el('b',{},'計画より10%以上遅れています'),'（'+late.map(x=>tname(x===ps?'study':'create')+' '+gapText(x.gap)).join('、')+'）。計画を組み直すか、記録の付け忘れがないかを見直してください。'),
@@ -5587,7 +5594,10 @@ function viewMaterials(){
         if(q.type==='tf') patch.answer=av==='1'; else if(q.type==='mc5') patch.correct=av;
         else {const arr=av.split('/').map(s=>s.trim());patch.blanks=(q.blanks||[]).map((b,i)=>({k:b.k,answer:arr[i]!=null?arr[i]:b.answer}));}
         confirm(x,patch);}},'本と同じなので確認済みにする'));};
-  const paste=el('textarea',{id:'imp-paste',rows:5,placeholder:'AIが作ったJSON（{ から } まで）か、CSVの中身を貼り付け'});
+  // the 取り込む button lights up (and works) only once something is pasted
+  const impBtn=el('button',{type:'button',class:'btn sub sm',disabled:true,onclick:()=>impRun(paste.value)},'貼り付けた中身を取り込む');
+  const impSync=()=>{const has=!!paste.value.trim();impBtn.disabled=!has;impBtn.className='btn sm'+(has?'':' sub');};
+  const paste=el('textarea',{id:'imp-paste',rows:5,placeholder:'AIが作ったJSON（{ から } まで）か、CSVの中身を貼り付け',oninput:()=>impSync()});
   const pick=e=>{const f=e.target.files&&e.target.files[0];if(!f) return;const r=new FileReader();r.onload=()=>impRun(r.result);r.onerror=()=>toast('ファイルを読めませんでした');r.readAsText(f);e.target.value='';};
   const R=IMPRES;IMPRES=null;
   const qn=b=>docs.filter(([,d])=>d.book===b).reduce((a,[,d])=>a+d.items.length,0);
@@ -5602,13 +5612,13 @@ function viewMaterials(){
       el('div',{class:'between'},el('h2',{},'取り込む'),el('button',{type:'button',class:'help','aria-label':'取り込みの形の説明',onclick:formHelp},'?')),
       el('label',{class:'btn sub sm',for:'imp-file',style:'cursor:pointer'},'ファイルを選ぶ（JSON・CSV）',el('input',{type:'file',id:'imp-file',accept:'.json,.csv,.txt,application/json,text/csv,text/plain',style:'display:none',onchange:pick})),
       el('label',{class:'field',for:'imp-paste'},'または貼り付け',paste),
-      el('button',{type:'button',class:'btn sub sm',onclick:async()=>{try{const t=await navigator.clipboard.readText();if(!t){toast('クリップボードが空です');return;}paste.value=t;toast('貼り付けました（'+t.length+'文字）');}catch(_){toast('ここからは貼り付けられませんでした。欄を長押しして「ペースト」を選んでください');}}},'クリップボードから貼り付ける'),
+      el('button',{type:'button',class:'btn sub sm',onclick:async()=>{try{const t=await navigator.clipboard.readText();if(!t){toast('クリップボードが空です');return;}paste.value=t;impSync();toast('貼り付けました（'+t.length+'文字）');}catch(_){toast('ここからは貼り付けられませんでした。欄を長押しして「ペースト」を選んでください');}}},'クリップボードから貼り付ける'),
       el('p',{class:'xs muted'},'長い文は、このボタンか、欄の長押しで貼り付けてください。'),
-      el('button',{type:'button',class:'btn sm',onclick:()=>impRun(paste.value)},'貼り付けた中身を取り込む')),
+      impBtn),
     el('div',{class:'card'},el('div',{class:'between'},el('h2',{},'自分のAIで作る（おすすめ）'),el('button',{type:'button',class:'help','aria-label':'単元と取り込む順番',onclick:unitHelp},'?')),
       el('p',{class:'small'},'プロンプトをAIに渡して写真を送り、AIの確認にチャットで答えてから、返ってきたJSONを上に貼り付けます。'),
       el('p',{class:'xs muted'},'プロンプトをコピー'),
-      el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>copyText(tocPrompt(),'目次用のプロンプト')},'目次用'),el('button',{type:'button',class:'btn sub sm',onclick:()=>copyText(qPrompt(),'問題用のプロンプト')},'問題用')),
+      el('div',{class:'grid2'},el('button',{type:'button',class:'btn sm'+((plan2().materials||[]).length?' sub':''),onclick:()=>copyText(tocPrompt(),'目次用のプロンプト')},'目次用'),el('button',{type:'button',class:'btn sub sm',onclick:()=>copyText(qPrompt(),'問題用のプロンプト')},'問題用')),
       el('div',{class:'ailinks'},el('span',{class:'xs muted'},'新しいチャットを開く：'),
         [['ChatGPT','https://chatgpt.com/'],['Claude','https://claude.ai/new'],['Gemini','https://gemini.google.com/app'],['Copilot','https://copilot.microsoft.com/']].map(([n,u])=>el('a',{href:u,target:'_blank',rel:'noopener noreferrer',class:'ailink'},n))),
       el('p',{class:'xs muted'},'1冊ごとにコピーし直してください。')),
