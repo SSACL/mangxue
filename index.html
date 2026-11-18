@@ -137,6 +137,8 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);margin:0;
 .qb{margin:14px 0}
 .stp2{display:grid;grid-template-columns:1fr auto;gap:6px}
 .qb.later{opacity:.75}
+.ttit{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;display:flex;flex-direction:column;gap:8px}
+.ttday{border-top:1px solid var(--line);padding:10px 0;display:flex;flex-direction:column;gap:6px}
 .qbh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
 .qbh .chip{flex:none}
 .wkcount{display:grid;gap:6px;margin:8px 0}
@@ -1096,7 +1098,7 @@ const PHASES_PRESET=[
   {id:'p3',name:'総仕上げ',items:[]}];
 const ALLOC_OPTS=[[-1,tnameS('study')+'だけ'],[-0.5,tnameS('study')+'多め'],[0,'ふつう'],[0.5,tnameS('create')+'多め'],[1,tnameS('create')+'だけ']];
 function tnameS(tr){return tr==='study'?'学習':'制作';}
-const EMPTY_PLAN2={v:3,names:{study:'学習',create:'制作'},weekStart:1,mode:'week',dayTypes:DAYTYPE_PRESET,week:['o','w','w','w','w','w','oh'],dflt:'w',dates:{},alloc:{},perPage:4,perQ:3,readShare:0.5,phases:PHASES_PRESET,subjects:[],materials:[],works:[],goals:[]};
+const EMPTY_PLAN2={v:3,names:{study:'学習',create:'制作'},weekStart:1,mode:'week',dayTypes:[],week:[],dflt:'',dates:{},alloc:{},perPage:4,perQ:3,readShare:0.5,phases:PHASES_PRESET,subjects:[],materials:[],works:[],goals:[]};
 const TABSTATE={day:'study',plan:'all'};
 const GKIND={event:'当日',target:'目標日',mid:'途中の節目',mock:'模試',date:'日付だけ'};
 const byDate=(a,b)=>(a.date||'9')<(b.date||'9')?-1:(a.date||'9')>(b.date||'9')?1:0;
@@ -3466,7 +3468,7 @@ function timeEditor(P,up,rr){
     cells.push(el('button',{type:'button',class:'cc mini'+(set?' set':''),'aria-label':md(ds)+' '+dtLetter(id,P),onclick:()=>up(x=>{x.dates=x.dates||{};if(!TST.brush) delete x.dates[ds]; else x.dates[ds]=TST.brush;})},el('span',{class:'dn'},String(i)),el('b',{class:'dtl'},dtLetter(id,P))));}
   const dateTab=[
     el('p',{class:'xs muted'},'下の時間割を選んでから、日付を押すと塗れます。「決めない」で押すと元に戻ります。決めていない日は、次の時間割になります。'),
-    el('div',{class:'field'},'決めていない日の時間割',el('div',{class:'dtchips'},types.map(d=>typeChip(P,d.id,(P.dflt||types[0].id)===d.id,()=>up(x=>{x.dflt=d.id;}))))),
+    el('div',{class:'field'},'決めていない日の時間割',el('div',{class:'dtchips'},types.map(d=>typeChip(P,d.id,(P.dflt||(types[0]||{}).id)===d.id,()=>up(x=>{x.dflt=d.id;}))))),
     el('div',{class:'field'},'塗る時間割',el('div',{class:'dtchips'},types.map(d=>typeChip(P,d.id,TST.brush===d.id,()=>{TST.brush=d.id;rr();},true)),el('button',{type:'button',class:'dtc sm','aria-pressed':String(!TST.brush),onclick:()=>{TST.brush='';rr();}},'決めない'))),
     el('div',{class:'calhead'},navBtn('','前の月',-1,()=>{TST.ym=ymd(new Date(y,m-2,1)).slice(0,7);rr();}),el('h2',{style:'text-align:center'},y+'年'+m+'月'),navBtn('','次の月',1,()=>{TST.ym=ymd(new Date(y,m,1)).slice(0,7);rr();})),
     el('div',{class:'calgrid'},cells)];
@@ -3993,8 +3995,95 @@ function wizCreate(){
   return [ws.map(work),
     ws.length?qb('4-7','頭を使う工程を、決まったコマに寄せますか？',[segQ('頭を使う工程',H.on||'',[['yes','寄せる'],['no','寄せない']],v=>upH(o=>{o.on=v;})),
       H.on==='yes'?[el('p',{class:'small'},'頭を使う工程'),el('div',{class:'chips'},heads.map(n=>el('button',{type:'button',class:'chip sm','aria-pressed':String((H.steps||[]).includes(n)),onclick:()=>upH(o=>{const a=(o.steps||[]).slice();const i=a.indexOf(n);if(i>=0) a.splice(i,1); else a.push(n);o.steps=a;})},n))),
-        el('p',{class:'small'},'寄せるコマ'),slots.length?el('div',{class:'chips'},slots.map(sl=>el('button',{type:'button',class:'chip sm','aria-pressed':String((H.slots||[]).includes(sl.k)),onclick:()=>upH(o=>{const a=(o.slots||[]).slice();const i=a.indexOf(sl.k);if(i>=0) a.splice(i,1); else a.push(sl.k);o.slots=a;})},sl.l))):el('p',{class:'xs muted'},'時間割に制作のコマがまだありません。')]:null]):null];}
+        el('p',{class:'small'},'寄せるコマ'),slots.length?headSlotChips(P):el('p',{class:'xs muted'},'寄せるコマは、「使える時間」で時間割を作ったあとに選びます。')]:null]):null];}
+function headSlotChips(P){const H=((P.setup||{}).create||{}).head||{};
+  const slots=(P.dayTypes||[]).flatMap(d=>(d.slots||[]).filter(sl=>sl.track==='create').map(sl=>({k:d.id+':'+sl.id,l:d.name+' '+(sl.time||'')+' '+(sl.label||'')})));
+  const upH=fn=>wizS(S=>{S.create=Object.assign({},S.create);S.create.head=Object.assign({},S.create.head);fn(S.create.head);});
+  return el('div',{class:'chips'},slots.map(sl=>el('button',{type:'button',class:'chip sm','aria-pressed':String((H.slots||[]).includes(sl.k)),onclick:()=>upH(o=>{const a=(o.slots||[]).slice();const i=a.indexOf(sl.k);if(i>=0) a.splice(i,1); else a.push(sl.k);o.slots=a;})},sl.l)));}
 /* ----- 計画づくりの質問 5：使える時間 ----- */
+/* 5-1 時間割がないとき（2026-11-18）：決まった予定 → 日ごとの作業できる時間帯と使いたい時間 → 先にするほう から作る。
+   予定の組み合わせごとに時間割を分ける（在宅は「家で」、掛け持ち・副業は予定2つ）。シフトの予定は、曜日の組み合わせに足した
+   時間割を作り、日ごとの当て方にしてカレンダーで塗る。行き帰りに読めるならスキマ演習のコマ（使わないなら学習）。 */
+const TT_KINDS=[['work','仕事'],['school','学校'],['part','アルバイト'],['side','副業'],['home','家のこと'],['other','そのほか']];
+function ttName(it){return it.kind==='other'?((it.name||'').trim()||'そのほか'):((TT_KINDS.find(k=>k[0]===it.kind)||[])[1]||'予定');}
+function ttDone(it){return !!(it.kind&&(it.shift||(it.days||[]).length)&&it.from&&it.to&&(it.place==='home'||(it.place==='out'&&(!(+it.travel>0)||it.read))));}
+function ttTypes(P){const tt=(P.setup||{}).tt||{}, its=tt.none?[]:(tt.items||[]).filter(ttDone), ws=+(P.weekStart??1), out=[], byKey={};
+  for(let i=0;i<7;i++){const w=(ws+i)%7, f=its.filter(it=>!it.shift&&it.days.includes(w)), key=f.map(it=>it.id).sort().join('-')||'none';
+    if(!byKey[key]){byKey[key]={key,items:f,days:[],shift:null};out.push(byKey[key]);}byKey[key].days.push(w);}
+  for(const sh of its.filter(it=>it.shift)) for(const T of out.slice()) if(!T.shift&&out.length<7) out.push({key:T.key+'_'+sh.id,items:T.items.concat([sh]),days:[],shift:sh});
+  for(const T of out) T.name=T.items.length?[...new Set(T.items.map(ttName))].join('と')+'の日':'予定のない日';
+  for(const T of out) if(out.filter(x=>x.name===T.name).length>1) T.suf=T.shift?'（'+T.shift.from.replace(/^0/,'')+'〜）':'（'+T.days.map(w=>DN[w]).join('・')+'）';
+  for(const T of out){if(T.suf) T.name+=T.suf;T.id='tt_'+T.key;}
+  return out;}
+function ttTracks(P){const S0=P.setup||{}, st=S0.study||{}, a=[];if(st.kind&&st.kind!=='none') a.push('study');if(!(S0.create||{}).none&&(P.works||[]).length) a.push('create');
+  if((S0.tt||{}).first==='create') a.reverse();return a;}
+// a day without its own 時間帯 uses the first one answered
+function ttAns(P,T,types){const by=((P.setup||{}).tt||{}).by||{}, a=by[T.key]||{}, f=types.map(x=>by[x.key]||{}).find(x=>x.from&&x.to)||{};
+  return {from:a.from||f.from||'',to:a.to||f.to||'',study:+a.study||0,create:+a.create||0};}
+function ttHm(m){const x=hmOf(m);return x.length<5?'0'+x:x;}
+function ttLay(T,A,tracks){
+  const pre=it=>it.kind==='school'?'通学':(it.kind==='work'||it.kind==='part'||it.kind==='side')?'通勤':'移動', bl=[], sl=[];
+  for(const it of T.items){const [a,b]=ivl(it.from,it.to), t=it.place==='out'?Math.max(0,Math.round(+it.travel||0)):0;bl.push([a-t,b+t]);
+    if(t&&it.read==='yes') sl.push({label:pre(it)+'（行き）',s:a-t,min:t,track:'study',use:'app'},{label:pre(it)+'（帰り）',s:b,min:t,track:'study',use:'app'});}
+  let wins=[];
+  if(A.from&&A.to){wins=[ivl(A.from,A.to)];for(const [a,b] of bl){const nx=[];for(const [s0,e0] of wins){if(b<=s0||a>=e0){nx.push([s0,e0]);continue;}if(a>s0) nx.push([s0,a]);if(b<e0) nx.push([b,e0]);}wins=nx;}}
+  const free=wins.reduce((q,[a,b])=>q+b-a,0), move=sl.reduce((q,x)=>q+x.min,0), put={}, w2=wins.map(w=>w.slice());
+  for(const tr of tracks){let rem=Math.max(0,Math.round(+A[tr]||0));put[tr]=0;
+    for(const w of w2){if(rem<=0) break;const len=w[1]-w[0];if(len<15) continue;const take=Math.min(rem,len);
+      sl.push(Object.assign({label:tname(tr),s:w[0],min:take,track:tr},tr==='study'?{use:'any'}:{}));w[0]+=take;rem-=take;put[tr]+=take;}}
+  sl.sort((x,y)=>x.s-y.s);
+  return {free,move,put,slots:sl.map((x,i)=>Object.assign({id:'abcdefghijklmnopqrstuvwxyz'[i]||('s'+i),label:x.label,time:ttHm(x.s),track:x.track,min:x.min},x.use?{use:x.use}:{}))};}
+function ttMake(x){const types=ttTypes(x), tr=ttTracks(x);
+  x.dayTypes=types.map(T=>({id:T.id,name:T.name,slots:ttLay(T,ttAns(x,T,types),tr).slots}));
+  const wk=Array(7).fill('');for(const T of types) for(const w of T.days) wk[w]=T.id;x.week=wk;delete x.cycle;
+  const none=types.find(T=>T.key==='none');x.dflt=(none||types[0]||{}).id||'';
+  // the days painted with a シフト's 時間割 are kept; the rest follow the weekdays again
+  const ids=new Set(types.map(T=>T.id)), sh=new Set(types.filter(T=>T.shift).map(T=>T.id));x.dates=x.dates||{};
+  for(const k of Object.keys(x.dates)) if(!ids.has(x.dates[k])||(k>=today()&&!sh.has(x.dates[k]))) delete x.dates[k];
+  if(sh.size){const last=(x.goals||[]).reduce((m,g)=>g.date&&g.date>m?g.date:m,addDays(today(),56));
+    for(let ds=today(),i=0;ds<=last&&i<800;ds=addDays(ds,1),i++) if(!x.dates[ds]) x.dates[ds]=wk[parseYmd(ds).getDay()]||x.dflt;x.mode='dates';}
+  else x.mode='week';
+  const C=(x.setup||{}).create||{}, keys=new Set(x.dayTypes.flatMap(d=>d.slots.map(s=>d.id+':'+s.id)));
+  if(C.head&&C.head.slots) C.head.slots=C.head.slots.filter(k=>keys.has(k));if(C.crunch&&C.crunch.keep) C.crunch.keep=C.crunch.keep.filter(k=>keys.has(k));}
+function ttForm(P){
+  const tt=(P.setup||{}).tt||{}, items=tt.items||[], ws=+(P.weekStart??1), order=Array.from({length:7},(_,i)=>(ws+i)%7), tr=ttTracks(P);
+  const upTT=fn=>wizUp(x=>{x.setup=x.setup||{};x.setup.tt=Object.assign({items:[],by:{}},x.setup.tt);fn(x.setup.tt,x);});
+  const qb0=(title,body)=>el('div',{class:'qb'},el('div',{class:'qbh'},el('b',{class:'small'},title)),body);
+  const tI=(id,v,fn)=>el('input',{type:'time',id,value:v||'',onchange:e=>fn(e.target.value)});
+  const item=(it,i)=>{const up=fn=>upTT(t=>{fn(t.items[i]);});
+    return el('div',{class:'ttit'},
+      el('div',{class:'chips',role:'group','aria-label':'何の予定'},TT_KINDS.map(([k,l])=>el('button',{type:'button',class:'chip sm','aria-pressed':String(it.kind===k),onclick:()=>up(o=>{o.kind=k;})},l))),
+      it.kind==='other'?ptext('tn-'+it.id,it.name||'',v=>up(o=>{o.name=v;}),'予定の名前'):null,
+      el('div',{class:'chips',role:'group','aria-label':'曜日'},order.map(w=>el('button',{type:'button',class:'chip sm','aria-pressed':String(!it.shift&&(it.days||[]).includes(w)),disabled:!!it.shift,
+          onclick:()=>up(o=>{const a=(o.days||[]).slice(), j=a.indexOf(w);if(j>=0) a.splice(j,1); else a.push(w);o.days=a;})},DN[w])),
+        el('button',{type:'button',class:'chip sm','aria-pressed':String(!!it.shift),onclick:()=>up(o=>{o.shift=!o.shift;})},'シフト')),
+      el('div',{class:'grid2'},pfield('tf-'+it.id,'始まり',tI('tf-'+it.id,it.from,v=>up(o=>{o.from=v;}))),pfield('te-'+it.id,'終わり',tI('te-'+it.id,it.to,v=>up(o=>{o.to=v;})))),
+      segQ('場所',it.place||'',[['home','家で'],['out','出かける']],v=>up(o=>{o.place=v;})),
+      it.place==='out'?[pfield('tm-'+it.id,'片道（分）',pnum('tm-'+it.id,it.travel??'',v=>up(o=>{o.travel=Math.max(0,Math.round(v));}),5,0)),
+        +it.travel>0?[el('p',{class:'small'},'行き帰りに、読んだり解いたりできますか？'),segQ('行き帰り',it.read||'',[['yes','できる'],['no','できない']],v=>up(o=>{o.read=v;}))]:null]:null,
+      twoStepBtn('この予定を消す',()=>upTT(t=>{t.items.splice(i,1);})));};
+  const itemsOk=!!tt.none||(items.length>0&&items.every(ttDone)), types=itemsOk?ttTypes(P):[];
+  const day=T=>{const A=ttAns(P,T,types), L=A.from&&A.to?ttLay(T,A,tr):null, a=(tt.by||{})[T.key]||{};
+    const upB=fn=>upTT(t=>{t.by=Object.assign({},t.by);t.by[T.key]=Object.assign({},t.by[T.key]);fn(t.by[T.key]);});
+    return el('div',{class:'ttday'},
+      el('div',{class:'between'},el('b',{class:'small'},T.name),el('span',{class:'xs muted'},T.shift?'シフト':T.days.map(w=>DN[w]).join('・'))),
+      el('div',{class:'grid2'},pfield('ta-'+T.id,'何時から',tI('ta-'+T.id,A.from,v=>upB(o=>{o.from=v;}))),pfield('tb-'+T.id,'何時まで',tI('tb-'+T.id,A.to,v=>upB(o=>{o.to=v;})))),
+      L?el('p',{class:'xs muted num'},'空いている時間 '+fmtMin(L.free)+(L.move?'（ほかに行き帰り '+fmtMin(L.move)+'）':'')):null,
+      tr.length?el('div',{class:'grid2'},tr.map(k=>pfield('tq-'+k+'-'+T.id,tname(k)+'（分）',pnum('tq-'+k+'-'+T.id,a[k]??'',v=>upB(o=>{o[k]=Math.max(0,Math.round(v));}),15,0)))):null,
+      L&&tr.some(k=>L.put[k]<A[k])?el('p',{class:'xs',style:'color:var(--bad)'},'空いている時間より長いぶんは置けません。'):null);};
+  const ready=itemsOk&&types.length>0&&types.every(T=>{const A=ttAns(P,T,types);return A.from&&A.to;})&&(tr.length<2||!!tt.first)&&types.some(T=>{const A=ttAns(P,T,types);return tr.some(k=>A[k]>0);});
+  const make=()=>{WIZ.ttMade=true;wizUp(ttMake);};
+  return [
+    qb0('決まった予定を足してください。（仕事・学校・アルバイト・副業・家のことなど）',[
+      tt.none?null:items.map(item),
+      el('div',{class:'row',style:'gap:8px;flex-wrap:wrap'},
+        tt.none?null:el('button',{type:'button',class:'btn sub sm',onclick:()=>upTT(t=>{t.items=(t.items||[]).concat([{id:newId('ti'),days:[]}]);t.none=false;})},'＋ 予定を足す'),
+        items.length?null:el('button',{type:'button',class:'chip sm','aria-pressed':String(!!tt.none),onclick:()=>upTT(t=>{t.none=!t.none;})},'決まった予定はない'))]),
+    itemsOk?qb0('日ごとに、作業できる時間帯と使いたい時間を決めてください。',types.map(day)):null,
+    tr.length===2||tt.first?qb0('先にするのはどちらですか？',segQ('先にする',tt.first||'',[['study',tname('study')],['create',tname('create')]],v=>upTT(t=>{t.first=v;}))):null,
+    !ready&&(tt.none||items.length)?el('p',{class:'xs muted'},'答えていない所があります。'):null,
+    WIZ.ttMade?(ready?twoStepBtn('答えから作り直す',make,'もう一度押すと作り直します'):null)
+      :el('button',{type:'button',class:'btn',disabled:!ready,onclick:make},'この答えで時間割を作る')];}
 function wizTime5(){
   const P=WIZ.P, S0=P.setup||{}, any=(P.dayTypes||[]).some(d=>(d.slots||[]).some(s=>+s.min>0)), T=wizTotals();
   const cr=(S0.create||{}).crunch||{}, nyu=(P.works||[]).some(w=>(w.dl||{}).manage==='yes'&&(w.dl||{}).nyuko!=='no');
@@ -4004,11 +4093,14 @@ function wizTime5(){
   const sslots=(P.dayTypes||[]).flatMap(d=>(d.slots||[]).filter(sl=>sl.track==='study').map(sl=>({k:d.id+':'+sl.id,l:d.name+' '+(sl.time||'')+' '+(sl.label||'')})));
   const afterQ=(tr,other)=>qb('5-3-'+tr,'計画している'+tname(tr)+'がすべて終わったあと、そのコマをどう使いますか？',[segQ(tname(tr)+'のあと',(S0.after||{})[tr]||'',[['give',tname(other)+'に回す'],['free','空けておく'],['next','次の目標を入れる']],v=>upA(tr,v)),
     (S0.after||{})[tr]==='next'?el('p',{class:'xs muted'},'終わったときに次の目標を聞き、計画を組み直します。そのとき、いまの計画をなるべく変えずに組むことも選べます。'):null]);
+  const made=!!WIZ.ttMade, H=(S0.create||{}).head||{};
+  const total=el('p',{class:'xs muted num'},'目標日までに使える時間（予備日を除く）：'+tname('study')+' '+hrs(T.study.C)+'・'+tname('create')+' '+hrs(T.create.C));
   return [
-    any?qb('5-1','いまの時間割で組みますか？',[segQ('時間割',WIZ.tt||'',[['keep','このまま使う'],['edit','直してから組む']],v=>{WIZ.tt=v;wizSave();wizRender();}),
-        el('p',{class:'xs muted num'},'目標日までに使える時間（予備日を除く）：'+tname('study')+' '+hrs(T.study.C)+'・'+tname('create')+' '+hrs(T.create.C))])
-      :el('div',{class:'card'},el('h2',{},'時間割を作りましょう。')),
-    !any||WIZ.tt==='edit'?timeEditor(P,wizUp,()=>wizRender()):null,
+    !any?[el('div',{class:'card'},el('h2',{},'時間割を作りましょう。')),ttForm(P)]
+      :made?[total,pdet('ttq',el('span',{class:'small'},'質問の答え'),ttForm(P))]
+      :qb('5-1','いまの時間割で組みますか？',[segQ('時間割',WIZ.tt||'',[['keep','このまま使う'],['edit','直してから組む']],v=>{WIZ.tt=v;wizSave();wizRender();}),total]),
+    made||(any&&WIZ.tt==='edit')?timeEditor(P,wizUp,()=>wizRender()):null,
+    made&&createOn&&H.on==='yes'?qb('4-7b','頭を使う工程を寄せるコマを選んでください。',headSlotChips(P)):null,
     nyu&&studyOn?qb('5-2','入稿の前に、学習を減らして制作を優先する期間をとりますか？',[segQ('追い込み',cr.on||'',[['no','とらない'],['yes','とる']],v=>upC(o=>{o.on=v;})),
       cr.on==='yes'?[pfield('qc-w','入稿の何週間前から',pnum('qc-w',cr.weeks,v=>upC(o=>{o.weeks=Math.max(1,Math.round(v));}),1,1)),
         el('p',{class:'small'},'その間も学習に残すコマ'),sslots.length?el('div',{class:'chips'},sslots.map(sl=>el('button',{type:'button',class:'chip sm','aria-pressed':String((cr.keep||[]).includes(sl.k)),onclick:()=>upC(o=>{const a=(o.keep||[]).slice();const i=a.indexOf(sl.k);if(i>=0) a.splice(i,1); else a.push(sl.k);o.keep=a;})},sl.l))):el('p',{class:'xs muted'},'時間割に学習のコマがまだありません。')]:null]):null,
