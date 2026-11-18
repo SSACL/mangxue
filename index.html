@@ -2060,7 +2060,7 @@ function routineRow(ds,r,first){
 }
 function answerRoutine(ds,r,val,card){
   setDay(ds,d=>{d.r[r.id]=val;});
-  toast(val?'できた！ 記録しました':'正直に答えてくれて、ありがとう');
+  toast('記録しました');
   const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(card&&!reduce){card.classList.add('leaving');setTimeout(render,260);} else render();
 }
@@ -2076,13 +2076,6 @@ function answerSheet(ds,r){
 function rbtn(ds,r,val){
   const s=routineState(ds,r), text=val?'できた':'できなかった';
   return el('button',{type:'button',class:'rb '+(val?'ok':'ng'),'aria-pressed':String(s===val),'aria-label':r.name+'：'+text,title:text,onclick:()=>{setDay(ds,d=>{if(d.r[r.id]===val) delete d.r[r.id]; else d.r[r.id]=val;});render();}},val?'○':'×');
-}
-function comebackCard(t){
-  const la=lastActiveBefore(t);if(!la) return null;
-  const gap=diffDays(la,t)-1;if(gap<2) return null;
-  return el('div',{class:'card',style:'background:var(--accent-soft);gap:8px'},
-    el('p',{class:'small'},el('b',{},'おかえりなさい。'),gap+'日ぶりの記録です。空いた日はそのままで大丈夫です。'),
-    el('button',{type:'button',class:'btn sub sm',onclick:()=>{for(let i=1;i<=gap;i++){const ds=addDays(la,i);if(!hasActivity(ds)) setDay(ds,d=>{d.off=1;});}toast('空いた日をお休みの日にしました');render();}},'空いた'+gap+'日をお休みの日にする'));
 }
 
 /* 24 hours as 100%: what the day was spent on */
@@ -2219,7 +2212,7 @@ function viewCheckin(id){
     its.map(it=>itemEditor(ds,it)),
     c.report?ciTomorrow(c):null,
     (!rs.length&&!its.length&&!c.report)?el('div',{class:'empty'},el('p',{class:'small'},'ここで聞く項目がまだありません。'),el('a',{href:'#routines',class:'btn sub sm'},'習慣の設定で選ぶ')):null,
-    el('button',{type:'button',class:'btn',onclick:()=>{setDay(ds,d=>{d.ci=Object.assign({},d.ci,{[id]:Date.now()});});toast(c.report?'今日もおつかれさまでした':'記録しました');go('home');}},c.report?'レポートを終える':'チェックインを終える')
+    el('button',{type:'button',class:'btn',onclick:()=>{setDay(ds,d=>{d.ci=Object.assign({},d.ci,{[id]:Date.now()});});toast('記録しました');go('home');}},c.report?'レポートを終える':'チェックインを終える')
   ];
 }
 
@@ -4570,11 +4563,11 @@ function viewHome(){
     const show=adv&&!(seen.t&&Date.now()-seen.t<36*3600*1000)&&!(seen.extra!=null&&adv.extra<=seen.extra&&seen.gid===adv.gid);
     if(show) notice.push(el('div',{class:'card notice'},
       el('p',{class:'small'},el('b',{},'見込みより、'+tname('create')+'に時間がかかっていますか？')),
-      el('p',{class:'small'},'ここまでに終えた作業'+adv.n+'件の記録では、計画で見込んだ時間のおよそ'+(Math.round(adv.ratio*10)/10)+'倍かかっています。丁寧に進めてこられたのだと思います。ただ、このペースのままだと、「'+adv.name+'」（'+md(adv.due)+'）までに、予備日を使っても'+hrs(adv.extra)+'ほど足りなくなりそうです。いまのうちに、実際のペースで残りの作業を見積もり直しておきませんか。'),
+      el('p',{class:'small'},'ここまでに終えた作業'+adv.n+'件の記録では、計画で見込んだ時間のおよそ'+(Math.round(adv.ratio*10)/10)+'倍かかっています。このペースのままだと、「'+adv.name+'」（'+md(adv.due)+'）までに、予備日を使っても'+hrs(adv.extra)+'ほど足りなくなりそうです。いまのうちに、実際のペースで残りの作業を見積もり直しておきませんか。'),
       el('div',{class:'grid2'},el('button',{type:'button',class:'btn sm',onclick:()=>openWizard('create')},'実際のペースで計画を組み直す'),
         el('button',{type:'button',class:'btn sub sm',onclick:()=>{setLife(x=>{x.replanSeen={t:Date.now(),extra:adv.extra,gid:adv.gid};});render();}},'今回はこのまま進める'))));
     if(act) for(const g of plan2().goals||[]) if(g.reward&&!g.got&&goalDone(g)) notice.push(el('div',{class:'card notice good'},
-      el('p',{class:'small'},el('b',{},'🎁 「'+g.name+'」を達成しました！'),'ごほうび：'+g.reward),
+      el('p',{class:'small'},el('b',{},'🎁 「'+g.name+'」を達成しました。'),'ごほうび：'+g.reward),
       el('button',{type:'button',class:'btn sub sm',onclick:()=>upP(x=>{x.goals.find(y=>y.id===g.id).got=true;})},'ごほうびを受け取った')));
   }
   // check-ins / report: one row; within an hour of the time and not yet done, the button turns orange
@@ -4599,11 +4592,11 @@ function viewHome(){
   const sk=streak();
   const routineSec=[
     el('div',{class:'between'},el('h2',{class:'sec'},'ルーティン'),el('span',{class:'xs muted num'},d.off?'':(rs.length?'答えた '+answered.length+' / '+rs.length:'')+(sk>=2?'　記録 '+sk+'日目':''))),
-    d.off?el('p',{class:'small muted'},'今日はお休みの日です。ゆっくり休んでください。'):[cards.length?el('div',{class:'rstrip',role:'list','aria-label':'まだ答えていないルーティン'},cards):(rs.length?el('p',{class:'small alldone'},'今日のルーティンには、ぜんぶ答えました。'):null),ansRow],
+    d.off?el('p',{class:'small muted'},'今日はお休みの日です。'):[cards.length?el('div',{class:'rstrip',role:'list','aria-label':'まだ答えていないルーティン'},cards):(rs.length?el('p',{class:'small alldone'},'今日のルーティンには、ぜんぶ答えました。'):null),ansRow],
     el('div',{class:'qrow'},el('button',{type:'button',class:'hrec',onclick:()=>{TABSTATE.day='life';go('day/'+t);}},mico('day'),'今日の習慣記録'),(L.quick||[]).slice(0,4).map(q=>el('button',{type:'button',class:'chip sm',onclick:()=>addQuick(q,t)},'＋'+quickLabel(q))))];
   const next=milestones().find(m=>m[0]>=t);
   return [
-    comebackCard(t),notice,prog,ciRow,routineSec,
+    notice,prog,ciRow,routineSec,
     cmLine(t),
     bringOf(t)?el('p',{class:'small bringline'},'🎒 今日の持ち物：'+bringOf(t).t):null,
     el('div',{class:'between'},el('h2',{class:'sec'},'今日やること'),phaseLabel(t)?el('span',{class:'pill',style:'padding:2px 10px;font-size:12px'},phaseLabel(t)):null),
@@ -4847,7 +4840,7 @@ const scCard=()=>scLight({w:260,h:170,cx:300,cy:-30,n:34,seed:7,spread:[1.75,3.0
 const scBurst=()=>scLight({w:340,h:200,cx:290,cy:44,n:40,seed:11,spread:[1.3,3.4],dist:[30,260],fade:[1,0,1.15]});
 function viewDone(){
   const {n,ok}=P.stats;
-  return [el('h1',{},'おつかれさまでした'),
+  return [el('h1',{},'演習の結果'),
     el('div',{class:'card donecard'},scBurst(),crystalNode(),el('span',{class:'big'},String(ok),el('small',{},' / '+n+'問')),el('p',{class:'small muted'},'「勘」で当たった問題と間違えた問題は、「間違えた問題」から解き直せます。')),
     el('button',{type:'button',class:'btn',onclick:()=>{P.step='setup';render();}},'もう一度えらぶ'),
     el('a',{href:'#home',class:'btn sub',onclick:()=>{P.step='setup';}},'ホームにもどる')];
@@ -5357,50 +5350,79 @@ const IMP_Q_EX={'形式':'芒学の問題','教材':'（問題集の名前）','
   {'番号':2,'単元':'（単元の名前）','形':'選択肢','問題':'（問題文）','選択肢':['（選択肢1）','（選択肢2）','（選択肢3）','（選択肢4）'],'答え':3,'解説':'（解説）'},
   {'番号':3,'単元':'（単元の名前）','形':'穴埋め','問題':'（…［A］…［B］…）','答え':['（Aの語句）','（Bの語句）'],'語群':['（語群1）','（語群2）','（語群3）'],'解説':'（解説）'},
   {'番号':4,'単元':'（単元の名前）','形':'並び替え','問題':'（何を並べるか）','答え':['（1番目）','（2番目）','（3番目）'],'解説':'（解説）'}]};
+/* プロンプト（2026-11-18）：一度で出させず、チャットで確かめることを解消してからJSONにする。確かめても分からない所は「確認」に書き、アプリの確認画面に出す */
 function tocPrompt(){return [
-  'この画像（またはPDF）は、私が持っている教材の目次です。学習計画アプリ「芒学」に取り込むためのJSONを作ってください。',
-  '写真を何回かに分けて送るときは、最後に「以上です」と送ります。そのあとに、それまでの写真をまとめて1つのJSONにしてください。',
+  '私が持っている教材の目次を、学習計画アプリ「芒学」に取り込むためのJSONにしてください。目次の写真（またはPDF）は、この文と一緒に、またはこのあとに送ります。',
+  '',
+  '進め方：',
+  '1. 1回に送れる写真の枚数に上限があるときは、最初にその枚数を教えてください。写真は何回かに分けて送ることがあります。送り終えたら、私が「以上です」と送ります。それまではJSONを作らず、「○枚受け取りました（ここまで合計○枚）」とだけ返してください。',
+  '2. 「以上です」のあと、JSONを作る前に、下の「確かめること」を私に聞いてください。写真から分かることは案として書き、私の答えを待ちます。',
+  '3. 私が答えたら、JSONを返します。1回の返事に収まらないときは、節の切れ目でJSONを閉じて「続きがあります」と書き、私が「続き」と送ったら、次の節から新しいJSONで返します。',
+  '4. JSONのあとに1行だけ、「この返事のJSON：（最初の見出し）〜（最後の見出し）、○行」と書いてください。',
+  '',
+  '確かめること：',
+  '- 受け取った写真の枚数と、写っている範囲（最初と最後の見出し・ページ）。抜けているページ、重なっているページ、読めない写真がないか。',
+  '- 書名。写真に写っていなければ聞いてください。',
+  '- 目次に出てこないページの扱い。目次からは分からないので、私に聞いてください。',
+  '  - 章の頭の、導入（イントロダクション）だけのページや扉のページ',
+  '  - 章末の、ページの切り替え（白いページ）、挿画、コラム、まとめ、確認問題のページ',
+  '  - 巻末の、索引・付録・模擬問題など',
+  '  それぞれ、読む範囲に含めるか、含めないか。含めないなら、どのページかを私に聞き、そのページはどの節にも含めません（節の「はじめ」「おわり」をそのページを避けて決めます）。含めるなら、すぐ前の節の範囲に足します（章の頭のページなら、その章の最初の節の範囲に足します）。私が分からないと答えたら、目次のページ番号どおりにします。',
+  '- 問題集で、同じ単元の中で問題番号が1から始まり直すとき（Basic・Step-Up、初級・中級などの段階ごと）、段階ごとに別の教材に分けるか。おすすめは、番号が重なるときだけ分け、番号が重ならなければ、1冊を1つの教材のままにすることです。',
+  '- 単元の当てはめで迷う見出し。',
   '',
   '決まり：',
-  '- 「教材」には、写真に写っている書名をそのまま書いてください。書名が写っていなければ "" にしてください（名前はアプリで聞きます）。',
-  '- 出力は、下の形のJSONだけにしてください。説明の文はいりません。',
-  '- 1冊につき1つのJSONにします。',
-  '- 問題集で、同じ単元の中で問題番号が1から始まり直すとき（Basic・Step-Up、初級・中級などの段階ごと）は、段階ごとに別の教材にして、JSONを段階の数だけ [ ] の中に並べてください。「教材」は「書名（Basic）」のようにします。番号が重ならなければ、1冊を1つの教材のままにします。',
+  '- 「教材」には、書名をそのまま書きます。',
+  '- 出力は、下の形のJSONと、そのあとの1行だけです。',
+  '- 1冊につき1つのJSONにします。段階ごとに分けるときは、JSONを段階の数だけ [ ] の中に並べ、「教材」は「書名（Basic）」のようにします。',
   '- 「種類」は、読むもの（テキスト・入門書）なら「読む」、問題集なら「解く」です。',
   '- 「目次」には、いちばん細かい見出し（節）を1つずつ、本の順に書きます。節がない章は、「節」を "" にして章を1つ書きます。',
   '- 「はじめ」「おわり」は数字です。読むものはページ、問題集は問題番号です。',
   unitRule('見出し'),
-  '- 読み取れない所や自信のない所は、推測で埋めず、その行に「確認」という項目を足して、内容を書いてください。',
+  '- 確かめたあとも読み取れない所や自信のない所は、推測で埋めず、その行に「確認」という項目を足して、内容を書いてください（アプリの確認画面に出ます）。',
   '',
   '形：',
   JSON.stringify(IMP_TOC_EX,null,1)].join('\n');}
 function qPrompt(){return [
-  'これから、私が持っている問題集のページの写真を、何回かに分けて送ります。学習計画アプリ「芒学」の演習に取り込むためのJSONを作ってください。',
+  '私が持っている問題集のページの写真を、何回かに分けて送ります。学習計画アプリ「芒学」の演習に取り込むためのJSONを作ってください。',
   '',
   '進め方：',
-  '1. 最初の写真を見たら（この文より前に写真を送っていたら、この文を読んだら）、JSONを作る前に、次の2つの案を私に出して、答えを待ってください。',
-  '  - 解説の分け方：本の解説を「解説」（短いもの）と「詳しい解説」のどちらに置くか。全部を「解説」に置く案でもかまいません。',
-  '  - 問題集の分け方：同じ単元の中で問題番号が1から始まり直すとき（Basic・Step-Up、初級・中級などの段階ごと）は、段階ごとに別の問題集にします（「教材」は「書名（Basic）」のように）。番号が重ならなければ、1つの問題集のままにします。',
-  '2. 私が答えたら、それ以降は、送られた写真の分ごとにJSONを返してください。決めた分け方と名前は、最後まで変えません。',
-  '3. 1回の返事に収まらないときは、問題の切れ目でJSONを閉じて、そのあとに「続きがあります」とだけ書いてください。私が「続き」と送ったら、次の問題から新しいJSONで返してください。',
+  '1. 1回に送れる写真の枚数に上限があるときは、最初にその枚数を教えてください。',
+  '2. 最初の写真を受け取ったら（この文より前に写真を送っていたら、この文を読んだら）、JSONを作る前に、下の「最初に確かめること」を私に聞いてください。写真から分かることは案として書き、私の答えを待ちます。',
+  '3. 私が答えたら、それ以降は、送られた写真の分ごとにJSONを返します。決めたことと名前は、最後まで変えません。',
+  '4. 写真を受け取るたびに、下の「写真ごとに確かめること」を見て、気になることがあれば、JSONより先に私に聞いてください。なければ、そのままJSONを返します。',
+  '5. JSONのあとに1行だけ、「この返事のJSON：問題 ○〜○（○問）、受け取った写真 ○枚」と書いてください。',
+  '6. 1回の返事に収まらないときは、問題の切れ目でJSONを閉じて「続きがあります」と書き、私が「続き」と送ったら、次の問題から新しいJSONで返します。',
+  '',
+  '最初に確かめること：',
+  '- 問題と、答え・解説の位置（同じページ、次のページ、章末や巻末など）。',
+  '- 難しさや重要度の分け方：問題に付いている印（★の数、A・B・C、Basic・Step-Up など）は何があり、それぞれ何を表すか。段階ごとのまとまり（ブロック）があるか。同じ単元の中で問題番号が1から始まり直すときは、段階ごとに別の問題集にするか（「教材」は「書名（Basic）」のように）。おすすめは、番号が重なるときだけ分け、番号が重ならなければ、1つの問題集のままにすることです。',
+  '- 解説の分け方：本の解説のどの部分を「解説」（短いもの）にし、どの部分を「詳しい解説」にするか。例：本文の解説は「解説」、これも覚える・根拠条文・アドバイスなどの囲みは「詳しい解説」。全部を「解説」に置く案でもかまいません。',
+  '- 問題の形：○×・選択肢・穴埋め・並び替えのどれに当てはめるか。記述や計算の問題は取り込まないので、あれば教えてください。',
+  '- 図や表：表はHTMLの表にします。表にできない図があれば、どう書くか。',
+  '- 単元の当てはめで迷うもの。',
+  '',
+  '写真ごとに確かめること：',
+  '- 受け取った枚数が、私が送った枚数と合っているか（「○枚受け取りました」と書いてください）。',
+  '- 抜けている番号、重なっている番号、ページをまたいで切れている問題や解説がないか。切れているときは、続きの写真を待つか私に聞きます。',
+  '- 読めない所。',
   '',
   '決まり：',
-  '- 「教材」には、写真に写っている問題集の名前をそのまま書いてください。名前が写っていなければ "" にしてください（名前はアプリで聞きます）。私が名前を伝えたら、それ以降はその名前にします。',
-  '- JSONの返事には、説明の文はいりません。',
+  '- 「教材」には、写真に写っている問題集の名前をそのまま書いてください。名前が写っていなければ聞いてください。私が名前を伝えたら、それ以降はその名前にします。',
+  '- JSONの返事には、JSONとそのあとの1行のほかに、説明の文はいりません。',
   '- 問題文・選択肢・答え・解説は、本のとおりに書き写します。言い換えたり、足したりしないでください。',
-  '- 「詳しい解説」には、本の紙面の順に、囲みや見出し（例：これも覚える、根拠条文、アドバイス）も含めて、解説の部分をすべて書き写します。「解説」と「詳しい解説」の2つより細かくは分けません。',
+  '- 「詳しい解説」には、決めた分け方のとおり、本の紙面の順に、囲みや見出し（例：これも覚える、根拠条文、アドバイス）も含めて書き写します。「解説」と「詳しい解説」の2つより細かくは分けません。',
   '- 解説の書式は、次のHTMLだけを使います：見出し <h4>、太字 <b>、赤字や強調 <mark>、改行 <br>、箇条書き <ul><li>、表 <table><tr><th><td>。それ以外のタグは使いません。',
   '- 「形」は「○×」「選択肢」「穴埋め」「並び替え」のどれかです。',
   '  - ○×：答えは「○」か「×」。',
   '  - 選択肢：選択肢を順に「選択肢」に書き、答えは正しい選択肢の番号（1から数える）。',
   '  - 穴埋め：問題文の空欄を ［A］［B］… と書き、答えを「答え」に順に書きます。語群があれば、本の番号の順に「語群」に書きます（番号は付けず語句だけ）。答えは語群と同じ語句にします。',
   '  - 並び替え：正しい順を「答え」に書きます。',
-  '- 記述や計算の問題は含めないでください。',
   '- 「番号」は本の問題番号（数字）です。「ページ」は本のページで、分からなければ省きます。',
   unitRule('問題'),
   '- 「論点」は、その問題の論点を短く。なければ省きます。',
-  '- 「印」は、本が問題ごとに付けている重要度や難しさの印（★の数、A・B・C など）を、本のとおりに書き写します。なければ省きます。',
-  '- 読み取れない所や自信のない所は、推測で埋めず、その問題に「確認」という項目を足して、内容を書いてください。',
+  '- 「印」は、本が問題ごとに付けている重要度や難しさの印（★の数、A・B・C など）を、本のとおりに書き写します。段階ごとのまとまりの名前（Basic など）は、問題集を分けないときだけ「印」に書きます。なければ省きます。',
+  '- 確かめたあとも読み取れない所や自信のない所は、推測で埋めず、その問題に「確認」という項目を足して、内容を書いてください（アプリの確認画面に出ます）。',
   '',
   '形：',
   JSON.stringify(IMP_Q_EX,null,1)].join('\n');}
@@ -5565,7 +5587,7 @@ function viewMaterials(){
       el('p',{class:'xs muted'},'長い文は、このボタンか、欄の長押しで貼り付けてください。'),
       el('button',{type:'button',class:'btn sm',onclick:()=>impRun(paste.value)},'貼り付けた中身を取り込む')),
     el('div',{class:'card'},el('div',{class:'between'},el('h2',{},'自分のAIで作る（おすすめ）'),el('button',{type:'button',class:'help','aria-label':'単元と取り込む順番',onclick:unitHelp},'?')),
-      el('p',{class:'small'},'プロンプトを写真と一緒にAIに渡し、返ってきたJSONを上に貼り付けます。'),
+      el('p',{class:'small'},'プロンプトをAIに渡して写真を送り、AIの確認にチャットで答えてから、返ってきたJSONを上に貼り付けます。'),
       el('p',{class:'xs muted'},'プロンプトをコピー'),
       el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>copyText(tocPrompt(),'目次用のプロンプト')},'目次用'),el('button',{type:'button',class:'btn sub sm',onclick:()=>copyText(qPrompt(),'問題用のプロンプト')},'問題用')),
       el('div',{class:'ailinks'},el('span',{class:'xs muted'},'新しいチャットを開く：'),
