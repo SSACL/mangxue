@@ -141,13 +141,17 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);margin:0;
 .qpre p{margin:4px 0 0}
 #menu details.menuset>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between}#menu details.menuset>summary::-webkit-details-marker{display:none}
 #menu details.menuset>summary::after{content:'';width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-right:16px;transition:transform .15s}#menu details.menuset[open]>summary::after{transform:rotate(-135deg)}
+.gcrow{gap:8px;flex-wrap:wrap;align-items:center}.gcrow .btn{flex:1;min-width:0}.gcrow .chip{flex:none}
+.wknav{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;text-align:center}
+.card.future{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 25%,transparent)}
+.cifoot{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:5;padding-top:6px;display:flex;flex-direction:column}.cifoot>.btn{width:100%}
+.cisetrow{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:4px}
 .prround{display:flex;flex-direction:column;gap:2px;padding:6px 0;border-top:1px solid var(--line)}
 .prchart{margin:8px 0 12px}.prbars{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:2px;align-items:end;margin-top:4px}
 .prcol{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;min-width:0}.prcol i{display:block;width:70%;max-width:22px;min-height:1px;background:var(--accent);border-radius:4px 4px 0 0}
 .prcol .prv{white-space:nowrap;min-height:1.2em}.prcol span{font-size:10px;line-height:1.2}
 .guide{padding-left:1.4em;margin:6px 0 12px;display:flex;flex-direction:column;gap:8px}.guide a{color:var(--accent-ink)}
 .cib.wait{border-style:dashed;background:transparent;color:var(--muted);font:inherit;cursor:pointer}.cib.wait b{font-weight:500}
-.pushhint{text-align:center;margin-top:4px}.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent-ink);text-decoration:underline;cursor:pointer}
 .wkstack{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.wkstack .wkv{margin-left:10px;white-space:nowrap}.wkstack .btn{flex:none}
 .ttit{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;display:flex;flex-direction:column;gap:8px}
 .ttday{border-top:1px solid var(--line);padding:10px 0;display:flex;flex-direction:column;gap:6px}
@@ -684,7 +688,7 @@ h2{text-wrap:balance}
 .unitrow input{width:20px;height:20px;flex:none;accent-color:var(--accent)}
 .unitrow .unitname{flex:1;min-width:0}
 .unitmerge{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;background:var(--accent-soft)}
-.ailinks{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.ailinks{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-inline:-2px;padding:2px}.ailinks::-webkit-scrollbar{display:none}.ailinks>*{flex:none;white-space:nowrap}
 .ailink{font-size:12.5px;padding:4px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);text-decoration:none}
 .ailink:hover,.ailink:focus-visible{color:var(--accent-ink);border-color:var(--accent)}
 .helpt{border-top:1px solid var(--line);padding:2px 0}
@@ -2256,7 +2260,7 @@ function viewDay(arg){
     el('h2',{class:'sec'},'今日やること'),taskList(ds),
     trackEditors(ds),
     (ms.length||ev.length)?el('div',{class:'card'},el('h2',{},'この日の予定'),ms.map(m=>el('p',{class:'small'},'◆ '+m[1])),ev.map(g=>el('p',{class:'small'},'🗓 '+(typeof g==='object'&&g?(g.s||'')+'〜'+(g.e||'')+' '+(g.t||'プライベートの予定'):g)))):null,
-    el('a',{href:'#tracks',class:'small',style:'align-self:flex-start'},'時間の記録のしかたを変える')];
+    el('a',{href:'#tracks',class:'btn sub sm'},'時間の記録のしかたを変える')];
   return [
     el('div',{class:'calhead'},navBtn('#day/'+addDays(ds,-1),'前の日',-1),
       el('div',{style:'text-align:center'},el('span',{class:'small muted'},ds===t?'今日':(ds<t?diffDays(ds,t)+'日前':diffDays(t,ds)+'日後')),el('h1',{},jpDate(ds))),
@@ -2285,8 +2289,9 @@ function viewCheckin(id){
     its.map(it=>itemEditor(ds,it)),
     c.report?ciTomorrow(c):null,
     (!rs.length&&!its.length&&!c.report)?el('div',{class:'empty'},el('p',{class:'small'},'このチェックインで記録する項目がまだありません。'),el('a',{href:'#routines',class:'btn sub sm'},'習慣の設定で選ぶ')):null,
-    el('button',{type:'button',class:'btn',onclick:()=>{setDay(ds,d=>{d.ci=Object.assign({},d.ci,{[id]:Date.now()});});toast('記録しました');go('home');}},c.report?'レポートを終える':'チェックインを終える'),
-    pushHint()
+    el('div',{class:'cifoot'},el('button',{type:'button',class:'btn',onclick:()=>{setDay(ds,d=>{d.ci=Object.assign({},d.ci,{[id]:Date.now()});});toast('記録しました');go('home');}},c.report?'レポートを終える':'チェックインを終える')),
+    // 設定への誘導（2026-11-18）：いちばん下に小さく。「習慣の設定」でこのチェックインの折りたたみを開いて出す
+    el('div',{class:'cisetrow'},pushHint(),el('button',{type:'button',class:'chip sm',onclick:()=>{OPEN.add('ci:'+c.id);go('routines');}},c.report?'このレポートの設定':'このチェックインの設定'))
   ];
 }
 
@@ -2305,13 +2310,14 @@ function ciTomorrow(c){
       !od.skip&&hasStay?stayBoxes(r,cmStaySel(s,od,r).off,key+'-s',nx=>cmDaySetOff(ds,dir,s,r,nx)):null,
       el('label',{class:'row',for:key+'-x',style:'min-height:40px'},el('input',{type:'checkbox',id:key+'-x',checked:!!od.skip,onchange:e=>cmDirSet(ds,dir,'skip',e.target.checked?1:undefined)}),el('span',{class:'small'},name+'の通勤設定をスキップする'),skipHelp()));};
   const rows=cmOn()&&!d.off&&!o.none?[dirRow('go'),dirRow('back')].filter(Boolean):[];
-  return el('div',{class:'card',id:'ci-tomorrow'},
-    el('div',{class:'between'},el('h2',{},'明日の予定'),el('span',{class:'small muted'},jpDate(ds))),
+  // 明日の予定（2026-11-18）：記録ではなく先の設定なので、セクション名をカードの外に出し、カードは淡い青の地
+  return [el('h2',{class:'sec'},'明日の予定'),el('div',{class:'card future',id:'ci-tomorrow'},
+    el('b',{class:'small'},jpDate(ds)),
     el('p',{class:'small'},dt?[el('b',{class:'dtl'},dtLetter(id,P)),' '+dt.name]:'時間割なし',d.off?'（お休みの日）':''),
     cmOn()&&!d.off?[el('h3',{class:'sub'},'通勤'),
       o.none?el('p',{class:'small muted'},'この日の通勤設定は、すべてスキップします（カレンダーで戻せます）。'):rows.length?[p?el('p',{class:'xs muted'},cmDiaText(ds,p)):null,rows]:el('p',{class:'small muted'},'この時間割には通勤がありません。')]:null,
     bringFold(ds,'cib'),
-    el('button',{type:'button',class:'btn sub sm',onclick:()=>{CIRET={id:c.id,label:ciTitle(c)};CAL.sel=ds;CAL.ym=ds.slice(0,7);CAL.focus=true;go('cal');}},'時間割や通勤のパターンをカレンダーで変更する'));
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>{CIRET={id:c.id,label:ciTitle(c)};CAL.sel=ds;CAL.ym=ds.slice(0,7);CAL.focus=true;go('cal');}},'時間割や通勤のパターンをカレンダーで変更する'))];
 }
 /* back to the check-in from the calendar: a button over the page while the calendar is open */
 function retOverlay(){
@@ -2353,14 +2359,18 @@ const CAL={ym:'',sel:'',show:{study:true,create:true,habit:true,priv:true,stamp:
 function calShowSave(){try{IDB.put('__calshow',CAL.show);}catch(e){}}
 function plannedOn(ds){const o={study:0,create:0};if(!planActive()) return o;for(const k of planTasks(ds)){if(k.review) continue;if(k.kind==='study') o.study+=k.plan||0; else if(k.kind==='manga') o.create+=k.plan||0;}return o;}
 /* the calendar page's Google buttons: open it, and (once the client ID is set) import and export by hand */
+/* カレンダー画面の「Googleカレンダー」（2026-11-18）：標準でたたむ。設定ずみなら取り込み・書き出しをここでも押せる（押したら表示を更新するだけ）。
+   「同期・Googleカレンダー・バックアップ」への誘導は小さなボタン1つ */
 function gcalCalRow(){
-  const cfg=gcalCfg(), on=!!cfg.clientId;gisPreload();
+  const cfg=gcalCfg(), imp=cfg.imp||{}, exp=cfg.exp||{}, on=!!cfg.clientId;gisPreload();
   const open=el('a',{href:gcalUrl(CAL.ym+'-01',true),target:'_blank',rel:'noopener',class:'btn sub sm'},'Googleで開く');
-  if(!on) return el('div',{class:'card'},el('div',{class:'grid2',style:'grid-template-columns:1fr'},open,el('button',{type:'button',class:'btn sub sm',onclick:()=>{FOCUS='#gcal-card';go('import');}},'Googleとの連携を設定する')),
-    el('p',{class:'xs muted'},'連携すると、Googleカレンダーの予定を取り込んだり、節目・期日を書き出したりできます。それまでは、日の欄からプライベートの予定を手で追加できます。'));
-  return el('div',{class:'card'},el('h2',{},'Googleカレンダー'),
-    el('p',{class:'small'},'予定の取り込みと節目の書き出しは、「同期・Googleカレンダー・バックアップ」でできます。'+(cfg.lastImport?'前回の取り込み：'+md(ymd(new Date(cfg.lastImport)))+' '+hm(cfg.lastImport)+'。':'')),
-    el('div',{class:'grid2',style:'grid-template-columns:1fr'},el('button',{type:'button',class:'btn sub sm',onclick:()=>{FOCUS='#gcal-card';go('import');}},'取り込み・書き出しへ'),open));
+  const toSet=label=>el('button',{type:'button',class:'chip sm',onclick:()=>{if(on) POPEN.add('gcset');FOCUS='#gcal-card';go('import');}},label);
+  const done=on&&(imp.acct||exp.acct);
+  return pdet('calgc',el('span',{style:'flex:1;min-width:0'},'Googleカレンダー'),
+    done?el('div',{class:'grid2',style:'grid-template-columns:1fr'},
+      el('button',{type:'button',class:'btn sub sm',disabled:!imp.acct||!(imp.cals||[]).length,onclick:()=>gRun('取り込んでいます',async()=>{await gcalImport();toast('予定を取り込みました');})},'Googleから予定を取り込む'),
+      el('button',{type:'button',class:'btn sub sm',disabled:!exp.acct,onclick:()=>gRun('書き出しています',async()=>{await gcalExport();toast('節目を書き出しました');})},'Googleに節目を書き出す')):null,
+    el('div',{class:'row gcrow'},open,toSet(done?'アカウントとカレンダーの設定':'Googleとの連携を設定する')));
 }
 function viewCal(){
   const t=today();if(!CAL.ym) CAL.ym=t.slice(0,7);if(!CAL.sel) CAL.sel=t;
@@ -2604,7 +2614,8 @@ function pushMark(){if(!(S.meta.pushOn&&S.meta.pushOn.on)){S.meta.pushOn={on:tru
 const DATA_TEMPLATE='https://github.com/SSACL/mangxue-data-template';
 function pushSetup(){if(PUSHCFG){document.getElementById('sheet').close();go('routines');return;}pushGuide();}
 function pushGuide(){
-  const A=(href,t)=>el('a',{href,target:'_blank',rel:'noopener'},t);
+  const A=(href,t)=>t;
+  const go2=(href,t)=>el('div',{class:'cisetrow',style:'justify-content:flex-start'},el('a',{href,target:'_blank',rel:'noopener',class:'chip sm'},t));
   const step=(...kids)=>el('li',{},...kids);
   openSheet('通知の設定',
     el('p',{class:'small muted'},'通知は、あなたのCloudflareのアカウントから届きます。設定は最初の1回だけです。'),
@@ -2614,6 +2625,7 @@ function pushGuide(){
         :[step(A(DATA_TEMPLATE,'テンプレート'),'を開き、「Use this template」→「Create a new repository」。「Private」を選んで「Create repository」。'),
           step('GitHubの「Settings」→「Developer settings」→「Personal access tokens」→「Fine-grained tokens」→「Generate new token」。「Repository access」は「Only select repositories」で作ったリポジトリを選び、「Permissions」の「Contents」を「Read and write」にして「Generate token」。'),
           step('メニューの「同期・Googleカレンダー・バックアップ」の「端末どうしの自動同期」に、ユーザー名・リポジトリ・トークン・この端末の名前を手入力して「保存して同期する」。')]),
+    go2(DATA_TEMPLATE,'テンプレートを開く'),
     el('h3',{class:'sub'},'Cloudflare'),
     el('ol',{class:'small guide',start:SYNC?2:4},
       step(A('https://dash.cloudflare.com/sign-up','Cloudflareのアカウント'),'を作ります。'),
@@ -2622,6 +2634,7 @@ function pushGuide(){
       step('GitHubのデータ用リポジトリの「Settings」→「Secrets and variables」→「Actions」→「New repository secret」で、Name「CLOUDFLARE_API_TOKEN」にトークンを、Name「CLOUDFLARE_ACCOUNT_ID」にアカウントIDを貼り付けて、2つ追加します。'),
       step('同じリポジトリの「Actions」→「通知の仕組みをCloudflareに置く」→「Run workflow」。'),
       step('数分たったら、「同期・Googleカレンダー・バックアップ」の「今すぐ同期」を押し、「習慣の設定」の「この端末の通知」で「この端末で通知を受け取る」。')),
+    go2('https://dash.cloudflare.com/sign-up','Cloudflareを開く'),
     el('p',{class:'xs muted'},'iPhone・iPadは、ホーム画面に追加したアプリから開いたときに通知を受け取れます。'));
 }
 function ciWaiting(){return !!life().ciWait&&!pushAny();}
@@ -2629,7 +2642,8 @@ function ciStartSheet(){const close=()=>document.getElementById('sheet').close()
   openSheet('チェックイン',el('p',{class:'small muted'},'時刻に通知を受け取るには、設定が要ります。'),
     el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub',onclick:()=>{close();pushSetup();}},'通知を設定する'),
       el('button',{type:'button',class:'btn sub',onclick:()=>{close();setLife(x=>{delete x.ciWait;});toast('チェックインを使えるようにしました');render();}},'通知なしで使う')));}
-function pushHint(){return pushAny()?null:el('p',{class:'xs muted pushhint'},'時刻に通知を受け取るには ',el('button',{type:'button',class:'linkbtn',onclick:pushSetup},'通知を設定する'));}
+// ボタンの形にそろえる（2026-11-18）：「このチェックインの設定」と横に並べる小さなボタン
+function pushHint(){return pushAny()?null:el('button',{type:'button',class:'chip sm',onclick:pushSetup},'通知を設定する');}
 async function pushDisable(){
   try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();if(sub) await sub.unsubscribe();}catch(_){}
   try{if(PUSHCFG) await fetch(PUSHCFG.url+'/sync',{method:'POST',headers:pushHeaders(),body:JSON.stringify({device:DEVICE,sub:null})});}catch(_){}
@@ -4535,7 +4549,8 @@ function viewPrefs(){
 function menuSetOpen(){try{return localStorage.getItem('mx-menuset')==='1';}catch(_){return false;}}
 function openMenu(){
   const m=document.getElementById('menu');
-  const a=(href,label,ic)=>el('a',{href:'#'+href,'aria-current':VIEW===href.split('/')[0]?'page':null,onclick:()=>m.close()},el('span',{class:'mi','aria-hidden':'true'},mico(ic)),el('span',{},label));
+  // いまいるページだけに色（2026-11-18）：チェックインは3つとも同じ画面なので、行き先まで見る
+  const a=(href,label,ic)=>el('a',{href:'#'+href,'aria-current':(href.startsWith('checkin/')?location.hash==='#'+href:VIEW===href.split('/')[0])?'page':null,onclick:()=>m.close()},el('span',{class:'mi','aria-hidden':'true'},mico(ic)),el('span',{},label));
   m.replaceChildren(...[
     el('div',{class:'between',style:'padding:0 4px 4px 12px'},brandNode(),el('button',{type:'button',class:'iconbtn','aria-label':'メニューを閉じる',onclick:()=>m.close()},'×')),
     el('h3',{},'毎日'),a('home','ホーム','home'),a('day/'+today(),'今日の記録','day'),a('cal','カレンダー','cal'),
@@ -5174,8 +5189,10 @@ function weekCard(from,nav){const W=weekSum(from), wd=ds=>md(ds)+'（'+WD[parseY
   const row=(l,v)=>el('div',{class:'between small'},el('span',{style:'min-width:0'},l),el('span',{class:'num',style:'flex:none;text-align:right'},v));
   const h3=x=>el('h3',{class:'small',style:'margin:6px 0 0'},x), L=W.life;
   return el('div',{class:'card wkcard'},
-    el('div',{class:'between'},el('h2',{},'週のまとめ'),nav||null),
-    el('p',{class:'xs muted num'},wd(W.from)+'〜'+wd(W.to)),
+    el('h2',{},'週のまとめ'),
+    // ◀ 日付 ▶（2026-11-18）：日付の期間をボタンの間に
+    nav?el('div',{class:'wknav'},nav.prev||el('span',{class:'navbtn','aria-hidden':'true',style:'visibility:hidden'}),el('span',{class:'small num'},wd(W.from)+'〜'+wd(W.to)),nav.next||el('span',{class:'navbtn','aria-hidden':'true',style:'visibility:hidden'}))
+      :el('p',{class:'xs muted num'},wd(W.from)+'〜'+wd(W.to)),
     W.time.length?[h3('学習と制作の時間'),W.time.map(x=>row(tname(x.tr),fmtMin(x.rec)+(x.cap?'（コマ '+fmtMin(x.cap)+'）':'')))]:null,
     W.prog.length?[h3('節目までの進み具合'),W.prog.map(x=>row(x.name+'（'+md(x.date)+'）',progTxt(x.diff)))]:null,
     W.prac.on?[h3('演習'),W.prac.n?[row('解いた問題',W.prac.n+'問'),row('正解率',Math.round(W.prac.ok/W.prac.n*100)+'%'),
@@ -5191,7 +5208,7 @@ function weekPick(){const P=plan2(), last=addDays(weekStartOf(today(),P),-7);let
   for(const [k,L] of Object.entries(S.log)) if(/^\d{4}-\d{2}$/.test(k)) for(const e of (L&&L.e)||[]){const ds=ymd(new Date(e[0]-dayStartMin()*60000));if(ds<first) first=ds;}
   first=weekStartOf(first,P);let w=TABSTATE.wk&&TABSTATE.wk<=last&&TABSTATE.wk>=first?TABSTATE.wk:last;
   const go2=d=>{TABSTATE.wk=addDays(w,7*d);render();};
-  return weekCard(w,el('div',{class:'row',style:'gap:6px'},w>first?navBtn('','前の週',-1,()=>go2(-1)):null,w<last?navBtn('','次の週',1,()=>go2(1)):null));}
+  return weekCard(w,{prev:w>first?navBtn('','前の週',-1,()=>go2(-1)):null,next:w<last?navBtn('','次の週',1,()=>go2(1)):null});}
 function viewProgress(){
   const st=studyStats(), mg=mangaStats(), m=manga(), act=planActive();
   const setM=fn=>{const x=clone(manga());fn(x);x.t=Date.now();S.meta.manga=x;save('meta/manga');render();};
