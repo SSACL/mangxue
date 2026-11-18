@@ -1984,13 +1984,13 @@ function taskSheet(ds,k){
   const tk=trackOf(k.kind);
   const pm=k.plan||plannedMin(k.time);
   openSheet(k.title,el('p',{class:'small muted'},trackName(tk)+'に使った時間を記録します（予定 '+fmtMin(pm)+'）。'),
-    minutePicker(pm,m=>{checkTask(ds,k,true);setDay(ds,d=>{d.rec['@'+tk]=(Array.isArray(d.rec['@'+tk])?d.rec['@'+tk]:[]).filter(x=>x.s!==k.id).concat([{s:k.id,m,title:k.title}]);});document.getElementById('sheet').close();toast(fmtMin(m)+'を記録しました');render();},
+    minutePicker(pm,m=>{checkTask(ds,k,true);setDay(ds,d=>{d.rec['@'+tk]=(Array.isArray(d.rec['@'+tk])?d.rec['@'+tk]:[]).filter(x=>x.s!==k.id).concat([{s:k.id,m,title:k.title}]);});document.getElementById('sheet').close();toast(fmtMin(m)+'を記録しました。「'+k.title+'」ができました！');render();},
       tk==='manga'?null:el('button',{type:'button',class:'btn sub sm',onclick:()=>{checkTask(ds,k,true);document.getElementById('sheet').close();render();}},'時間は記録しない')));
 }
 function toggleTask(ds,k,on){
   const tk=trackOf(k.kind);
   if(on&&tk&&(tracks()[tk]==='time'||tk==='manga')){taskSheet(ds,k);return;}
-  checkTask(ds,k,on);
+  checkTask(ds,k,on);if(on) toast('「'+k.title+'」ができました！');
   if(!on&&tk) setDay(ds,d=>{d.rec['@'+tk]=(Array.isArray(d.rec['@'+tk])?d.rec['@'+tk]:[]).filter(x=>x.s!==k.id);});
   render();
 }
@@ -2060,7 +2060,7 @@ function routineRow(ds,r,first){
 }
 function answerRoutine(ds,r,val,card){
   setDay(ds,d=>{d.r[r.id]=val;});
-  toast('記録しました');
+  toast(val?'できた！ 記録しました':'記録しました');
   const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(card&&!reduce){card.classList.add('leaving');setTimeout(render,260);} else render();
 }
@@ -4566,9 +4566,9 @@ function viewHome(){
       el('p',{class:'small'},'ここまでに終えた作業'+adv.n+'件の記録では、計画で見込んだ時間のおよそ'+(Math.round(adv.ratio*10)/10)+'倍かかっています。このペースのままだと、「'+adv.name+'」（'+md(adv.due)+'）までに、予備日を使っても'+hrs(adv.extra)+'ほど足りなくなりそうです。いまのうちに、実際のペースで残りの作業を見積もり直しておきませんか。'),
       el('div',{class:'grid2'},el('button',{type:'button',class:'btn sm',onclick:()=>openWizard('create')},'実際のペースで計画を組み直す'),
         el('button',{type:'button',class:'btn sub sm',onclick:()=>{setLife(x=>{x.replanSeen={t:Date.now(),extra:adv.extra,gid:adv.gid};});render();}},'今回はこのまま進める'))));
-    if(act) for(const g of plan2().goals||[]) if(g.reward&&!g.got&&goalDone(g)) notice.push(el('div',{class:'card notice good'},
-      el('p',{class:'small'},el('b',{},'🎁 「'+g.name+'」を達成しました。'),'ごほうび：'+g.reward),
-      el('button',{type:'button',class:'btn sub sm',onclick:()=>upP(x=>{x.goals.find(y=>y.id===g.id).got=true;})},'ごほうびを受け取った')));
+    if(act) for(const g of plan2().goals||[]) if(!g.got&&!g.open&&isWork(g)&&goalDone(g)) notice.push(el('div',{class:'card notice good'},
+      g.reward?el('p',{class:'small'},el('b',{},'🎁 「'+g.name+'」を達成しました！'),'ごほうび：'+g.reward):el('p',{class:'small'},el('b',{},'「'+g.name+'」を達成しました！')),
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>upP(x=>{x.goals.find(y=>y.id===g.id).got=true;})},g.reward?'ごほうびを受け取った':'閉じる')));
   }
   // check-ins / report: one row; within an hour of the time and not yet done, the button turns orange
   const cis=L.checkins.filter(c=>c.on);
@@ -4592,7 +4592,7 @@ function viewHome(){
   const sk=streak();
   const routineSec=[
     el('div',{class:'between'},el('h2',{class:'sec'},'ルーティン'),el('span',{class:'xs muted num'},d.off?'':(rs.length?'答えた '+answered.length+' / '+rs.length:'')+(sk>=2?'　記録 '+sk+'日目':''))),
-    d.off?el('p',{class:'small muted'},'今日はお休みの日です。'):[cards.length?el('div',{class:'rstrip',role:'list','aria-label':'まだ答えていないルーティン'},cards):(rs.length?el('p',{class:'small alldone'},'今日のルーティンには、ぜんぶ答えました。'):null),ansRow],
+    d.off?el('p',{class:'small muted'},'今日はお休みの日です。'):[cards.length?el('div',{class:'rstrip',role:'list','aria-label':'まだ答えていないルーティン'},cards):(rs.length?el('p',{class:'small alldone'},rs.every(r=>routineState(t,r)===1)?'今日のルーティンは、ぜんぶできました！':'今日のルーティンには、ぜんぶ答えました。'):null),ansRow],
     el('div',{class:'qrow'},el('button',{type:'button',class:'hrec',onclick:()=>{TABSTATE.day='life';go('day/'+t);}},mico('day'),'今日の習慣記録'),(L.quick||[]).slice(0,4).map(q=>el('button',{type:'button',class:'chip sm',onclick:()=>addQuick(q,t)},'＋'+quickLabel(q))))];
   const next=milestones().find(m=>m[0]>=t);
   return [
