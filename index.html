@@ -2289,7 +2289,7 @@ function plannedOn(ds){const o={study:0,create:0};if(!planActive()) return o;for
 function gcalCalRow(){
   const cfg=gcalCfg(), on=!!cfg.clientId;gisPreload();
   const open=el('a',{href:gcalUrl(CAL.ym+'-01',true),target:'_blank',rel:'noopener',class:'btn sub sm'},'Googleで開く');
-  if(!on) return el('div',{class:'card'},el('div',{class:'grid2'},open,el('button',{type:'button',class:'btn sub sm',onclick:()=>{FOCUS='#gcal-card';go('import');}},'Googleとの連携を設定する')),
+  if(!on) return el('div',{class:'card'},el('div',{class:'grid2',style:'grid-template-columns:1fr'},open,el('button',{type:'button',class:'btn sub sm',onclick:()=>{FOCUS='#gcal-card';go('import');}},'Googleとの連携を設定する')),
     el('p',{class:'xs muted'},'連携すると、Googleカレンダーの予定を取り込んだり、節目・期日を書き出したりできます。それまでは、日の欄からプライベートの予定を手で追加できます。'));
   return el('div',{class:'card'},el('h2',{},'Googleカレンダー'),el('div',{class:'grid2'},
       el('button',{type:'button',class:'btn sub sm',onclick:()=>{if(!cfg.imp.acct||!(cfg.imp.cals||[]).length){toast('取り込み用のアカウントとカレンダーを選んでください');FOCUS='#gcal-card';go('import');return;}gRun('取り込んでいます',gcalImport);}},'予定を取り込む'),
@@ -2946,7 +2946,7 @@ function viewCommuteBody(){
       el('p',{class:'xs muted'},'0時〜3時の電車は、前の日のダイヤで数えます（金曜の終電は平日ダイヤ、土曜の始発は土曜ダイヤ）。')),
     el('div',{class:'savebar'+(dirty?' on':''),role:'region','aria-label':'保存'},
       el('span',{class:'small'},dirty?'保存していない変更があります':'変更はありません'),
-      el('div',{class:'grid3'},el('button',{type:'button',class:'btn sub sm',disabled:!dirty,onclick:cmDiscard},'元に戻す'),el('button',{type:'button',class:'btn sub sm two',onclick:cmPreview},el('span',{class:'bsub'},'特定の日付で'),el('span',{},'確認する')),el('button',{type:'button',class:'btn sm',disabled:!dirty,onclick:cmSave},'保存する')))
+      el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',style:'grid-column:1/-1',onclick:cmPreview},'日付を選んで確認'),el('button',{type:'button',class:'btn sub sm',disabled:!dirty,onclick:cmDiscard},'元に戻す'),el('button',{type:'button',class:'btn sm',disabled:!dirty,onclick:cmSave},'保存する')))
   ];
 }
 /* 確認する: the trips of a chosen day, worked out with the settings as they are on the page (saved or not) */
@@ -3852,7 +3852,9 @@ function segQ1(id,cur,opts,fn){const g=segQ(id,cur,opts,fn);g.style.gridTemplate
    日付の欄は、期日か目安の日を選んだときだけ（前の版で日付だけ答えてあれば出す） */
 const DMODE=[['fix','決まった期日がある'],['aim','目安の日を自分で決める'],['none','日付を決めずに続ける']];
 function dmodeDate(mode,date){return mode==='fix'||mode==='aim'||(!mode&&!!date);}
-function segQ(id,cur,opts,fn){return el('div',{class:'seg',style:'grid-template-columns:repeat('+Math.min(opts.length,opts.length>3?2:opts.length)+',1fr)',role:'group','aria-label':id},opts.map(([v,l])=>el('button',{type:'button','aria-pressed':String(cur===v),onclick:()=>fn(cur===v?'':v)},l)));}
+function labW(t){let n=0;for(const ch of String(t)) n+=ch.charCodeAt(0)<256?0.55:1;return n;}
+function segCols(labels){const n=labels.length, w=Math.max(0,...labels.map(labW));return n===3?(w<=5?3:1):n===2||n>3?(w<=8?2:1):n;}
+function segQ(id,cur,opts,fn){return el('div',{class:'seg',style:'grid-template-columns:repeat('+segCols(opts.map(o=>o[1]))+',minmax(0,1fr))',role:'group','aria-label':id},opts.map(([v,l])=>el('button',{type:'button','aria-pressed':String(cur===v),onclick:()=>fn(cur===v?'':v)},l)));}
 /* ----- 計画づくりの質問 3：学習の中身 ----- */
 const FMT=[['mc','マークシート・選択肢から選ぶ'],['blank','穴埋め（語句を選ぶ・書く）'],['essay','記述・論述'],['calc','計算'],['listen','リスニング'],['oral','実技・口述・面接']];
 function fmtLabel(f){return (FMT.find(x=>x[0]===f)||[,f])[1];}
@@ -4684,7 +4686,7 @@ function viewPractice(){
     el('div',{class:'card'},el('h2',{},'単元'),
       el('div',{class:'chips'},practiceSubjects().map(s=>el('button',{type:'button',class:'chip','aria-pressed':String(P.subject===s.id),onclick:()=>{P.subject=s.id;render();}},s.short)))),
     el('div',{class:'card'},el('h2',{},'出し方'),
-      el('div',{class:'seg',style:'grid-template-columns:repeat(3,minmax(0,1fr))'},
+      el('div',{class:'seg',style:'grid-template-columns:1fr'},
         [['cont','続きから'],['miss','間違えた問題'],['all','最初から']].map(([k,l])=>el('button',{type:'button','aria-pressed':String(P.mode===k),onclick:()=>{P.mode=k;render();}},l+'（'+n[k]+'）'))),
       roundLine?el('p',{class:'small muted num'},roundLine):null,
       starOn?[el('p',{class:'xs muted'},'星'),el('div',{class:'chips',role:'group','aria-label':'星'},lv.map(v=>el('button',{type:'button',class:'chip','aria-pressed':String(!X.has(v)),onclick:()=>{X.has(v)?X.delete(v):X.add(v);setStarX(X);render();}},starTxt(v))))]:null,
@@ -5086,7 +5088,7 @@ function viewImport(){
   };
   return [
     el('h1',{},'同期・Googleカレンダー・バックアップ'),statusNode(),syncCard(),gcalCard(),
-    el('div',{class:'card between',style:'flex-direction:row'},el('span',{class:'small'},'教材の目次と問題の取り込みは、教材設定へ'),el('a',{href:'#materials',class:'btn sub sm'},'教材設定')),
+    el('div',{class:'card between',style:'flex-direction:row'},el('span',{class:'small'},'教材の目次と問題の取り込みは、教材設定へ'),el('a',{href:'#materials',class:'btn sub sm',style:'flex:none;white-space:nowrap'},'教材設定')),
     el('div',{class:'card'},el('h2',{},'バックアップ'),el('p',{class:'small muted'},'同期を設定していれば、記録は自動でほかの端末にもそろいます。書き出しは、念のための控えとして月に1回ほどで十分です。'),
       el('button',{type:'button',class:'btn sub sm',onclick:exportAll},'バックアップを書き出す'),
       el('label',{class:'field',for:'restore'},'ファイルを読み込む（問題ファイル・バックアップ）',el('input',{type:'file',id:'restore',accept:'application/json,.json',onchange:importFile})))
