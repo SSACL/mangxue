@@ -1700,12 +1700,14 @@ const ALLDAYS=[0,1,2,3,4,5,6], WEEKDAYS=[1,2,3,4,5], DN='日月火水木金土';
 const PALETTE=['#E5484D','#F76B15','#E2A336','#46A758','#12A594','#0090FF','#8E4EC6','#D6409F'];
 const MIN_CHOICES=[15,30,45,60,90];   // anything longer is typed in (自由に入力)
 const TYPES={sleep:'睡眠（寝た時刻と起きた時刻）',weather:'天気（晴れ・くもり・雨・雪）',span:'時間（内訳を選ぶ・重なってもOK）',memo:'メモ',check:'チェック（やった・やらない）',count:'回数'};
-/* 初めての人の設定（2026-11-18）：ルーティンは「7時間寝る」だけ、ワンタップ記録なし、天気は置かない。
+/* 初めての人の設定（2026-11-18）：ルーティンは「7時間寝る」だけ、ワンタップ記録なし。
+   天気は朝のチェックインで記録する（2026-11-19：「プリセットに戻す」で天気が消えないように）。
    チェックインは朝 08:00・夜 20:00・〆 23:00。ciWait のあいだホームのボタンは薄い枠で、「通知を設定する」か「通知なしで使う」を選ぶまで始まらない */
 const WEATHER_ITEM={id:'weather',name:'天気',emoji:'🌦',color:'',type:'weather'};
 const LIFE_PRESET={v:4,dayStart:'04:00',sleepTarget:420,ciWait:true,
   items:[
     {id:'sleep',name:'睡眠',emoji:'😴',color:'',type:'sleep'},
+    WEATHER_ITEM,
     {id:'work',name:'仕事',emoji:'💼',color:'',type:'span',subs:[{id:'office',name:'出社'},{id:'remote',name:'在宅'},{id:'over',name:'残業'}]},
     {id:'chores',name:'家事',emoji:'🧺',color:'',type:'span',subs:[{id:'cook',name:'料理'},{id:'laundry',name:'洗濯'},{id:'clean',name:'掃除'},{id:'shop',name:'買い物'}]},
     {id:'hobby',name:'趣味の時間',emoji:'🎮',color:'',type:'span',subs:[{id:'oshi',name:'推し活'},{id:'game',name:'ゲーム'},{id:'stream',name:'配信を見る'}]},
@@ -1714,7 +1716,7 @@ const LIFE_PRESET={v:4,dayStart:'04:00',sleepTarget:420,ciWait:true,
   routines:[
     {id:'sleep7',name:'7時間寝る',emoji:'🛏️',kind:'sleep',min:420,auto:true,by:'',days:ALLDAYS,before:null,at:false}],
   checkins:[
-    {id:'m',name:'朝',time:'08:00',on:true,items:['sleep'],routines:[]},
+    {id:'m',name:'朝',time:'08:00',on:true,items:['sleep','weather'],routines:[]},
     {id:'d',name:'昼',time:'12:30',on:false,items:[],routines:[]},
     {id:'n',name:'夜',time:'20:00',on:true,items:['work','chores','hobby','move'],routines:[]},
     {id:'z',name:'〆',time:'23:00',on:true,report:true,items:['note'],routines:[]}],
@@ -1731,7 +1733,7 @@ function migrateLife(L){
   L.v=4; return L;
 }
 function migrateV2(L){
-  for(const it of LIFE_PRESET.items) if(!L.items.some(x=>x.id===it.id)){const i=L.items.findIndex(x=>x.id==='hobby');L.items.splice(i<0?L.items.length:i,0,clone(it));}
+  for(const it of LIFE_PRESET.items) if(it.type!=='weather'&&!L.items.some(x=>x.id===it.id)){const i=L.items.findIndex(x=>x.id==='hobby');L.items.splice(i<0?L.items.length:i,0,clone(it));}
   for(const c of LIFE_PRESET.checkins) if(!L.checkins.some(x=>x.id===c.id)) L.checkins.push(clone(c));
   if(!L.routines.some(r=>r.kind==='sleep')) L.routines.push(Object.assign(clone(LIFE_PRESET.routines.find(r=>r.kind==='sleep')),{off:true}));
   if(!L.quick) L.quick=clone(LIFE_PRESET.quick);
