@@ -4533,8 +4533,8 @@ function viewPrefs(){
     el('p',{class:'small muted'},'この端末だけの設定です。'),
     el('div',{class:'card'},el('h2',{},'表示の明るさ'),
       el('div',{class:'themeseg',role:'group','aria-label':'表示の明るさ'},tb('','端末に合わせる'),tb('light','ライト'),tb('dark','ダーク'))),
-    // メインメニューに「習慣」を出す（2026-11-18）。外すと、メニューの「毎日」のいちばん下に「暮らし」
-    el('div',{class:'card'},el('label',{class:'row',for:'pf-life'},el('input',{type:'checkbox',id:'pf-life',checked:lifeTab(),onchange:e=>setLifeTab(e.target.checked)}),el('span',{},'メインメニューに「習慣」を出す'))),
+    // 隠すときにチェックを付ける（2026-11-19）。隠すと、メニューの〆のレポートの下に「習慣」
+    el('div',{class:'card'},el('label',{class:'row',for:'pf-life'},el('input',{type:'checkbox',id:'pf-life',checked:!lifeTab(),onchange:e=>setLifeTab(!e.target.checked)}),el('span',{},'メインメニューの「習慣」を隠す'))),
     el('div',{class:'card'},el('h2',{},'演習の問題の書体'),
       el('p',{class:'small muted'},'問題文・選択肢・解説の書体です。選んだ書体にない字は、その字だけ端末の書体で表示されます。'),
       el('div',{class:'qfontlist',role:'group','aria-label':'演習の問題の書体'},QFONTS.map(f=>
@@ -4553,13 +4553,14 @@ function openMenu(){
   const a=(href,label,ic)=>el('a',{href:'#'+href,'aria-current':(href.startsWith('checkin/')?location.hash==='#'+href:VIEW===href.split('/')[0])?'page':null,onclick:()=>m.close()},el('span',{class:'mi','aria-hidden':'true'},mico(ic)),el('span',{},label));
   m.replaceChildren(...[
     el('div',{class:'between',style:'padding:0 4px 4px 12px'},brandNode(),el('button',{type:'button',class:'iconbtn','aria-label':'メニューを閉じる',onclick:()=>m.close()},'×')),
-    el('h3',{},'毎日'),a('home','ホーム','home'),a('day/'+today(),'今日の記録','day'),a('cal','カレンダー','cal'),
+    // メインメニューと同じものは置かない。小見出しは「設定と管理」だけ（2026-11-19）
+    a('day/'+today(),'今日の記録','day'),a('cal','カレンダー','cal'),
     life().checkins.filter(c=>c.on).map(c=>a('checkin/'+c.id,ciTitle(c)+'（'+c.time+'）',ciIcon(c))),
-    lifeTab()?null:a('life','暮らし','bed'),
-    el('h3',{},'学習と制作'),a('practice','演習','practice'),a('progress','進捗','progress'),a('share','Xへのシェア','share'),a('plan','計画','plan'),
+    lifeTab()?null:a('life','習慣','bed'),
+    a('share','Xへのシェア','share'),
     // 「設定と管理」はたたむ（2026-11-18）。開いたかどうかはこの端末で覚えておく。いまその画面にいれば開いて出す
     el('details',{class:'menuset',open:menuSetOpen()||['routines','commute','tracks','materials','import','prefs'].includes(VIEW),ontoggle:e=>{try{localStorage.setItem('mx-menuset',e.target.open?'1':'');}catch(_){}}},
-      el('summary',{},el('h3',{},'設定と管理')),a('routines','ルーティンと記録の設定','bell'),a('commute','通勤経路の設定','train'),a('tracks','学習と制作の記録方法','timer'),a('materials','教材設定','books'),a('import','同期・Googleカレンダー・バックアップ','sync'),a('prefs','その他の設定','prefs'))].flat());
+      el('summary',{},el('h3',{},'設定と管理')),a('routines','ルーティンと記録の設定','bell'),a('commute','通勤経路の設定','train'),a('tracks','学習と制作の記録方法','timer'),a('materials','教材設定','books'),a('import','同期・Googleカレンダー・バックアップ','sync'),a('prefs','その他の設定','prefs'))].flat().filter(Boolean));
   if(!m.open) m.showModal();
 }
 
