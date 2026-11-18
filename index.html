@@ -380,7 +380,8 @@ dialog.wiz::backdrop{background:rgba(10,14,20,.45)}
 .sameas{display:flex;flex-direction:column;gap:6px;border-top:1px dashed var(--line);padding-top:8px}
 .sameas .row{min-height:36px;gap:6px}
 .branch{display:flex;flex-direction:column;gap:8px;margin-top:4px;padding:10px;border-radius:14px;border:1.5px dashed var(--line);background:color-mix(in srgb,var(--muted) 6%,var(--surface))}
-input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
+input,select,textarea{color:var(--ink)}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.55;font-size:.86em}
 
 .legcard{display:flex;flex-direction:column;gap:8px;padding:10px 12px 12px;border:1.5px solid var(--line);border-radius:14px;background:var(--bg)}
 .legcard.stay{border-style:dashed;border-color:var(--accent)}
@@ -986,9 +987,9 @@ function syncCard(){
     return el('form',{class:'card',onsubmit:submit},
       el('h2',{},'端末どうしの自動同期'),
       el('p',{class:'small muted'},PENDING?'ほかの端末から設定が届きました。この端末の名前を入力して保存してください。':'問題と記録を、ご自分の非公開リポジトリ経由で、スマホ・iPad・PCの間で自動的にそろえます。2台目からは、1台目の「ほかの端末に設定を移す」を使うと入力が要りません。'),
-      el('label',{class:'field',for:'s-paste'},'設定リンクを貼り付け（2台目以降）',el('input',{type:'text',id:'s-paste',autocomplete:'off',placeholder:'https://…#sync=…',oninput:e=>{const v=e.target.value;const i=v.indexOf('#sync=');if(i<0) return;const p=parseSyncPayload(v.slice(i+6).trim());if(p){PENDING=p;render();}else msg.textContent='リンクを読み取れませんでした。もう一度コピーしてください。';}})),
+      el('label',{class:'field',for:'s-paste'},'設定リンクを貼り付け（2台目以降）',el('input',{type:'text',id:'s-paste',autocomplete:'off',placeholder:'例：https://…#sync=…',oninput:e=>{const v=e.target.value;const i=v.indexOf('#sync=');if(i<0) return;const p=parseSyncPayload(v.slice(i+6).trim());if(p){PENDING=p;render();}else msg.textContent='リンクを読み取れませんでした。もう一度コピーしてください。';}})),
       inp('s-owner','GitHubのユーザー名','owner'),inp('s-repo','データ用のリポジトリ（非公開）','repo'),
-      inp('s-token','トークン','token','password','github_pat_…'),inp('s-name','この端末の名前','name','text','スマホ／iPad／PC'),
+      inp('s-token','トークン','token','password','例：github_pat_…'),inp('s-name','この端末の名前','name','text','例：スマホ'),
       syncBtn,msg);
   }
   const share=el('div',{style:'display:flex;flex-direction:column;gap:8px;align-items:flex-start'});
@@ -3437,7 +3438,7 @@ function createEditor(P,up){
   const add=(type)=>{const id=newId('w');up(x=>{let n='新しい作品',k=2;while(x.works.some(y=>y.name===n)) n='新しい作品'+(k++);x.works.push({id,name:n,type,pages:16,chunk:4,steps:type==='manga'?clone(MANGA_STEPS):[{id:'s1',name:'工程1',perPage:false,hours:5}]});});POPEN.add('w:'+id);};
   return [
     el('p',{class:'small'},tname('create')+'の前提を決めます。作品ごとに、工程と、1ページあたり（または工程全体）の時間の想定を入力します。'),
-    R.all.n?el('div',{class:'card'},el('p',{class:'small'},'これまでの記録では、'+tname('create')+'は想定の ',el('b',{},String(Math.round(R.all.ratio*100)/100)+'倍'),' かかっています（記録'+R.all.n+'件）。工程ごとの「実績に合わせる」で想定を直せます。')):
+    R.all.n?el('div',{class:'card'},el('p',{class:'small'},'これまでの記録では、'+tname('create')+'は想定の ',el('b',{},String(Math.round(R.all.ratio*100)/100)+'倍'),' かかっています（記録'+R.all.n+'件）。工程ごとの「実績に合わせる」で想定を編集できます。')):
       el('p',{class:'xs muted'},'作業を済みにするときにかかった時間を記録しておくと、次に組み直すとき、ここに想定との差が出ます。'),
     ws.map(wEdit),
     el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>add('manga')},'＋ 漫画型で追加'),el('button',{type:'button',class:'btn sub sm',onclick:()=>add('custom')},'＋ 一から組む'))];
@@ -3601,7 +3602,7 @@ function keepCard(){
     el('p',{class:'small'},md(cur.baseline.made)+' に組んだときの期日です。'),
     el('p',{class:'small num'},main.map(g=>g.name+' '+md(g.date)).join('・')+(rest.length?'、ほか節目・模試・予定 '+rest.length+'件':'')),
     el('div',{class:'grid2'},el('button',{type:'button',class:'btn','aria-label':'前回の期日をそのまま使う',onclick:wizKeepDates},'そのまま使う'),el('button',{type:'button',class:'btn sub',onclick:()=>{WIZ.keep=false;wizSave();wizRender();}},'期日を見直す')),
-    el('p',{class:'xs muted'},'そのまま使うと、「何を計画するか」と「期日」を飛ばして「組み方」から始めます。あとから戻って直せます。'));
+    el('p',{class:'xs muted'},'そのまま使うと、「何を計画するか」と「期日」を飛ばして「組み方」から始めます。あとから戻って編集できます。'));
 }
 function keepCard0(cur){const sel=WIZ.keepSel||(WIZ.keepSel=new Set(KEEP_OPTS.map(x=>x[0])));
   return el('div',{class:'card keepcard'},el('h2',{},'前の計画から、何を引き継ぎますか？（いくつでも）'),el('p',{class:'xs muted'},'時間割と教材設定は、いつもそのまま残ります。'),
@@ -3630,7 +3631,7 @@ function wizRender(top){
   const T=(k==='what'||k==='dates'||k==='method'||!Object.keys(wizSched().goals).length)?null:wizTotals();
   const view={what:wizWhat,dates:wizDates,check:wizCheck,method:wizMethod,study:()=>((P.setup||{}).study||{}).kind?wizStudy():studyEditor(P,wizUp),create:()=>((P.setup||{}).create||{}).kinds?wizCreate():createEditor(P,wizUp),need:wizNeed,time:()=>((P.setup||{}).study||{}).kind||((P.setup||{}).create||{}).kinds?wizTime5():wizTime(),outlook:wizOutlook,build:wizBuildView}[k];
   const askKeep=k==='what'&&planActive()&&WIZ.keep==null;
-  const nb=el('div',{class:'wizbody'},askKeep?keepCard():null,el('h2',{class:'wizh'},(WIZ.i+1)+'. '+wizName(k)),WIZ.keep&&(k==='what'||k==='dates')?el('p',{class:'xs',style:'color:var(--good)'},'前回の期日をそのまま使っています。ここで直すと、直した期日で組みます。'):null,view());
+  const nb=el('div',{class:'wizbody'},askKeep?keepCard():null,el('h2',{class:'wizh'},(WIZ.i+1)+'. '+wizName(k)),WIZ.keep&&(k==='what'||k==='dates')?el('p',{class:'xs',style:'color:var(--good)'},'前回の期日をそのまま使っています。ここで編集すると、編集した期日で組みます。'):null,view());
   d.replaceChildren(
     el('div',{class:'wizhead'},el('b',{},planActive()?'計画を組み直す':'計画を組む'),el('button',{type:'button',class:'chip sm',onclick:wizToMaterials},'教材設定'),el('button',{type:'button',class:'chip sm',onclick:()=>{WIZ=null;wizSave();openWizard();}},'最初から'),el('button',{type:'button',class:'iconbtn','aria-label':'閉じる（ここまでの内容は残ります）',onclick:wizClose},'×')),
     steps,nb,
@@ -3668,7 +3669,7 @@ function wizNeed(){
           el('table',{class:'table'},el('tbody',{},(P.dayTypes||[]).filter(d=>(d.slots||[]).some(s=>s.track===tr&&+s.min>0)).map(d=>el('tr',{},el('td',{},el('b',{class:'dtl'},dtLetter(d.id,P)),' '+d.name),el('td',{class:'num'},fmtMin((d.slots||[]).filter(s=>s.track===tr).reduce((a,s)=>a+(+s.min||0),0))+' → '+fmtMin(scaled(d))))))),
           el('button',{type:'button',class:'btn sub sm',onclick:()=>wizUp(x=>{for(const d of x.dayTypes) for(const s of d.slots||[]) if(s.track===tr&&s.use!=='app') s.min=Math.ceil((+s.min||0)*k/5)*5;})},'この時間割にする')]);
   };
-  return [el('p',{class:'small'},'前提から出した作業の量と、いまの時間割で使える時間をくらべます。足りないときは、時間割を伸ばす案を出します。次の「時間割」で、自分で直すこともできます。'),card('study'),card('create')];
+  return [el('p',{class:'small'},'前提から出した作業の量と、いまの時間割で使える時間をくらべます。足りないときは、時間割を伸ばす案を出します。次の「時間割」で、自分で編集することもできます。'),card('study'),card('create')];
 }
 /* 見通し: for each goal, the work, the time, and the buffer; what to do when it does not fit */
 /* 日付を決めずに続ける作業：見通しでは、コマに入るだけ並べると終わる日（作業の量が分かるときだけ） */
@@ -3706,7 +3707,7 @@ function shortCard(P,R,tr,gid,g,G,need,cumW){const t=today(), bufCap=g.buf&&!G.e
       perDay?el('button',{type:'button',class:'chip sm',onclick:()=>wizUp(x=>{for(const d of x.dayTypes) for(const sl of d.slots||[]) if(sl.track===tr&&sl.use!=='app') sl.min=Math.ceil((+sl.min||0)*k/5)*5;})},'コマを伸ばす（1日あと約'+fmtMin(perDay)+'）'):null,
       mv&&!evBased?el('button',{type:'button',class:'chip sm',onclick:()=>moveTo(mv)},'目標日を'+mv+'日後ろにする'):null,
       el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf(tr))},tname(tr)+'の作業を減らす')),
-    el('details',{class:'helpt'},el('summary',{},'?'),el('p',{class:'xs'},'1つ選んでまだ足りなければ、この画面に戻って、ほかの案も組み合わせて直せます。')));}
+    el('details',{class:'helpt'},el('summary',{},'?'),el('p',{class:'xs'},'1つ選んでまだ足りなければ、この画面に戻って、ほかの案も組み合わせられます。')));}
 // 7-2b: 「まだ決めていない」 added books with nothing kept for them: offer to bring the 修了目標日 forward
 function pullCard(P,R){const st=(P.setup||{}).study||{};if(st.addQ!=='later'||(st.tmp||{}).keep==='yes'||!setupTargetDate(st)) return null;
   const up=fn=>wizS(S=>{S.study=Object.assign({},S.study);fn(S.study);});
@@ -3801,7 +3802,7 @@ function wizBuildView(){
       near.map(g=>el('label',{class:'row',for:'nb-'+g.id,style:'min-height:44px'},el('input',{type:'checkbox',id:'nb-'+g.id,checked:!!pick[g.id],onchange:e=>{pick[g.id]=e.target.checked;wizSave();}}),el('span',{},g.name+'（'+md(g.date)+'）を予備日なしで組む')))):null,
     el('p',{class:'xs muted'},gcalReady()?'組んだあと、節目・期日をGoogleカレンダー（「'+GCALNAME+'」）に書き出すか聞きます。':gcalCfg().clientId?'設定で「書き出し用のアカウント」を選ぶと、組んだあとにGoogleカレンダーへ書き出せます（メニューの「問題の取り込み・同期・バックアップ」）。':'Googleとの連携を設定すると、組んだあとにGoogleカレンダーへ書き出せます（メニューの「問題の取り込み・同期・バックアップ」）。'),
     replanQ(P,wizSched()),
-    over&&!far.length?el('div',{class:'warn'},'はみ出す節目があるので、まだ組めません。「見通し」で直してください。',el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf('outlook'))},'見通しへ')):null,
+    over&&!far.length?el('div',{class:'warn'},'はみ出す節目があるので、まだ組めません。「見通し」で編集してください。',el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf('outlook'))},'見通しへ')):null,
     el('button',{type:'button',class:'btn'+((P.goals||[]).some(g=>g.open||(g.date&&g.kind!=='date'))?'':' sub'),disabled:over,onclick:wizBuild},'この内容で組む（今日から）')];
 }
 function farHalf(x,gid,lim){const g=x.goals.find(y=>y.id===gid);if(!g) return;
@@ -3813,6 +3814,7 @@ function farHalf(x,gid,lim){const g=x.goals.find(y=>y.id===gid);if(!g) return;
 /* ----- 計画づくりの質問 1・2：何を計画するか・期日（計画づくりの質問.md 第3版）
    The answers live in P.setup (and each work's dl); the goals they make are rebuilt from them (src:'setup'),
    keeping a reward already set. Goals added by hand or from 節目の案 stay as they are. ----- */
+const WK_UNIT={manga:'冊',illust:'冊',novel:'冊',goods:'種類',other:'件'};
 const WK_KINDS=[['manga','漫画'],['illust','イラスト集'],['novel','小説'],['goods','イラストグッズ'],['other','そのほか']];
 const WK_BOOK=['manga','illust','novel'];
 function wkLabel(k){return (WK_KINDS.find(x=>x[0]===k)||[,'作品'])[1];}
@@ -3990,7 +3992,7 @@ function wizStudy(){
             pfield('qad-a-'+id,'どれくらいの量ですか',pselect('qad-a-'+id,o.amt||'',[['','（選ぶ）'],...AMT_OPTS.slice(1,7),['week','分からない（週に何時間か）']],v=>setA(a=>{a.amt=v;}))),
             o.amt==='n'?pfield('qad-an-'+id,'数',pnum('qad-an-'+id,o.n,v=>setA(a=>{a.n=Math.max(1,Math.round(v));}),1,1)):null,
             o.amt==='week'?pfield('qad-w-'+id,'週に何時間',pnum('qad-w-'+id,o.weekly,v=>setA(a=>{a.weekly=Math.max(0,v);}),0.5,0)):null);})]:null,
-      st.addQ==='later'?[el('p',{class:'small'},'仮に取っておきましょう。あとで直せます。'),segQ('仮置き',(st.tmp||{}).keep||'',[['yes','仮に取っておく'],['no','取っておかない']],v=>up(o=>{o.tmp=Object.assign({},o.tmp,{keep:v});})),
+      st.addQ==='later'?[el('p',{class:'small'},'仮に取っておきましょう。あとで編集できます。'),segQ('仮置き',(st.tmp||{}).keep||'',[['yes','仮に取っておく'],['no','取っておかない']],v=>up(o=>{o.tmp=Object.assign({},o.tmp,{keep:v});})),
         (st.tmp||{}).keep==='yes'?el('div',{class:'grid2'},pfield('qtm-n','何冊くらい',pnum('qtm-n',(st.tmp||{}).n,v=>up(o=>{o.tmp=Object.assign({},o.tmp,{n:Math.max(1,Math.round(v))});}),1,1)),
           pfield('qtm-m','何月ごろ',pselect('qtm-m',(st.tmp||{}).month||'',[['','（選ぶ）'],...monthsTo(st).map(m=>[m,m.replace('-','年').replace(/^(\d+年)0?/,'$1')+'月'])],v=>up(o=>{o.tmp=Object.assign({},o.tmp,{month:v});}))),
           pfield('qtm-w','週に何時間くらい',pnum('qtm-w',(st.tmp||{}).weekly,v=>up(o=>{o.tmp=Object.assign({},o.tmp,{weekly:Math.max(0,v)});}),0.5,0))):null]:null]),
@@ -4003,8 +4005,8 @@ function wizStudy(){
     exam&&st.status==='new'?qb('3-11b','1周目の前に、入門書などで全体を一通り読む期間をとりますか？',[segQ('入門の読み通し',(st.intro||{}).on||'',[['yes','とる'],['no','とらない']],v=>up(o=>{o.intro=Object.assign({},o.intro,{on:v});})),
       (st.intro||{}).on==='yes'?el('div',{class:'grid2'},pfield('qi-m','読む教材',pselect('qi-m',(st.intro||{}).mat||'',[['','（選ぶ）'],...rm.map(m=>[m.id,m.name])],v=>up(o=>{o.intro=Object.assign({},o.intro,{mat:v});}))),
         pfield('qi-w','何週間',pnum('qi-w',(st.intro||{}).weeks,v=>up(o=>{o.intro=Object.assign({},o.intro,{weeks:Math.max(1,Math.round(v))});}),1,1))):null]):null,
-    sm.length?qb('3-12','問題集ごとに、何周しますか？（あとで直せます）',sm.map(roundRow)):null,
-    bands.length?qb('3-13','学び方の段階',[bandTable(bands,today()),el('p',{class:'xs muted'},'区切りの日は、見通しの「節目の案」で直せます。')]):null];}
+    sm.length?qb('3-12','問題集ごとに、何周しますか？（あとで編集できます）',sm.map(roundRow)):null,
+    bands.length?qb('3-13','学び方の段階',[bandTable(bands,today()),el('p',{class:'xs muted'},'区切りの日は、見通しの「節目の案」で編集できます。')]):null];}
 /* ----- 計画づくりの質問 4：制作の中身（作品ごと）----- */
 function setupCreate(x){for(const w of x.works||[]){const k=wkKind(w), d=w.dl||{};if(!WK_BOOK.includes(k)) continue;
   for(const sd of w.steps||[]) if(sd.cover){if(w.cover==='no') sd.off=true; else delete sd.off;}
@@ -4146,7 +4148,7 @@ function wizTime5(){
   return [
     !any?[el('div',{class:'card'},el('h2',{},'時間割を作りましょう。')),ttForm(P)]
       :made?[total,pdet('ttq',el('span',{class:'small'},'質問の答え'),ttForm(P))]
-      :qb('5-1','いまの時間割で組みますか？',[segQ('時間割',WIZ.tt||'',[['keep','このまま使う'],['edit','直してから組む']],v=>{WIZ.tt=v;wizSave();wizRender();}),Object.keys(wizSched().goals).length?total:null]),
+      :qb('5-1','いまの時間割で組みますか？',[segQ('時間割',WIZ.tt||'',[['keep','このまま使う'],['edit','編集してから組む']],v=>{WIZ.tt=v;wizSave();wizRender();}),Object.keys(wizSched().goals).length?total:null]),
     made||(any&&WIZ.tt==='edit')?timeEditor(P,wizUp,()=>wizRender()):null,
     made&&createOn&&H.on==='yes'?qb('4-7b','頭を使う工程を寄せるコマを選んでください。',headSlotChips(P)):null,
     nyu&&studyOn?qb('5-2','入稿の前に、学習を減らして制作を優先する期間をとりますか？',[segQ('追い込み',cr.on||'',[['no','とらない'],['yes','とる']],v=>upC(o=>{o.on=v;})),
@@ -4193,8 +4195,9 @@ function wizWhat(){
       el('button',{type:'button',class:'chip','aria-pressed':String(!!c.none),onclick:()=>wizS(S=>{S.create=Object.assign({},S.create,{none:!c.none});})},'制作は計画しない'))),
     !c.none&&kinds.length?qb('1-3','それぞれいくつ作りますか？',WK_KINDS.filter(([k])=>kinds.includes(k)).map(([k,l])=>{const n=Math.max(0,Math.round(+((c.counts||{})[k])||0)), nm=((c.names||{})[k])||[];
       return el('div',{class:'wkcount'},
-        pfield('wk-n-'+k,l,pnum('wk-n-'+k,n,v=>wizS(S=>{S.create.counts=Object.assign({},S.create.counts,{[k]:Math.max(0,Math.min(20,Math.round(v)))});}),1,0)),
-        Array.from({length:n},(_,i)=>el('input',{type:'text','aria-label':l+(i+1)+'の呼び名',value:nm[i]||'',placeholder:l+(i+1),onchange:e=>wizS(S=>{const N=S.create.names=Object.assign({},S.create.names);const a=(N[k]||[]).slice();a[i]=e.target.value.trim();N[k]=a;})})));})):null];}
+        el('label',{class:'field',for:'wk-n-'+k},l,el('span',{class:'row',style:'gap:8px'},pnum('wk-n-'+k,n,v=>wizS(S=>{S.create.counts=Object.assign({},S.create.counts,{[k]:Math.max(0,Math.min(20,Math.round(v)))});}),1,0),el('span',{class:'small',style:'flex:none'},WK_UNIT[k]||'件'))),
+        n?el('p',{class:'small',style:'margin:4px 0 0'},'作品の名前（あとで変えられます）'):null,
+        Array.from({length:n},(_,i)=>el('input',{type:'text','aria-label':l+'の'+(i+1)+'つ目の名前',value:nm[i]||l+(i+1),onchange:e=>wizS(S=>{const N=S.create.names=Object.assign({},S.create.names);const a=(N[k]||[]).slice();a[i]=e.target.value.trim()||l+(i+1);N[k]=a;})})));})):null];}
 function wizDates(){
   const P=WIZ.P, S0=P.setup||{}, st=S0.study||{}, evs=S0.events||[], ws=P.works||[], t=today();
   const upSt=fn=>wizS(S=>{S.study=Object.assign({},S.study);fn(S.study);});
@@ -4226,7 +4229,7 @@ function wizDates(){
     return el('div',{class:'grid2'},pfield('dn-'+id,label+'の締切',pdate('dn-'+id,o.normal,v=>upW(w.id,d=>{d[part]=Object.assign({},d[part],{normal:v});}))),
       pfield('de-'+id,'早割の締切（あれば）',pdate('de-'+id,o.early,v=>upW(w.id,d=>{d[part]=Object.assign({},d[part],{early:v});}))),
       !o.normal&&e?pfield('dw-'+id,'決まっていなければ、イベントの何週間前',pnum('dw-'+id,o.weeks,v=>upW(w.id,d=>{d[part]=Object.assign({},d[part],{weeks:Math.max(0,Math.round(v))});}),1,0)):null,
-      auto?el('p',{class:'xs muted num',style:'grid-column:1/-1'},label+'の締切：'+auto.replace(/-/g,'/')+'（印刷所が決まったら直す）'):null);};
+      auto?el('p',{class:'xs muted num',style:'grid-column:1/-1'},label+'の締切：'+auto.replace(/-/g,'/')+'（印刷所が決まったら編集する）'):null);};
   const work=w=>{const d=w.dl||{}, k=wkKind(w), e=d.ev==='yes'?evs.find(y=>y.id===d.event):null, book=WK_BOOK.includes(k), q=n=>n+'@'+w.id;
     const dm=[segQ1('期日',d.dmode||'',DMODE,v=>upW(w.id,o=>{o.dmode=v;})),dmodeDate(d.dmode,d.done)?pfield('done-'+w.id,k==='other'?'納期':'完成させたい日',pdate('done-'+w.id,d.done,v=>upW(w.id,o=>{o.done=v;}))):null];
     if(k==='other') return el('div',{class:'card'},el('h2',{},w.name),qb(q('2-o'),'納期はありますか？',dm));
@@ -4256,7 +4259,7 @@ function extraGoals(P,up){
 function keepRewards(dst,cur){for(const g of dst.goals||[]){const c=(cur.goals||[]).find(x=>x.id===g.id);if(c&&c.reward&&!g.reward){g.reward=c.reward;if(c.got) g.got=c.got;}}}
 function wizBuild(){
   wizPull();
-  const t=today(), pick=WIZ.nb||{}, src=clone(WIZ.P), old=plan2();delete src.dueEdit;keepRewards(src,old);if(old.stars) src.stars=clone(old.stars); else delete src.stars;
+  const t=today(), pick=WIZ.nb||{}, src=clone(WIZ.P), old=plan2();delete src.dueEdit;delete src.unitChanged;keepRewards(src,old);if(old.stars) src.stars=clone(old.stars); else delete src.stars;
   for(const g of src.goals||[]) if(pick[g.id]&&diffDays(t,g.date)<=14) g.buffer=false;
   for(const o of Object.values(((src.setup||{}).study||{}).rounds||{})) if(o&&o.pending) delete o.pending;
   GMUTE=true;try{setPlan2(x=>{for(const k of Object.keys(x)) delete x[k];Object.assign(x,src);x.v=3;x.baseline=scheduleAll(x,t,{});x.start=t;});}finally{GMUTE=false;}
@@ -4326,21 +4329,21 @@ function dueSave(g,v){const ref=dueRef(plan2(),g);if(!ref||!v) return;
   if(WIZ&&WIZ.P){ap(WIZ.P);wizSave();}}
 function dueSheet(g){const sh=()=>document.getElementById('sheet').close();let v=g.date||'';
   openSheet('「'+g.name+'」の日付',el('input',{type:'date',id:'due-d',value:v,onchange:e=>{v=e.target.value;}}),
-    el('button',{type:'button',class:'btn',onclick:()=>{if(!v) return;dueSave(g,v);sh();render();}},'直す'),
+    el('button',{type:'button',class:'btn',onclick:()=>{if(!v) return;dueSave(g,v);sh();render();}},'保存する'),
     el('button',{type:'button',class:'btn sub',onclick:sh},'やめる'));}
 function planGoals(){
   const P=plan2(), act=planActive(), B=P.baseline, done=act?doneMap():{};
   const gpct=gid=>{const b=B&&B.goals&&B.goals[gid];if(!b) return null;const tot=b.ids.reduce((a,id)=>a+(B.w[id]||0),0);return tot?Math.round(b.ids.reduce((a,id)=>a+(done[id]?(B.w[id]||0):0),0)/tot*100):100;};
   const gs=(P.goals||[]).filter(g=>!g.open).sort(byDate);
   return [
-    act&&P.dueEdit?el('div',{class:'card notice'},el('p',{class:'small'},'期日を直しました。'),
+    act&&P.dueEdit?el('div',{class:'card notice'},el('p',{class:'small'},'期日を編集しました。'),
       el('div',{class:'grid2',style:'grid-template-columns:2fr 1fr'},el('button',{type:'button',class:'btn sm',onclick:()=>{openWizard('outlook');wizS(()=>{});}},'この日付で組み直す'),
         el('button',{type:'button',class:'btn sub sm',onclick:()=>{setPlan2(x=>{delete x.dueEdit;});render();}},'あとで'))):null,
-    el('p',{class:'small muted'},'期日はここで直せます。ほかの日付や中身は、「全体」の「計画を組み直す」から変えます。'),
+    el('p',{class:'small muted'},'期日はここで編集できます。ほかの日付や中身は、「全体」の「計画を組み直す」から変えます。'),
     el('div',{class:'card'},gs.map(g=>{const p=act&&isWork(g)?gpct(g.id):null, due=dueRef(P,g);
       return el('div',{class:'gl'},
         el('div',{class:'between'},el('span',{class:'small'},el('span',{class:'num muted'},(g.date?md(g.date):'未定')+'　'),g.name),
-          due?el('button',{type:'button',class:'chip sm',onclick:()=>dueSheet(g)},'日付を直す'):el('span',{class:'xs muted'},GKIND[g.kind]||'')),
+          due?el('button',{type:'button',class:'chip sm',onclick:()=>dueSheet(g)},'日付を編集する'):el('span',{class:'xs muted'},GKIND[g.kind]||'')),
         p!=null?el('p',{class:'xs num',style:p===100?'color:var(--good)':''},p===100?'達成 ✓':'進み '+p+'%'):null,
         isWork(g)?(g.reward?el('button',{type:'button',class:'rw',onclick:()=>rewardSheet(g)},'🎁 '+g.reward+(g.got?'（受け取りました）':'')):el('button',{type:'button',class:'rw none',onclick:()=>rewardSheet(g)},'＋ ごほうびを決める')):null);}))];
 }
@@ -4581,7 +4584,7 @@ function viewHome(){
       el('div',{class:'grid2',style:'gap:14px'},
         act&&!ps&&openOf(plan2(),'study').length?openBar('study'):pb(tname('study'),st.pct,st.plan,'',T.study==='time'&&!act?fmtH(trackTotal('study')):'',ps,'study'),
         act&&!pc&&openOf(plan2(),'create').length?openBar('create'):(act?pc:works().length)?pb(tname('create'),mg.pct,mg.plan,'manga',T.manga==='time'&&!act?fmtH(trackTotal('manga')):'',pc,'create'):null),
-      el('div',{class:'grid2'},el('a',{href:'#practice',class:'btn sm'+(realDocs().length?'':' sub')},'演習をはじめる'),el('a',{href:'#plan',class:'btn sub sm'},'計画を見る・直す')));
+      el('div',{class:'grid2'},el('a',{href:'#practice',class:'btn sm'+(realDocs().length?'':' sub')},'演習をはじめる'),el('a',{href:'#plan',class:'btn sub sm'},'計画を見る・編集する')));
     const late=[ps,pc].filter(x=>x&&x.gap<=-0.1);
     if(late.length) notice.push(el('div',{class:'card notice'},
       el('p',{class:'small'},el('b',{},'計画より10%以上遅れています'),'（'+late.map(x=>tname(x===ps?'study':'create')+' '+gapText(x.gap)).join('、')+'）。計画を組み直すか、記録の付け忘れがないかを見直してください。'),
@@ -4670,11 +4673,12 @@ function markCounts(qs){const c={};let none=0;for(const q of qs){if(q.mark) c[q.
 function bookQs(b){return Object.values(S.qbank).filter(d=>d&&d.book===b&&Array.isArray(d.items)).flatMap(d=>d.items);}
 function starHelp(){helpTopics('星',[
   ['星とは','本の印（★・A／B など）を、自分で決めた段階の星に当てはめます。','演習で、星を選んで解けます。'],
-  ['当てはめ方','取り込むときの確認画面か、教材の「直す」で決めます。','★の数の印は、そのまま星の数になります。','印のない問題には、問題集ごとの星が付きます。'],
+  ['当てはめ方','取り込むときの確認画面か、教材の「編集する」で決めます。','★の数の印は、そのまま星の数になります。','印のない問題には、問題集ごとの星が付きます。'],
   ['表示','問題に星を出すかは「その他の設定」で変えられます。']]);}
 function starCard(P){const c=starCfg(P);
   return el('div',{class:'card'},
-    el('div',{class:'between'},el('h2',{},'星'),el('button',{type:'button',class:'help','aria-label':'星の説明',onclick:starHelp},'?')),
+    el('div',{class:'between'},el('h2',{},'星（問題の重要度・難しさ）'),el('button',{type:'button',class:'help','aria-label':'星の説明',onclick:starHelp},'?')),
+    el('p',{class:'small'},'本の印（★・A/B・Basic/Step-Up など）を、自分で決めた段階の星にそろえます。星を使うと、演習で星を選んで解けるようになります。'),
     el('div',{class:'seg',style:'grid-template-columns:1fr 1fr',role:'group','aria-label':'星'},[[true,'使う'],[false,'使わない']].map(([v,l])=>el('button',{type:'button','aria-pressed':String(c.on===v),onclick:()=>{setPlan2(x=>{x.stars=Object.assign({},x.stars);if(v) delete x.stars.off; else x.stars.off=true;});render();}},l))),
     c.on?el('label',{class:'field',for:'star-n'},'段階の数',el('select',{id:'star-n',onchange:e=>{const v=+e.target.value;if(v){setPlan2(x=>{x.stars=Object.assign({},x.stars,{n:v});});render();}}},
       (c.n?[]:[[0,'選ぶ']]).concat([2,3,4,5].map(v=>[v,v+'段階'])).map(([v,l])=>{const o=el('option',{value:v},l);if(c.n===v) o.selected=true;return o;}))):null);}
@@ -4930,7 +4934,7 @@ function planProgressCards(){
     el('div',{class:'card'},el('div',{class:'between'},el('h2',{},'節目とごほうび'),el('button',{type:'button',class:'btn sub sm',onclick:()=>{TABSTATE.plan='goals';go('plan');}},'計画の節目へ')),
       goals.filter(g=>g.date).map(g=>{const p=isWork(g)?gpct(g):null, ok=p===100;return el('div',{class:'gl'},
         el('div',{class:'between'},el('span',{class:'small'},el('span',{class:'num muted'},md(g.date)+'　'),g.name),el('span',{class:'small num',style:ok?'color:var(--good);font-weight:700':''},isWork(g)?(ok?'達成 ✓':(p==null?'—':p+'%')):(GKIND[g.kind]||''))),
-        !isWork(g)?null:g.reward?el('button',{type:'button',class:'rw','aria-label':g.name+'のごほうびを直す',onclick:()=>rewardSheet(g)},'🎁 '+g.reward+(g.got?'（受け取りました）':''))
+        !isWork(g)?null:g.reward?el('button',{type:'button',class:'rw','aria-label':g.name+'のごほうびを編集する',onclick:()=>rewardSheet(g)},'🎁 '+g.reward+(g.got?'（受け取りました）':''))
           :el('button',{type:'button',class:'rw none',onclick:()=>rewardSheet(g)},'＋ ごほうびを決める'));}))];
 }
 function rewardSheet(g){
@@ -5082,7 +5086,7 @@ function viewShare(){
     el('label',{class:'field',for:'line'},'ひと言',input),
     el('fieldset',{style:'border:none;margin:0;padding:0;display:flex;flex-direction:column'},el('legend',{class:'small muted',style:'padding:0;margin-bottom:4px'},'載せるもの'),
       opt('study',(P_().study.icon||'📖')+' '+tname('study')+'の％','o-study'),opt('manga',(P_().create.icon||'✏️')+' '+tname('create')+'の％','o-manga'),opt('delta','前回からの変化','o-delta'),opt('tag','ハッシュタグ','o-tag'),
-      el('input',{type:'text',id:'tagtext','aria-label':'ハッシュタグ',value:SH.tagText,placeholder:'#〜',oninput:e=>{SH.tagText=e.target.value;refresh();}})),
+      el('input',{type:'text',id:'tagtext','aria-label':'ハッシュタグ',value:SH.tagText,placeholder:'例：#芒学',oninput:e=>{SH.tagText=e.target.value;refresh();}})),
     offline?el('button',{type:'button',class:'btn',disabled:true},'オフラインのためシェアできません'):link,
     el('p',{class:'xs muted',style:'text-align:center'},moved?'投稿するかどうかはXの画面で決めます。アプリが自動で投稿することはありません。':'前回のシェアから％が動いていません。同じ数字が並ぶので、次の機会でも大丈夫です。')
   ];
@@ -5312,7 +5316,7 @@ function impCommit(){
       const mats=D.p.mats.map((m,i)=>Object.assign({},m,{name:D.items[i].name.trim(),kind:D.items[i].kind}));
       const merged=[];for(const m of mats){const o=merged.find(x=>x.name===m.name);if(o) o.rows=o.rows.concat(m.rows); else merged.push(Object.assign({},m,{rows:m.rows.slice()}));}
       const a=applyToc({mats:merged});const ck=merged.reduce((n,m)=>n+m.rows.filter(r=>r.check).length,0);
-      IMPRES={ok:true,msg:a.msg,added:a.added,notes:ck?['確認してほしい行が'+ck+'行あります。下の「教材」の「直す」から、本と見くらべて直せます。']:[]};
+      IMPRES={ok:true,msg:a.msg,added:a.added,notes:ck?['確認してほしい行が'+ck+'行あります。下の「教材」の「編集する」から、本と見くらべて直せます。']:[]};
     }else{
       const books={};D.items.forEach(it=>{const nm=it.name.trim(), src=D.p.books[it.orig];const dst=books[nm]||(books[nm]={});for(const [u,qs] of Object.entries(src)) dst[u]=(dst[u]||[]).concat(qs.map(q=>Object.assign(q,{_mode:it.mode||'over'})));});
       const a=applyQs({books});const ck=Object.values(books).flatMap(u=>Object.values(u).flat()).filter(q=>q.check).length;
@@ -5357,7 +5361,7 @@ function impDraftCard(){
         if(starCfg(P).on){const m=(P.materials||[]).find(x=>x.name===it.name.trim())||{};
           return starMapUI(P,'impst-'+i,{counts:mc.counts,noMark:mc.noMark,star:it.star!=null?it.star:m.star,marks:Object.assign({},m.marks||{},it.marks),onStar:v=>{it.star=v;},onMark:(mk,v)=>{it.marks[mk]=v;}});}
         return ks.length?el('p',{class:'xs muted'},'印：'+ks.map(k=>k+' '+mc.counts[k]+'問').join('・')):null;})(),
-      (()=>{const nu=D.kind==='toc'?D.p.mats[i].rows.filter(r=>!r.unit).length:0;return nu?el('p',{class:'xs',style:'color:var(--warn-ink)'},'単元が決まっていない行：'+nu+'行（単元 '+(P.subjects||[]).length+'／'+UNIT_MAX+'個。下の「単元」でまとめて空きを作るか、登録後に「直す」で選べます）'):null;})(),
+      (()=>{const nu=D.kind==='toc'?D.p.mats[i].rows.filter(r=>!r.unit).length:0;return nu?el('p',{class:'xs',style:'color:var(--warn-ink)'},'単元が決まっていない行：'+nu+'行（単元 '+(P.subjects||[]).length+'／'+UNIT_MAX+'個。下の「単元」でまとめて空きを作るか、登録後に「編集する」で選べます）'):null;})(),
       fresh.length?el('p',{class:'xs muted'},'新しくできる単元：'+fresh.join('・')):null,
       ck?el('p',{class:'xs',style:'color:var(--warn-ink)'},'要確認：'+ck+(D.kind==='toc'?'行':'問')):null);};
   return el('div',{class:'card',style:'border-color:var(--accent)'},
@@ -5477,14 +5481,14 @@ function formHelp(){helpTopics('取り込みの形',[
   ['教材を分けるとき','同じ単元の中で問題番号が1から始まり直すとき（Basic・Step-Up など）は、段階ごとに別の教材にします。','番号が重ならなければ、1冊を1つの教材のまま取り込めます。','目次と問題は、同じ教材の名前で取り込みます。'],
   ['写真が多いとき','AIが1回に送れる枚数ずつ、何回かに分けて送ります。','問題：返ってきたJSONを、その都度取り込みます。2回目からは、同じ問題集の名前を選びます。','目次：最後に「以上です」と送り、まとめて返ってきたJSONを取り込みます。'],
   ['取り込み直すとき','同じ教材の目次は置き換わります。','同じ問題集・単元・番号の問題は、上書きするか、続きの番号を付けるかを選べます。'],
-  ['番号の振り直し・束ねる','問題集の「直す」で、番号を振り直せます（単元ごとに1から／問題集全体で通す）。','「取り込んだ問題」で2冊以上選ぶと、1冊に束ねられます。元には戻せません。','本の番号も残ります。紙で解いた分は、本の番号で記録します。']]);}
+  ['番号の振り直し・束ねる','問題集の「編集する」で、番号を振り直せます（単元ごとに1から／問題集全体で通す）。','「取り込んだ問題」で2冊以上選ぶと、1冊に束ねられます。元には戻せません。','本の番号も残ります。紙で解いた分は、本の番号で記録します。']]);}
 function unitHelp(){const ST='「計画を組む」の「'+tname('study')+'」の段';helpTopics('単元と取り込む順番',[
   ['単元とは','進み具合や得手不得手を見るためのまとまりです（科目・分野・章など）。','全部で'+UNIT_MAX+'個までです。'],
   ['単元のでき方','取り込んだ「単元」の列から作られます。','名前がまったく同じものだけが、1つにまとまります。'],
   ['最初に取り込む1冊','単元の分け方の元にしたい本がおすすめです（範囲をひととおり扱う本など）。','2冊目からは、プロンプトをコピーし直します。'],
-  ['単元が足りないとき','教材設定の「単元」で近い単元を選んでまとめると、空きができます。','空きを作ったらプロンプトをコピーし直して取り込み直すか、「直す」で単元を選びます。'],
+  ['単元が足りないとき','教材設定の「単元」で近い単元を選んでまとめると、空きができます。','空きを作ったらプロンプトをコピーし直して取り込み直すか、「編集する」で単元を選びます。'],
   ['単元を先に決めたいとき',ST+'の「単元」で追加してから、プロンプトをコピーします。','または、プロンプトの最後に「単元は○○・○○の名前で」と書き足します。'],
-  ['あとから直すとき','教材は「直す」、単元の名前と順番は'+ST+'で直せます。','教材を消しても単元は残ります。使われていない単元は「単元」のカードで消せます。']]);}
+  ['あとから編集するとき','教材は「編集する」、単元の名前と順番は'+ST+'で編集できます。','教材を消しても単元は残ります。単元は「単元」のカードで1つ選ぶと消せます。']]);}
 
 // units no book uses: what is left after books are deleted (questions count as use too)
 function unusedUnits(P){const used=new Set();for(const m of P.materials||[]) for(const e of m.toc||[]) if(e.s) used.add(e.s);for(const d of Object.values(S.qbank)) if(d&&d.subject) used.add(d.subject);return (P.subjects||[]).filter(s=>!used.has(s.id));}
@@ -5557,8 +5561,11 @@ function mergeBooksUI(P,qn){
       twoStepBtn('選んだ'+BOOKSEL.length+'冊を束ねる',()=>{const nm=BOOKNAME.trim();
         if(!nm){toast('束ねたあとの名前を入力してください');render();return;}if(!BOOKRN){toast('番号の付け方を選んでください');render();return;}
         if(mergeBooks(BOOKSEL.slice(),nm,BOOKRN)){toast(BOOKSEL.length+'冊を「'+nm+'」に束ねました');BOOKSEL.length=0;BOOKNAME='';BOOKRN='';}render();},'もう一度押すと束ねます（元に戻せません）')):null];}
+let UNITTO='', UNITADD='';
+// a change of 単元 after the plan was built: the plan is asked to be built again (2026-11-18)
+function unitTouched(){if(planActive()) setPlan2(x=>{x.unitChanged=Date.now();});}
 function unitsCard(P){
-  const subs=P.subjects||[];if(!subs.length) return null;
+  const subs=P.subjects||[];
   const rows=new Map(subs.map(s=>[s.id,0])), qs=new Map(subs.map(s=>[s.id,0]));
   for(const m of P.materials||[]) for(const e of m.toc||[]) if(rows.has(e.s)) rows.set(e.s,rows.get(e.s)+1);
   for(const d of Object.values(S.qbank)) if(d&&qs.has(d.subject)) qs.set(d.subject,qs.get(d.subject)+((d.items||[]).length));
@@ -5567,15 +5574,32 @@ function unitsCard(P){
   if(sel.length&&!UNITNAME) UNITNAME=sel[0].name;
   return el('div',{class:'card'},
     el('div',{class:'between'},el('h2',{},'単元（'+subs.length+'／'+UNIT_MAX+'個）'),el('button',{type:'button',class:'help','aria-label':'単元と取り込む順番',onclick:unitHelp},'?')),
-    el('p',{class:'xs muted'},'2つ以上選ぶと、1つにまとめられます。'),
+    el('p',{class:'small'},'進み具合や正解率をまとめて見る分け方です（科目・分野など）。教材の目次と問題は、どれかの単元に分かれます。'),
+    el('p',{class:'small'},'単元は、計画を組む前に決めておきます。組んだあとに変えたときは、計画を組み直してください。'),
+    planActive()&&P.unitChanged?el('div',{class:'card notice'},el('p',{class:'small'},'単元を変えました。計画に反映するには、計画を組み直してください。'),
+      el('div',{class:'grid2'},el('button',{type:'button',class:'btn sm',onclick:()=>openWizard('outlook')},'計画を組み直す'),el('button',{type:'button',class:'btn sub sm',onclick:()=>{setPlan2(x=>{delete x.unitChanged;});render();}},'あとで'))):null,
+    subs.length?el('p',{class:'xs muted'},'1つ選ぶと消せます。2つ以上選ぶと、1つにまとめられます。'):null,
     el('div',{class:'unitlist'},subs.map(s=>{const id='us-'+s.id, r=rows.get(s.id), q=qs.get(s.id);
       return el('label',{class:'unitrow',for:id},el('input',{type:'checkbox',id,checked:UNITSEL.has(s.id),onchange:e=>{if(e.target.checked) UNITSEL.add(s.id); else UNITSEL.delete(s.id);if(UNITSEL.size<2) UNITNAME='';render();}}),
         el('span',{class:'unitname'},s.name),el('span',{class:'xs muted num'},r||q?[r?'目次 '+r+'行':'',q?'問題 '+q+'問':''].filter(Boolean).join('・'):'使われていない'));})),
     sel.length>=2?el('div',{class:'unitmerge'},
       el('label',{class:'field',for:'unit-merge-name'},'まとめたあとの名前',el('input',{type:'text',id:'unit-merge-name',value:UNITNAME,oninput:e=>{UNITNAME=e.target.value;}})),
       el('button',{type:'button',class:'btn sm',onclick:()=>{const ids=subs.filter(s=>UNITSEL.has(s.id)).map(s=>s.id), nm=(document.getElementById('unit-merge-name').value||'').trim();
-        if(mergeUnits(ids,nm)){UNITSEL.clear();UNITNAME='';toast(ids.length+'個の単元を「'+nm+'」にまとめました');render();}}},'選んだ'+sel.length+'個を1つにまとめる')):null,
-    un.length?twoStepBtn('使われていない'+un.length+'個を消す',()=>{const ids=new Set(un.map(s=>s.id));setPlan2(x=>{x.subjects=(x.subjects||[]).filter(s=>!ids.has(s.id));});if(WIZ) wizPull();toast('単元を'+un.length+'個消しました');render();}):null);
+        if(mergeUnits(ids,nm)){UNITSEL.clear();UNITNAME='';unitTouched();toast(ids.length+'個の単元を「'+nm+'」にまとめました');render();}}},'選んだ'+sel.length+'個を1つにまとめる')):null,
+    sel.length===1?(()=>{const s0=sel[0], linked=(rows.get(s0.id)||0)+(qs.get(s0.id)||0)>0, others=subs.filter(s=>s.id!==s0.id);
+      if(UNITTO&&!others.some(s=>s.id===UNITTO)) UNITTO='';
+      return el('div',{class:'unitmerge'},
+        linked?[el('p',{class:'small'},'「'+s0.name+'」の目次と問題を、別の単元に付け替えてから消します。'),
+          others.length?pfield('unit-to','付け替える単元',pselect('unit-to',UNITTO,[['','（選ぶ）'],...others.map(s=>[s.id,s.name])],v=>{UNITTO=v;render();})):el('p',{class:'xs muted'},'付け替える単元がありません。先に単元を追加してください。')]:null,
+        !linked||UNITTO?twoStepBtn(linked?'付け替えて消す':'この単元を消す',()=>{const t=subs.find(s=>s.id===UNITTO);
+          if(linked){if(!t||!mergeUnits([t.id,s0.id],t.name)) return;}
+          else {setPlan2(x=>{x.subjects=(x.subjects||[]).filter(s=>s.id!==s0.id);(x.goals||[]).forEach(g=>{if(g.scope&&Array.isArray(g.scope.subjects)) g.scope.subjects=g.scope.subjects.filter(id=>id!==s0.id);});});if(WIZ) wizPull();}
+          UNITSEL.clear();UNITTO='';unitTouched();toast('「'+s0.name+'」を消しました'+(linked?'（「'+t.name+'」に付け替えました）':''));render();}):null);})():null,
+    un.length?twoStepBtn('使われていない'+un.length+'個を消す',()=>{const ids=new Set(un.map(s=>s.id));setPlan2(x=>{x.subjects=(x.subjects||[]).filter(s=>!ids.has(s.id));});if(WIZ) wizPull();unitTouched();toast('単元を'+un.length+'個消しました');render();}):null,
+    subs.length<UNIT_MAX?el('div',{class:'row',style:'gap:8px'},el('input',{type:'text','aria-label':'追加する単元の名前',placeholder:'例：労働基準法',value:UNITADD,oninput:e=>{UNITADD=e.target.value;}}),
+      el('button',{type:'button',class:'btn sub sm',style:'flex:none',onclick:()=>{const nm=UNITADD.trim();if(!nm){toast('単元の名前を手入力してください');return;}
+        if(subs.some(s=>s.name===nm||s.short===nm)){toast('同じ名前の単元があります');return;}
+        setPlan2(x=>{x.subjects=(x.subjects||[]).concat([{id:newId('s'),name:nm,short:nm}]);});if(WIZ) wizPull();UNITADD='';unitTouched();toast('「'+nm+'」を追加しました');render();}},'＋ 単元を追加')):null);
 }
 function viewMaterials(){
   const P=plan2(), mats=P.materials||[];
@@ -5608,13 +5632,14 @@ function viewMaterials(){
   const qn=b=>docs.filter(([,d])=>d.book===b).reduce((a,[,d])=>a+d.items.length,0);
   return [
     el('h1',{},'教材設定'),
-    el('p',{class:'small muted'},'教材の目次と問題を取り込みます。'),
+    el('p',{class:'small muted'},'教材（本）の目次と、問題集の問題を取り込みます。目次を取り込むと、その量から学習の計画を組めるようになります。問題を取り込むと、アプリで演習できるようになります。'),
     IMPDRAFT?impDraftCard():null,
     R?el('div',{class:'card notice'+(R.ok?' good':''),role:'status'},
       R.ok?[el('p',{class:'small'},el('b',{},R.msg)),R.added&&R.added.length?el('p',{class:'xs'},'新しく足した単元：'+R.added.join('、')):null,(R.notes||[]).map(t=>el('p',{class:'xs'},t))]
         :[el('p',{class:'small'},el('b',{},'取り込めませんでした。何も変えていません。')),el('ul',{class:'small'},R.errs.slice(0,12).map(t=>el('li',{},t))),R.errs.length>12?el('p',{class:'xs'},'ほか'+(R.errs.length-12)+'件'):null]):null,
     el('div',{class:'card'},
       el('div',{class:'between'},el('h2',{},'取り込む'),el('button',{type:'button',class:'help','aria-label':'取り込みの形の説明',onclick:formHelp},'?')),
+      el('p',{class:'small'},'AIで作ったJSONか、手入力したCSVを、ファイルか貼り付けで取り込みます。登録する前に確認画面が出て、そこで直せます。'),
       el('label',{class:'btn sub sm',for:'imp-file',style:'cursor:pointer'},'ファイルを選ぶ（JSON・CSV）',el('input',{type:'file',id:'imp-file',accept:'.json,.csv,.txt,application/json,text/csv,text/plain',style:'display:none',onchange:pick})),
       el('label',{class:'field',for:'imp-paste'},'または貼り付け',paste),
       el('button',{type:'button',class:'btn sub sm',onclick:async()=>{try{const t=await navigator.clipboard.readText();if(!t){toast('クリップボードが空です');return;}paste.value=t;impSync();toast('貼り付けました（'+t.length+'文字）');}catch(_){toast('ここからは貼り付けられませんでした。欄を長押しして「ペースト」を選んでください');}}},'クリップボードから貼り付ける'),
@@ -5632,17 +5657,19 @@ function viewMaterials(){
       el('p',{class:'xs muted'},'テンプレートを保存'),
       el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>saveFile('mangxue-toc-template.csv','\uFEFF'+tocTemplate(),'text/csv')},'目次用'),el('button',{type:'button',class:'btn sub sm',onclick:()=>saveFile('mangxue-questions-template.csv','\uFEFF'+qTemplate(),'text/csv')},'問題用'))),
     el('h2',{class:'sec'},'教材'),
+    mats.length?el('p',{class:'small muted'},'取り込んだ教材です。「編集する」で、名前・目次・区切り・使う順番を編集できます。'):null,
     mats.length?mats.map(m=>{const us=[...new Set((m.toc||[]).map(e=>e.s))].map(id=>subj(id).short).filter(Boolean), n=m.book?qn(m.book):0;
       return el('div',{class:'card'},el('div',{class:'between'},el('h2',{style:'min-width:0'},(m.kind==='solve'?'✏️ ':'📖 ')+m.name),el('span',{class:'xs muted',style:'white-space:nowrap'},m.kind==='solve'?'解く':'読む')),
         el('p',{class:'small muted'},'目次 '+(m.toc||[]).length+'項目'+(us.length?'（単元：'+us.join('・')+'）':'')+(m.kind==='solve'?'　問題 '+n+'問':'')),
         (()=>{const c=(m.toc||[]).filter(e=>e.check).length;return c?el('p',{class:'small',style:'color:var(--warn-ink)'},'要確認 '+c+'行'):null;})(),
         MATOPEN.has(m.id)?matEditor(m,P):null,
-        el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm','aria-expanded':String(MATOPEN.has(m.id)),onclick:()=>{if(MATOPEN.has(m.id)) MATOPEN.delete(m.id); else{MATOPEN.add(m.id);if((m.toc||[]).some(e=>e.check)) MATCHK.add(m.id);}render();}},MATOPEN.has(m.id)?'閉じる':'直す'),
+        el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm','aria-expanded':String(MATOPEN.has(m.id)),onclick:()=>{if(MATOPEN.has(m.id)) MATOPEN.delete(m.id); else{MATOPEN.add(m.id);if((m.toc||[]).some(e=>e.check)) MATCHK.add(m.id);}render();}},MATOPEN.has(m.id)?'閉じる':'編集する'),
           twoStepBtn('この教材を消す',()=>{setPlan2(x=>{x.materials=x.materials.filter(y=>y.id!==m.id);});render();})));})
       :el('p',{class:'small muted'},'まだありません。'),
     unitsCard(P),
     starCard(P),
     el('div',{class:'card'},el('h2',{},'取り込んだ問題'),
+      el('p',{class:'small'},'アプリの演習で解く問題です。問題集の「編集する」で、番号を振り直したり、何冊かを束ねたりできます。'),
       mergeBooksUI(P,qn),
       docs.length?el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'問題集'),el('th',{},'単元'),el('th',{},'問題数'),el('th',{},'要確認'))),
         el('tbody',{},docs.map(([id,d])=>el('tr',{},el('td',{},bookName(d.book)),el('td',{},subj(d.subject).short),el('td',{class:'num'},String(d.items.length)),el('td',{class:'num'},String(d.items.filter(q=>q.check).length)))))))
