@@ -139,6 +139,10 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);margin:0;
 .qb.later{opacity:.75}
 .qpre{margin:14px 0;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;color:var(--muted)}
 .qpre p{margin:4px 0 0}
+.guide{padding-left:1.4em;margin:6px 0 12px;display:flex;flex-direction:column;gap:8px}.guide a{color:var(--accent-ink)}
+.cib.wait{border-style:dashed;background:transparent;color:var(--muted);font:inherit;cursor:pointer}.cib.wait b{font-weight:500}
+.pushhint{text-align:center;margin-top:4px}.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent-ink);text-decoration:underline;cursor:pointer}
+.wkstack{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.wkstack .wkv{margin-left:10px;white-space:nowrap}.wkstack .btn{flex:none}
 .ttit{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;display:flex;flex-direction:column;gap:8px}
 .ttday{border-top:1px solid var(--line);padding:10px 0;display:flex;flex-direction:column;gap:6px}
 .qbh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
@@ -787,6 +791,12 @@ function countdowns(t){
     out.push(el('span',{},(x.short||x.label||def)+'まで ',el('b',{style:'color:var(--ink);font-size:15px'},String(diffDays(t,x.date))),'日'));
   return out;
 }
+// ホームの積み上げ（2026-11-18）：今週の学習・制作の時間（計画していない方は出さない）と「時間を記録する」
+function weekStack(t){const P=plan2(), S0=P.setup||{}, act=planActive(), ws=weekStartOf(t,P);
+  const trs=[['study',P_().study.icon||'📖'],['manga',P_().create.icon||'✏️']].filter(([k])=>!(act&&(k==='study'?(S0.study||{}).kind==='none':!!(S0.create||{}).none)));
+  return el('div',{class:'wkstack'},
+    el('span',{class:'small num'},el('span',{class:'muted'},'今週'),trs.map(([k,ic])=>el('span',{class:'wkv','aria-label':tname(k==='study'?'study':'create')+' '+fmtH(trackTotal(k,ws,t))},ic+' ',el('b',{},fmtH(trackTotal(k,ws,t)))))),
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>{TABSTATE.day='study';go('day/'+t);}},'時間を記録する'));}
 function noPlan(){
   return el('div',{class:'empty'},el('h2',{},'計画を組むと、ここに今日やることが出ます'),
     el('p',{class:'small muted'},'教材の目次を教材設定で取り込んでから、計画の画面の「計画を組む」で組みます。'),
@@ -1678,41 +1688,40 @@ const ALLDAYS=[0,1,2,3,4,5,6], WEEKDAYS=[1,2,3,4,5], DN='日月火水木金土';
 const PALETTE=['#E5484D','#F76B15','#E2A336','#46A758','#12A594','#0090FF','#8E4EC6','#D6409F'];
 const MIN_CHOICES=[15,30,45,60,90];   // anything longer is typed in (自由に入力)
 const TYPES={sleep:'睡眠（寝た時刻と起きた時刻）',weather:'天気（晴れ・くもり・雨・雪）',span:'時間（内訳を選ぶ・重なってもOK）',memo:'メモ',check:'チェック（やった・やらない）',count:'回数'};
-const LIFE_PRESET={v:3,dayStart:'04:00',sleepTarget:420,
+/* 初めての人の設定（2026-11-18）：ルーティンは「7時間寝る」だけ、ワンタップ記録なし、天気は置かない。
+   チェックインは朝 08:00・夜 20:00・〆 23:00。ciWait のあいだホームのボタンは薄い枠で、「通知を設定する」か「通知なしで使う」を選ぶまで始まらない */
+const WEATHER_ITEM={id:'weather',name:'天気',emoji:'🌦',color:'',type:'weather'};
+const LIFE_PRESET={v:4,dayStart:'04:00',sleepTarget:420,ciWait:true,
   items:[
     {id:'sleep',name:'睡眠',emoji:'😴',color:'',type:'sleep'},
-    {id:'weather',name:'天気',emoji:'🌦',color:'',type:'weather'},
     {id:'work',name:'仕事',emoji:'💼',color:'',type:'span',subs:[{id:'office',name:'出社'},{id:'remote',name:'在宅'},{id:'over',name:'残業'}]},
     {id:'chores',name:'家事',emoji:'🧺',color:'',type:'span',subs:[{id:'cook',name:'料理'},{id:'laundry',name:'洗濯'},{id:'clean',name:'掃除'},{id:'shop',name:'買い物'}]},
     {id:'hobby',name:'趣味の時間',emoji:'🎮',color:'',type:'span',subs:[{id:'oshi',name:'推し活'},{id:'game',name:'ゲーム'},{id:'stream',name:'配信を見る'}]},
     {id:'move',name:'運動',emoji:'🏃',color:'',type:'span',subs:[{id:'walk',name:'散歩'},{id:'muscle',name:'筋トレ'},{id:'stretch',name:'ストレッチ'}]},
     {id:'note',name:'その日のひと言',emoji:'💬',color:'',type:'memo'}],
   routines:[
-    {id:'out',name:'持ち物をそろえて家を出る',emoji:'🎒',kind:'manual',by:'07:30',days:WEEKDAYS,before:10,at:true},
-    {id:'train',name:'帰りの電車に乗る',emoji:'🚃',kind:'manual',by:'18:30',days:WEEKDAYS,before:10,at:true},
-    {id:'dinner',name:'夕食を食べ終わる',emoji:'🍚',kind:'manual',by:'20:00',days:ALLDAYS,before:10,at:true},
     {id:'sleep7',name:'7時間寝る',emoji:'🛏️',kind:'sleep',min:420,auto:true,by:'',days:ALLDAYS,before:null,at:false}],
   checkins:[
-    {id:'m',name:'朝',time:'07:00',on:true,items:['sleep','weather'],routines:[]},
+    {id:'m',name:'朝',time:'08:00',on:true,items:['sleep'],routines:[]},
     {id:'d',name:'昼',time:'12:30',on:false,items:[],routines:[]},
-    {id:'n',name:'夜',time:'23:00',on:true,items:['work','chores','hobby','move'],routines:['out','train','dinner']},
-    {id:'z',name:'〆',time:'00:15',on:true,report:true,items:['note'],routines:[]}],
-  quick:[{id:'q1',item:'move',sub:'walk',m:60}]};
+    {id:'n',name:'夜',time:'20:00',on:true,items:['work','chores','hobby','move'],routines:[]},
+    {id:'z',name:'〆',time:'23:00',on:true,report:true,items:['note'],routines:[]}],
+  quick:[]};
 const TRACKS_DEFAULT={study:'time',manga:'time',studyGoal:0};
 // settings saved by an older version get the new presets added (deterministic, so every device agrees without saving)
 function migrateLife(L){
   // 雨の日の経路（2026-11-18）：天気の項目を足す。どのチェックインに出すかは、使う人が習慣の設定で選ぶ
-  if((L.v||1)>=3&&L.v<4&&!L.items.some(i=>i.type==='weather')){const i=L.items.findIndex(x=>x.type==='sleep');L.items.splice(i+1,0,clone(LIFE_PRESET.items.find(x=>x.type==='weather')));}
+  if((L.v||1)>=3&&L.v<4&&!L.items.some(i=>i.type==='weather')){const i=L.items.findIndex(x=>x.type==='sleep');L.items.splice(i+1,0,clone(WEATHER_ITEM));}
   if((L.v||1)>=3){if(L.v<4) L.v=4;return L;}
   if((L.v||1)<2) migrateV2(L);
   const z=L.checkins.find(c=>c.id==='z');if(z) z.report=true;
-  if(!L.items.some(i=>i.type==='weather')){const i=L.items.findIndex(x=>x.type==='sleep');L.items.splice(i+1,0,clone(LIFE_PRESET.items.find(x=>x.type==='weather')));}
+  if(!L.items.some(i=>i.type==='weather')){const i=L.items.findIndex(x=>x.type==='sleep');L.items.splice(i+1,0,clone(WEATHER_ITEM));}
   L.v=4; return L;
 }
 function migrateV2(L){
   for(const it of LIFE_PRESET.items) if(!L.items.some(x=>x.id===it.id)){const i=L.items.findIndex(x=>x.id==='hobby');L.items.splice(i<0?L.items.length:i,0,clone(it));}
   for(const c of LIFE_PRESET.checkins) if(!L.checkins.some(x=>x.id===c.id)) L.checkins.push(clone(c));
-  if(!L.routines.some(r=>r.kind==='sleep')) L.routines.push(Object.assign(clone(LIFE_PRESET.routines[3]),{off:true}));
+  if(!L.routines.some(r=>r.kind==='sleep')) L.routines.push(Object.assign(clone(LIFE_PRESET.routines.find(r=>r.kind==='sleep')),{off:true}));
   if(!L.quick) L.quick=clone(LIFE_PRESET.quick);
 }
 function life(){if(!S.meta.life) S.meta.life=Object.assign({t:0},clone(LIFE_PRESET));migrateLife(S.meta.life);if(!S.meta.life.tracks) S.meta.life.tracks=clone(TRACKS_DEFAULT);return S.meta.life;}
@@ -2074,14 +2083,14 @@ function itemEditor(ds,it){
   return el('div',{class:'card'},el('label',{class:'row',for:'chk-'+uid},el('input',{type:'checkbox',id:'chk-'+uid,checked:!!v,onchange:e=>{setDay(ds,d=>{d.rec[it.id]=e.target.checked?1:0;});}}),badgeNode(it),el('b',{},it.name)));
 }
 function spanEditor(ds,key,name,badge,subs,list){
-  const uid=key.replace('@','_')+'-'+ds, st={sub:subs[0]?subs[0].id:'',mode:'min',a:'',b:'',m:null};
+  const uid=key.replace('@','_')+'-'+ds, st={sub:subs[0]?subs[0].id:'',mode:'min',a:'',b:'',m:null,title:''}, what=key==='@study'||key==='@manga';
   const nm=id=>(subs.find(s=>s.id===id)||{}).name||'';
   const total=list.reduce((a,x)=>a+spanMin(x),0);
   const ready=()=>st.mode==='time'?!!(st.a&&st.b):st.m>0;
   const add=()=>{
     if(!ready()) return;
-    const ent=st.mode==='time'?{s:st.sub,a:st.a,b:st.b}:{s:st.sub,m:st.m};
-    setDay(ds,d=>{d.rec[key]=(Array.isArray(d.rec[key])?d.rec[key]:[]).concat([ent]);});toast((nm(st.sub)||name)+'を記録しました');render();
+    const ent=st.mode==='time'?{s:st.sub,a:st.a,b:st.b}:{s:st.sub,m:st.m};if(what&&st.title) ent.title=st.title;
+    setDay(ds,d=>{d.rec[key]=(Array.isArray(d.rec[key])?d.rec[key]:[]).concat([ent]);});toast((st.title||nm(st.sub)||name)+'を記録しました');render();
   };
   // 記録する stays grey until a time is in, then takes the colour
   const recBtn=el('button',{type:'button',class:'btn sub sm',disabled:true,onclick:add},'記録する');
@@ -2096,7 +2105,8 @@ function spanEditor(ds,key,name,badge,subs,list){
     el('button',{type:'button','aria-pressed':'true',onclick:e=>{st.mode='min';minBox.hidden=false;timeBox.hidden=true;e.target.setAttribute('aria-pressed','true');e.target.nextSibling.setAttribute('aria-pressed','false');refresh();}},'分で入力'),
     el('button',{type:'button','aria-pressed':'false',onclick:e=>{st.mode='time';minBox.hidden=true;timeBox.hidden=false;e.target.setAttribute('aria-pressed','true');e.target.previousSibling.setAttribute('aria-pressed','false');refresh();}},'時刻で入力'));
   // at first only a ＋; it opens the inputs, and 記録する (or やめる) brings the ＋ back
-  const addRow=el('div',{class:'addrow',hidden:true},subs.length?subChips:null,modeSeg,minBox,timeBox,
+  const whatBox=what?el('label',{class:'field',for:'w-'+uid},'何をしたか（任意）',el('input',{type:'text',id:'w-'+uid,autocomplete:'off',placeholder:key==='@study'?'例：過去問 第3章':'例：ネーム 3ページ',oninput:e=>{st.title=e.target.value.trim();}})):null;
+  const addRow=el('div',{class:'addrow',hidden:true},subs.length?subChips:null,whatBox,modeSeg,minBox,timeBox,
     el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>{addRow.hidden=true;plus.hidden=false;}},'やめる'),recBtn));
   const plus=el('button',{type:'button',class:'addplus','aria-label':name+'の時間を追加',onclick:()=>{plus.hidden=true;addRow.hidden=false;}},'＋');
   return el('div',{class:'card'},el('div',{class:'between'},el('h2',{class:'row',style:'gap:6px'},badge,name),el('span',{class:'stot num'+(total?'':' zero'),'aria-label':'合計 '+(total?fmtMin(total):'0時間')},total?fmtMin(total):'0時間')),
@@ -2194,7 +2204,8 @@ function taskList(ds,opt){
 }
 function trackEditors(ds){
   const tr=tracks();
-  return (PLAN||planActive())?['study','manga'].filter(k=>tr[k]==='time'||trackEntries(ds,k).length).map(k=>spanEditor(ds,'@'+k,trackName(k)+'に使った時間',el('span',{'aria-hidden':'true'},k==='study'?P_().study.icon||'📖':P_().create.icon||'✏️'),[],trackEntries(ds,k))):null;
+  // 記録と演習を土台にする（2026-11-18）：計画を組む前から、学習・制作の時間を記録できる
+  return ['study','manga'].filter(k=>tr[k]==='time'||trackEntries(ds,k).length).map(k=>spanEditor(ds,'@'+k,trackName(k)+'に使った時間',el('span',{'aria-hidden':'true'},k==='study'?P_().study.icon||'📖':P_().create.icon||'✏️'),[],trackEntries(ds,k)));
 }
 function lifePanel(ds){
   const L=life(), d=dayRec(ds), rs=routines().filter(r=>routineApplies(ds,r));
@@ -2260,13 +2271,15 @@ function viewCheckin(id){
   return [
     el('div',{},el('span',{class:'small muted'},jpDate(ds)+(again?'・'+hm(again)+'に記録済み（答え直せます）':'')),el('h1',{},ciTitle(c))),
     c.report&&ds===addDays(weekStartOf(ds,plan2()),6)?weekCard(weekStartOf(ds,plan2())):null,
-    c.report&&(PLAN||planActive())?[el('h2',{class:'sec'},'学習と制作'),el('p',{class:'xs muted'},'今日やったことをチェックしてください。'+(tracks().study==='time'||tracks().manga==='time'?'使った時間も一緒に記録します。':'')),taskList(ds),trackEditors(ds)]:null,
+    c.report&&(PLAN||planActive())?[el('h2',{class:'sec'},'学習と制作'),el('p',{class:'xs muted'},'今日やったことをチェックしてください。'+(tracks().study==='time'||tracks().manga==='time'?'使った時間も一緒に記録します。':'')),taskList(ds),trackEditors(ds)]
+      :c.report?[el('h2',{class:'sec'},'学習と制作'),trackEditors(ds)]:null,
     rs.length?el('div',{class:'card'},el('h2',{},'ルーティン'),rs.map((r,i)=>routineRow(ds,r,i===0))):null,
     its.length&&c.report?el('h2',{class:'sec'},'生活の記録'):null,
     its.map(it=>itemEditor(ds,it)),
     c.report?ciTomorrow(c):null,
-    (!rs.length&&!its.length&&!c.report)?el('div',{class:'empty'},el('p',{class:'small'},'ここで聞く項目がまだありません。'),el('a',{href:'#routines',class:'btn sub sm'},'習慣の設定で選ぶ')):null,
-    el('button',{type:'button',class:'btn',onclick:()=>{setDay(ds,d=>{d.ci=Object.assign({},d.ci,{[id]:Date.now()});});toast('記録しました');go('home');}},c.report?'レポートを終える':'チェックインを終える')
+    (!rs.length&&!its.length&&!c.report)?el('div',{class:'empty'},el('p',{class:'small'},'このチェックインで記録する項目がまだありません。'),el('a',{href:'#routines',class:'btn sub sm'},'習慣の設定で選ぶ')):null,
+    el('button',{type:'button',class:'btn',onclick:()=>{setDay(ds,d=>{d.ci=Object.assign({},d.ci,{[id]:Date.now()});});toast('記録しました');go('home');}},c.report?'レポートを終える':'チェックインを終える'),
+    pushHint()
   ];
 }
 
@@ -2561,7 +2574,7 @@ async function pushUpload(){
 }
 function schedulePush(){try{cmNotesSave();}catch(_){}if(!PUSHSUB) return;clearTimeout(pushTimer);pushTimer=setTimeout(pushUpload,3000);}
 async function pushEnable(){
-  if(!PUSHCFG){toast('通知の送り役の準備がまだです');return;}
+  if(!PUSHCFG){toast('Cloudflareの設定がまだです');return;}
   try{
     const perm=await Notification.requestPermission();
     if(perm!=='granted'){toast('通知が許可されませんでした');render();return;}
@@ -2569,11 +2582,45 @@ async function pushEnable(){
     let sub=await reg.pushManager.getSubscription();
     if(sub&&sub.options&&sub.options.applicationServerKey&&b64uBytes(sub.options.applicationServerKey)!==PUSHCFG.vapidPublic){await sub.unsubscribe();sub=null;}
     if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:ub64u(PUSHCFG.vapidPublic)});
-    PUSHSUB=sub.toJSON();IDB.put('__pushsub',PUSHSUB);
+    PUSHSUB=sub.toJSON();IDB.put('__pushsub',PUSHSUB);pushMark();
     toast((await pushUpload())?'この端末で通知を受け取ります':'登録しました。電波が戻ったら予定を送ります');
   }catch(e){toast('通知を有効にできませんでした（'+((e&&e.name)||'エラー')+'）');}
   render();
 }
+/* チェックインの続き（2026-11-18）：どれか1台でも通知がオンになったら、ほかの端末でも通知の案内を出さない。
+   オンになったことは S.meta.pushOn で同期に乗せる。チェックインの薄い枠も、通知がオンになったら始まる */
+function pushAny(){return !!PUSHSUB||!!(S.meta.pushOn&&S.meta.pushOn.on);}
+function pushMark(){if(!(S.meta.pushOn&&S.meta.pushOn.on)){S.meta.pushOn={on:true,t:Date.now()};save('meta/pushOn');}if(life().ciWait) setLife(x=>{delete x.ciWait;});}
+// 通知の設定（2026-11-18）：Cloudflare の設定が終わっていれば「習慣の設定」の「この端末の通知」へ、まだなら手順を表示する
+const DATA_TEMPLATE='https://github.com/SSACL/mangxue-data-template';
+function pushSetup(){if(PUSHCFG){document.getElementById('sheet').close();go('routines');return;}pushGuide();}
+function pushGuide(){
+  const A=(href,t)=>el('a',{href,target:'_blank',rel:'noopener'},t);
+  const step=(...kids)=>el('li',{},...kids);
+  openSheet('通知の設定',
+    el('p',{class:'small muted'},'通知は、あなたのCloudflareのアカウントから届きます。設定は最初の1回だけです。'),
+    el('h3',{class:'sub'},'GitHub'),
+    el('ol',{class:'small guide'},
+      SYNC?step('同期に使っているリポジトリをテンプレートから作っていなければ、',A(DATA_TEMPLATE,'テンプレート'),'の「worker」と「.github」のフォルダを、そのリポジトリに追加します。')
+        :[step(A(DATA_TEMPLATE,'テンプレート'),'を開き、「Use this template」→「Create a new repository」。「Private」を選んで「Create repository」。'),
+          step('GitHubの「Settings」→「Developer settings」→「Personal access tokens」→「Fine-grained tokens」→「Generate new token」。「Repository access」は「Only select repositories」で作ったリポジトリを選び、「Permissions」の「Contents」を「Read and write」にして「Generate token」。'),
+          step('メニューの「同期・Googleカレンダー・バックアップ」の「端末どうしの自動同期」に、ユーザー名・リポジトリ・トークン・この端末の名前を手入力して「保存して同期する」。')]),
+    el('h3',{class:'sub'},'Cloudflare'),
+    el('ol',{class:'small guide',start:SYNC?2:4},
+      step(A('https://dash.cloudflare.com/sign-up','Cloudflareのアカウント'),'を作ります。'),
+      step('「Workers & Pages」の「Account Details」で、「Account ID」をコピーします。'),
+      step('「My Profile」→「API Tokens」→「Create Token」→「Edit Cloudflare Workers」の「Use template」。自分のアカウントと「All zones」を選び、「Continue to summary」→「Create Token」。表示されたトークンをコピーします（1回しか表示されません）。'),
+      step('GitHubのデータ用リポジトリの「Settings」→「Secrets and variables」→「Actions」→「New repository secret」で、Name「CLOUDFLARE_API_TOKEN」にトークンを、Name「CLOUDFLARE_ACCOUNT_ID」にアカウントIDを貼り付けて、2つ追加します。'),
+      step('同じリポジトリの「Actions」→「通知の仕組みをCloudflareに置く」→「Run workflow」。'),
+      step('数分たったら、「同期・Googleカレンダー・バックアップ」の「今すぐ同期」を押し、「習慣の設定」の「この端末の通知」で「この端末で通知を受け取る」。')),
+    el('p',{class:'xs muted'},'iPhone・iPadは、ホーム画面に追加したアプリから開いたときに通知を受け取れます。'));
+}
+function ciWaiting(){return !!life().ciWait&&!pushAny();}
+function ciStartSheet(){const close=()=>document.getElementById('sheet').close();
+  openSheet('チェックイン',el('p',{class:'small muted'},'時刻に通知を受け取るには、設定が要ります。'),
+    el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub',onclick:()=>{close();pushSetup();}},'通知を設定する'),
+      el('button',{type:'button',class:'btn sub',onclick:()=>{close();setLife(x=>{delete x.ciWait;});toast('チェックインを使えるようにしました');render();}},'通知なしで使う')));}
+function pushHint(){return pushAny()?null:el('p',{class:'xs muted pushhint'},'時刻に通知を受け取るには ',el('button',{type:'button',class:'linkbtn',onclick:pushSetup},'通知を設定する'));}
 async function pushDisable(){
   try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();if(sub) await sub.unsubscribe();}catch(_){}
   try{if(PUSHCFG) await fetch(PUSHCFG.url+'/sync',{method:'POST',headers:pushHeaders(),body:JSON.stringify({device:DEVICE,sub:null})});}catch(_){}
@@ -2581,7 +2628,7 @@ async function pushDisable(){
 }
 async function pushTest(){
   try{await pushUpload();const r=await fetch(PUSHCFG.url+'/test',{method:'POST',headers:pushHeaders(),body:JSON.stringify({device:DEVICE})});
-    toast(r.ok?'テスト通知を送りました。数秒で届きます':'送れませんでした（'+r.status+'）');}catch(_){toast('送り役につながりませんでした');}
+    toast(r.ok?'テスト通知を送りました。数秒で届きます':'送れませんでした（'+r.status+'）');}catch(_){toast('Cloudflareにつながりませんでした');}
 }
 // answers given with the ○ / × buttons on a notification
 async function applyAnswers(){
@@ -2595,13 +2642,14 @@ async function applyAnswers(){
   if(cm){toast('次の便に乗る予定に組み直しました');pushUpload();}
 }
 function pushCard(){
+  if(!PUSHCFG&&pushSupported()) return el('div',{class:'card'},el('h2',{},'通知'),el('p',{class:'small muted'},'時刻に通知を受け取るには、Cloudflareの設定が要ります。'),el('button',{type:'button',class:'btn sub sm',onclick:pushGuide},'設定の手順を見る'));
   const st=!pushSupported()?'unsupported':!PUSHCFG?'nocfg':(Notification.permission==='denied'?'denied':(PUSHSUB?'on':'off'));
   const n=st==='on'?pushItems().length:0;
   const msg={unsupported:'この画面では通知を使えません。ホーム画面の「まんしゅぇ」から開いてください。',
-    nocfg:'通知の送り役の準備がまだです。Cloudflare の設定が終わって同期されると、ここで有効にできます。',
+    nocfg:'Cloudflareの設定がまだです。',
     denied:'通知がブロックされています。Android の「設定」→「アプリ」→「まんしゅぇ」→「通知」で許可してから、もう一度開いてください。',
     off:'ルーティンの「何分前」「時刻ちょうど」と、チェックイン・レポートの時刻に、この端末へ通知が届くようになります。',
-    on:'通知を受け取っています。これから2週間で '+n+' 件の予定です'+(pushLast?'（送り役に渡した時刻 '+md(ymd(new Date(pushLast)))+' '+hm(pushLast)+'）':'')+'。'}[st];
+    on:'通知を受け取っています。これから2週間で '+n+' 件の予定です'+(pushLast?'（Cloudflareに渡した時刻 '+md(ymd(new Date(pushLast)))+' '+hm(pushLast)+'）':'')+'。'}[st];
   return el('div',{class:'card'},el('div',{class:'between'},el('h2',{},'この端末の通知'),el('span',{class:'pill'+(st==='on'?'':' gray')},st==='on'?'オン':'オフ')),
     el('p',{class:'small muted'},msg),
     st==='off'?el('button',{type:'button',class:'btn',onclick:pushEnable},'この端末で通知を受け取る'):null,
@@ -2841,7 +2889,7 @@ function slotHelp(){return el('button',{type:'button',class:'help','aria-label':
 function skipHelp(){return el('button',{type:'button',class:'help','aria-label':'スキップについての説明',onclick:e=>{e.preventDefault();e.stopPropagation();openSheet('通勤設定のスキップ',
   el('p',{class:'small'},'スキップすると、その日の通勤の時刻・通知・電車での演習のコマ・通勤に合わせたルーティンだけがなくなります。ほかの学習・制作のコマはそのまま残ります。'),
   el('p',{class:'small'},'飲み会や用事でその時間もふさがるときは、カレンダーの「プライベートの予定」に、時刻つきの予定を追加してください。重なるコマが減り、計画がその分を調整します。'));}},'?');}
-function privacyHelp(){return el('button',{type:'button',class:'help','aria-label':'駅名の登録についての注意',onclick:e=>{e.preventDefault();e.stopPropagation();openSheet('駅名について',el('p',{class:'small'},'通勤経路は個人情報です。駅名はイニシャル（例：S駅）での登録がおすすめです。通知の文面は、届くまで通知の送り役（Cloudflare）に保存されます。'));}},'?');}
+function privacyHelp(){return el('button',{type:'button',class:'help','aria-label':'駅名の登録についての注意',onclick:e=>{e.preventDefault();e.stopPropagation();openSheet('駅名について',el('p',{class:'small'},'通勤経路は個人情報です。駅名はイニシャル（例：S駅）での登録がおすすめです。通知の文面は、届くまでCloudflareに保存されます。'));}},'?');}
 function viewCommute(){CMDV=true;try{return viewCommuteBody();}finally{CMDV=false;}}
 function viewCommuteBody(){
   const C=commute(), P=plan2(), routes=C.routes||[], dirty=!!CDRAFT;
@@ -3126,7 +3174,7 @@ function viewRoutines(){
     el('div',{class:'small',style:'display:flex;flex-direction:column;gap:8px'},
       el('p',{},el('b',{},'ことばの使い分け：'),'「習慣」は暮らしの側の全体で、「ルーティン」と「生活の記録」からできています。学習と制作は「学習・制作の記録」として別に扱います（メニュー「学習と制作の記録方法」）。'),
       el('p',{},el('b',{},'ルーティン：'),'時刻や曜日が決まっていて、ホームで ○（できた）か ×（できなかった）を付けるものです。答えなかった日は「記録なし」になり、責められることはありません。'),
-      el('p',{},el('b',{},'チェックイン／レポート：'),'アプリを開くよう促す時刻と、そのときに聞く項目です（最大4回）。〆のレポートでは、学習と制作の記録が最初に出ます。時刻の前後1時間は、まだ済んでいなければホームのボタンがオレンジになります。同じ項目を何回聞いてもよく、答え直すと上書きされます。'),
+      el('p',{},el('b',{},'チェックイン／レポート：'),'アプリを開くよう促す時刻と、そのときに記録する項目です（最大4回）。〆のレポートでは、学習と制作の記録が最初に出ます。同じ項目をいくつのチェックインに出してもよく、答え直すと上書きされます。'),
       el('p',{},el('b',{},'生活の記録：'),'睡眠・仕事・家事・趣味・運動など、一日の過ごし方です。時間は15分〜6時間のボタンのほか、自由にも入力できます。「時間」の項目は内訳を選んで、分か時刻で入力します。ながら作業で時刻が重なっても大丈夫です。'),
       el('p',{},el('b',{},'ワンタップ記録：'),'よく使う「内訳と時間」の組み合わせを、ボタン1つで記録できます（4つまで）。'),
       el('p',{},el('b',{},'使わない：'),'消さずに一時的に止めておけます。もう一度チェックすれば元に戻ります。'),
@@ -3147,10 +3195,11 @@ function viewRoutines(){
     sleepDet);
 
   const RS=L.routines.filter(r=>r.kind!=='sleep'), IT=L.items;
-  const ciCards=el('div',{class:'card'},el('h2',{},'チェックインとレポート（最大4回）'),el('p',{class:'xs muted'},'時刻の前後1時間は、済んでいなければホームのボタンがオレンジになります（通知は次の段階で届くようになります）。'),
+  // チェックインごとに畳む（2026-11-18）：閉じているときは名前と時刻（オフなら「オフ」）だけ
+  const ciCards=el('div',{class:'card'},el('h2',{},'チェックインとレポート（最大4回）'),
     L.checkins.map((c,ci)=>{
       const tog=(key,id)=>{setLife(x=>{const cc=x.checkins.find(y=>y.id===c.id);const s=new Set(cc[key]);if(s.has(id)) s.delete(id); else s.add(id);cc[key]=[...s];});render();};
-      return el('div',{class:'ci'+(ci===0?' first':'')},
+      return det('ci:'+c.id,[el('span',{style:'flex:1;min-width:0'},ciTitle(c)),c.on?el('span',{class:'xs muted num'},c.time):offPill(true)],
         el('div',{class:'between'},
           el('label',{class:'row',for:'ci-'+c.id},el('input',{type:'checkbox',id:'ci-'+c.id,checked:c.on,onchange:e=>{setLife(x=>{x.checkins.find(y=>y.id===c.id).on=e.target.checked;});render();}}),el('b',{},ciTitle(c))),
           el('input',{type:'time',value:c.time,'aria-label':ciTitle(c)+'の時刻',style:'max-width:140px',onchange:e=>{if(e.target.value) setLife(x=>{x.checkins.find(y=>y.id===c.id).time=e.target.value;});}})),
@@ -3204,14 +3253,14 @@ function viewRoutines(){
     el('h1',{},'習慣の設定'),statusNode(),pushCard(),help,
     general,ciCards,quickCard,
     el('h2',{},'ルーティン'),
-    el('p',{class:'xs muted'},'通知（何分前・時刻ちょうど）は次の段階で届くようになります。設定は今のうちにしておけます。'),
+    PUSHSUB?null:el('p',{class:'xs muted'},PUSHCFG?'通知（何分前・時刻ちょうど）は、「この端末の通知」をオンにすると届きます。':'通知（何分前・時刻ちょうど）は、通知の設定が終わると届きます。'),
     RS.map((r,i)=>arrows(rEdit(r),'routines',r.id,i,RS.length,y=>y.kind!=='sleep',r.name)),
     el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id='r'+Date.now().toString(36);setLife(x=>{x.routines.push({id,name:freshName(x.routines,'新しいルーティン'),emoji:'✅',kind:'manual',by:'',days:ALLDAYS.slice(),before:10,at:true});});OPEN.add('r:'+id);render();}},'＋ ルーティンを追加'),
     el('h2',{},'生活の記録項目'),
     IT.map((it,i)=>arrows(iEdit(it),'items',it.id,i,IT.length,()=>true,it.name)),
     el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id='i'+Date.now().toString(36);setLife(x=>{x.items.push({id,name:freshName(x.items,'新しい項目'),emoji:'⭐',color:'',type:'span',subs:[]});});OPEN.add('i:'+id);render();}},'＋ 記録項目を追加'),
     el('div',{class:'card',style:'margin-top:8px'},el('h2',{},'プリセットに戻す'),el('p',{class:'xs muted'},'この画面の設定を最初の状態に戻します。これまでの記録は消えません。'),
-      twoStep('プリセットに戻す',()=>{setLife(x=>{const keep=x.tracks;Object.assign(x,clone(LIFE_PRESET));x.tracks=keep;});OPEN.clear();toast('プリセットに戻しました');render();}))
+      twoStep('プリセットに戻す',()=>{setLife(x=>{const keep=x.tracks, started=!x.ciWait;Object.assign(x,clone(LIFE_PRESET));x.tracks=keep;if(started) delete x.ciWait;});OPEN.clear();toast('プリセットに戻しました');render();}))
   ];
 }
 
@@ -3687,7 +3736,7 @@ function wizRender(top){
 function wizMethod(){
   const c=(id,title,desc)=>el('button',{type:'button',class:'choice wizchoice','aria-pressed':String(WIZ.method===id),onclick:()=>{WIZ.method=id;WIZ.i=2;wizSave();wizRender();}},el('b',{},title),el('span',{class:'small muted'},desc));
   return [el('p',{class:'small'},'どちらから組むかを選びます。'),
-    c('work','作業量から組む（おすすめ）','先に'+tname('study')+'と'+tname('create')+'の前提を聞いて、必要な時間を出します。それに合わせて時間割を決めます。'),
+    c('work','作業量から組む（おすすめ）','先に'+tname('study')+'と'+tname('create')+'の前提を確認して、必要な時間を出します。それに合わせて時間割を決めます。'),
     c('time','使える時間から組む','先に時間割を決めて、目標日までに使える時間を出します。その中に作業を詰めます。可処分時間を増やせないときはこちらです。'),
     el('p',{class:'xs muted'},'次へ進む順番：'+wizSteps().slice(3).map(wizName).join(' → '))];
 }
@@ -3843,7 +3892,7 @@ function wizBuildView(){
         el('button',{type:'button',class:'btn sub sm',onclick:()=>wizUp(x=>farHalf(x,g.id,lim))},g.track==='study'?'前半を2年以内の目標にする':'2年以内の目標にする')))):null,
     near.length?el('div',{class:'card'},el('h2',{},'期日まで2週間以内の節目'),el('p',{class:'small'},'期日が近いときは、予備日を取ると作業の時間が足りなくなりやすいので、予備日なしで組むのがおすすめです。'),
       near.map(g=>el('label',{class:'row',for:'nb-'+g.id,style:'min-height:44px'},el('input',{type:'checkbox',id:'nb-'+g.id,checked:!!pick[g.id],onchange:e=>{pick[g.id]=e.target.checked;wizSave();}}),el('span',{},g.name+'（'+md(g.date)+'）を予備日なしで組む')))):null,
-    el('p',{class:'xs muted'},gcalReady()?'組んだあと、節目・期日をGoogleカレンダー（「'+GCALNAME+'」）に書き出すか聞きます。':gcalCfg().clientId?'設定で「書き出し用のアカウント」を選ぶと、組んだあとにGoogleカレンダーへ書き出せます（メニューの「問題の取り込み・同期・バックアップ」）。':'Googleとの連携を設定すると、組んだあとにGoogleカレンダーへ書き出せます（メニューの「問題の取り込み・同期・バックアップ」）。'),
+    el('p',{class:'xs muted'},gcalReady()?'組んだあと、節目・期日をGoogleカレンダー（「'+GCALNAME+'」）に書き出すかを確認します。':gcalCfg().clientId?'設定で「書き出し用のアカウント」を選ぶと、組んだあとにGoogleカレンダーへ書き出せます（メニューの「問題の取り込み・同期・バックアップ」）。':'Googleとの連携を設定すると、組んだあとにGoogleカレンダーへ書き出せます（メニューの「問題の取り込み・同期・バックアップ」）。'),
     replanQ(P,wizSched()),
     over&&!far.length?el('div',{class:'warn'},'はみ出す節目があるので、まだ組めません。「プレビュー」で編集してください。',el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf('outlook'))},'プレビューへ')):null,
     el('button',{type:'button',class:'btn'+((P.goals||[]).some(g=>g.open||(g.date&&g.kind!=='date'))?'':' sub'),disabled:over,onclick:wizBuild},'この内容で組む（今日から）')];
@@ -3988,7 +4037,7 @@ function wizStudy(){
     return el('div',{class:'card'},el('b',{class:'small'},m.name),
       pfield('qr-'+m.id,'何周しますか',pselect('qr-'+m.id,n>4?'more':String(n),[['1','1周'],['2','2周'],['3','3周'],['4','4周'],['more','それより多い']],v=>setR(r=>{r.n=v==='more'?Math.max(5,+r.n||5):+v;}))),
       n>4?pfield('qrn-'+m.id,'周の数',pnum('qrn-'+m.id,n,v=>setR(r=>{r.n=Math.max(5,Math.round(v));}),1,5)):null,
-      el('p',{class:'small'},'1周の8割が終わる頃に、次の周をどうするかをホームで聞きますか？'),segQ('次の周を聞く',o.ask||'',[['yes','聞く'],['no','聞かない']],v=>setR(r=>{r.ask=v;})),
+      el('p',{class:'small'},'1周の8割が終わる頃に、次の周をどうするかをホームで確認しますか？'),segQ('次の周の確認',o.ask||'',[['yes','確認する'],['no','確認しない']],v=>setR(r=>{r.ask=v;})),
       n>1?[segQ('2周目からの範囲',o.range||'all',[['all','全部'],['some','章を選ぶ']],v=>setR(r=>{r.range=v||'all';})),
         o.range==='some'?el('div',{class:'chips'},chs.map(g=>{const on=g.rows.every(r=>(o.rows||[]).includes(r));
           return el('button',{type:'button',class:'chip sm','aria-pressed':String(on),onclick:()=>setR(r=>{const set=new Set(r.rows||[]);g.rows.forEach(x=>on?set.delete(x):set.add(x));r.rows=[...set].sort((a,b)=>a-b);})},g.ch||'（見出しなし）');})):null]:null);};
@@ -4001,7 +4050,7 @@ function wizStudy(){
         pfield('qf-t-'+f,'試験時間（分）',pnum('qf-t-'+f,o.time,v=>setF(x=>{x.time=v;}),1,0)),pfield('qf-n-'+f,'問題数',pnum('qf-n-'+f,o.n,v=>setF(x=>{x.n=v;}),1,0))),
         pace(f)?el('p',{class:'xs muted num'},'本番のペース：1問 '+pace(f)+'分'):null,
         pfield('qf-p-'+f,'演習で1問にかける時間（分。解説を読む時間も含めて）',pnum('qf-p-'+f,o.perQ||'',v=>setF(x=>{x.perQ=v;}),0.5,0)),
-        !(+o.perQ>0)&&pace(f)?el('button',{type:'button',class:'chip sm',onclick:()=>setF(x=>{x.perQ=pace(f);})},'本番のペースにする'):null);})):exam&&!fm.length?qpre('形式ごとの試験時間と問題数','形式を選ぶと聞きます。'):null,
+        !(+o.perQ>0)&&pace(f)?el('button',{type:'button',class:'chip sm',onclick:()=>setF(x=>{x.perQ=pace(f);})},'本番のペースにする'):null);})):exam&&!fm.length?qpre('形式ごとの試験時間と問題数','形式を選ぶと尋ねます。'):null,
     !exam?null:qb('3-3','合格の基準',[segQ('合格の基準',(st.pass||{}).mode||'',[['total','合計点だけ'],['unit','合計点＋単元ごとの最低点'],['x','分からない']],v=>up(o=>{o.pass=Object.assign({},o.pass,{mode:v});})),
       (st.pass||{}).mode&&(st.pass||{}).mode!=='x'?(fm.filter(f=>f!=='x').length?fm.filter(f=>f!=='x'):['all']).map(f=>{const o=((st.pass||{}).fmt||{})[f]||{}, setP=fn=>up(S=>{S.pass=Object.assign({},S.pass);S.pass.fmt=Object.assign({},S.pass.fmt);S.pass.fmt[f]=Object.assign({},S.pass.fmt[f]);fn(S.pass.fmt[f]);});
         return el('div',{class:'grid2'},f==='all'?null:el('b',{class:'small',style:'grid-column:1/-1'},fmtLabel(f)),pfield('qp-f-'+f,'満点',pnum('qp-f-'+f,o.full,v=>setP(x=>{x.full=v;}),1,0)),pfield('qp-m-'+f,'合格に要る点',pnum('qp-m-'+f,o.min,v=>setP(x=>{x.min=v;}),1,0)),
@@ -4014,7 +4063,7 @@ function wizStudy(){
       subs.length<UNIT_MAX?el('button',{type:'button',class:'btn sub sm',onclick:()=>wizS((S,x)=>{let n='新しい単元',k=2;while(x.subjects.some(y=>y.name===n)) n='新しい単元'+(k++);x.subjects.push({id:newId('s'),name:n,short:n,hours:10});})},'＋ 単元を追加'):null,
       st.pattern==='fmt'&&fm.filter(f=>f!=='x').some(f=>!subs.some(v=>v.name===fmtLabel(f)))?el('button',{type:'button',class:'btn sub sm',onclick:()=>wizS((S,x)=>{for(const f of fm.filter(f=>f!=='x')) if(!x.subjects.some(v=>v.name===fmtLabel(f))&&x.subjects.length<UNIT_MAX) x.subjects.push({id:newId('s'),name:fmtLabel(f),short:fmtLabel(f),hours:10});})},'形式を単元にする'):null]):null,
     subs.length>1?qb('3-6','単元ごとの割合（%）',[el('div',{class:'grid2'},subs.map(v=>pfield('qs-'+v.id,v.short||v.name,pnum('qs-'+v.id,v.share||'',x=>wizS((S,X)=>{X.subjects.find(z=>z.id===v.id).share=Math.max(0,Math.round(x));}),1,0)))),
-      el('p',{class:'xs muted num'},anyShare?'残り '+(100-shareSum)+'%':'入力しないと均等になります')]):st.pattern!=='mat'?qpre('単元ごとの割合（%）','単元が2つ以上あると聞きます。'):null,
+      el('p',{class:'xs muted num'},anyShare?'残り '+(100-shareSum)+'%':'入力しないと均等になります')]):st.pattern!=='mat'?qpre('単元ごとの割合（%）','単元が2つ以上あると尋ねます。'):null,
     qb('3-7','学習時間の合計の見込み',[segQ('学習時間の合計',st.total||'',[['known','分かる'],['mat','教材の量から計算する'],['unknown','分からない']],v=>{up(o=>{o.total=v;});WIZ.method=v==='unknown'?'time':'work';wizSave();}),
       st.total==='known'?pfield('qt-h','合計（時間）',pnum('qt-h',st.hours,v=>up(o=>{o.hours=Math.max(0,v);}),1,0)):null,
       st.total==='mat'?el('p',{class:'xs muted num'},'教材の量から：約'+Math.round(mats.reduce((a,m)=>a+matHours(P,m),0))+'時間'):null,
@@ -4045,12 +4094,12 @@ function wizStudy(){
         el('li',{},el('b',{},'使う：'),'問題集をアプリに取り込んで（写真から問題のデータを作る手間がかかります）、アプリで解きます。通勤やスキマ演習のコマで続きから出し、正誤と時間を記録して、単元ごとの正答率と弱いところを出します。'),
         el('li',{},el('b',{},'使わない：'),'問題は紙の問題集で解きます。今日やることは範囲で出し、終わったらチェックと時間を記録します。演習のタブと問題の取り込みは隠れます（あとで変えられます）。')),
       segQ('スキマ演習',st.app||'',[['yes','使う'],['no','使わない'],['later','あとで決める']],v=>up(o=>{o.app=v;}))]),
-    st.app==='yes'?qb('3-10b','スキマ演習で解く形（いくつでも）',el('div',{class:'chips'},[['tf','○×（一問一答）'],['mc5','選択肢から選ぶ'],['blank','穴埋め'],['order','並び替え']].map(([k,l])=>el('button',{type:'button',class:'chip sm','aria-pressed':String((st.qtypes||[]).includes(k)),onclick:()=>up(o=>{const a=(o.qtypes||[]).slice();const i=a.indexOf(k);if(i>=0) a.splice(i,1); else a.push(k);o.qtypes=a;})},l)))):!st.app?qpre('スキマ演習で解く形（いくつでも）','「使う」を選ぶと聞きます。'):null,
+    st.app==='yes'?qb('3-10b','スキマ演習で解く形（いくつでも）',el('div',{class:'chips'},[['tf','○×（一問一答）'],['mc5','選択肢から選ぶ'],['blank','穴埋め'],['order','並び替え']].map(([k,l])=>el('button',{type:'button',class:'chip sm','aria-pressed':String((st.qtypes||[]).includes(k)),onclick:()=>up(o=>{const a=(o.qtypes||[]).slice();const i=a.indexOf(k);if(i>=0) a.splice(i,1); else a.push(k);o.qtypes=a;})},l)))):!st.app?qpre('スキマ演習で解く形（いくつでも）','「使う」を選ぶと尋ねます。'):null,
     !exam?null:qb('3-11','この試験の勉強は、いまどの段階ですか？',segQ('いまの段階',st.status||'',[['new','まったく初めて'],['base','入門書などで一通り学んだ'],['retry','一度受けたことがある']],v=>up(o=>{o.status=v;}))),
     exam&&st.status==='new'?qb('3-11b','1周目の前に、入門書などで全体を一通り読む期間をとりますか？',[segQ('入門の読み通し',(st.intro||{}).on||'',[['yes','とる'],['no','とらない']],v=>up(o=>{o.intro=Object.assign({},o.intro,{on:v});})),
       (st.intro||{}).on==='yes'?el('div',{class:'grid2'},pfield('qi-m','読む教材',pselect('qi-m',(st.intro||{}).mat||'',[['','（選ぶ）'],...rm.map(m=>[m.id,m.name])],v=>up(o=>{o.intro=Object.assign({},o.intro,{mat:v});}))),
-        pfield('qi-w','何週間',pnum('qi-w',(st.intro||{}).weeks,v=>up(o=>{o.intro=Object.assign({},o.intro,{weeks:Math.max(1,Math.round(v))});}),1,1))):null]):exam&&!st.status?qpre('1周目の前に、入門書などで全体を一通り読む期間をとりますか？','「まったく初めて」を選ぶと聞きます。'):null,
-    sm.length?qb('3-12','問題集ごとに、何周しますか？（あとで編集できます）',sm.map(roundRow)):mats.length?qpre('問題集ごとに、何周しますか？（あとで編集できます）','教材の「種類」で「解くもの（問題集）」を選ぶと聞きます。'):null,
+        pfield('qi-w','何週間',pnum('qi-w',(st.intro||{}).weeks,v=>up(o=>{o.intro=Object.assign({},o.intro,{weeks:Math.max(1,Math.round(v))});}),1,1))):null]):exam&&!st.status?qpre('1周目の前に、入門書などで全体を一通り読む期間をとりますか？','「まったく初めて」を選ぶと尋ねます。'):null,
+    sm.length?qb('3-12','問題集ごとに、何周しますか？（あとで編集できます）',sm.map(roundRow)):mats.length?qpre('問題集ごとに、何周しますか？（あとで編集できます）','教材の「種類」で「解くもの（問題集）」を選ぶと尋ねます。'):null,
     bands.length?qb('3-13','学び方の段階',[bandTable(bands,today()),el('p',{class:'xs muted'},'区切りの日は、プレビューの「節目の案」で編集できます。')]):null];}
 /* ----- 計画づくりの質問 4：制作の中身（作品ごと）----- */
 function setupCreate(x){for(const w of x.works||[]){const k=wkKind(w), d=w.dl||{};if(!WK_BOOK.includes(k)) continue;
@@ -4187,7 +4236,7 @@ function wizTime5(){
   const studyOn=(S0.study||{}).kind&&(S0.study||{}).kind!=='none', createOn=!(S0.create||{}).none&&(P.works||[]).length;
   const sslots=(P.dayTypes||[]).flatMap(d=>(d.slots||[]).filter(sl=>sl.track==='study').map(sl=>({k:d.id+':'+sl.id,l:d.name+' '+(sl.time||'')+' '+(sl.label||'')})));
   const afterQ=(tr,other)=>qb('5-3-'+tr,'計画している'+tname(tr)+'がすべて終わったあと、そのコマをどう使いますか？',[segQ(tname(tr)+'のあと',(S0.after||{})[tr]||'',[['give',tname(other)+'に回す'],['free','空けておく'],['next','次の目標を入れる']],v=>upA(tr,v)),
-    (S0.after||{})[tr]==='next'?el('p',{class:'xs muted'},'終わったときに次の目標を聞き、計画を組み直します。そのとき、いまの計画をなるべく変えずに組むことも選べます。'):null]);
+    (S0.after||{})[tr]==='next'?el('p',{class:'xs muted'},'終わったときに次の目標を尋ね、計画を組み直します。そのとき、いまの計画をなるべく変えずに組むことも選べます。'):null]);
   const made=!!WIZ.ttMade, H=(S0.create||{}).head||{};
   const total=el('p',{class:'xs muted num'},'目標日までに使える時間（予備日を除く）：'+tname('study')+' '+hrs(T.study.C)+'・'+tname('create')+' '+hrs(T.create.C));
   return [
@@ -4243,7 +4292,7 @@ function wizWhat(){
       return el('div',{class:'wkcount'},
         el('label',{class:'field',for:'wk-n-'+k},l,el('span',{class:'row',style:'gap:8px'},pnum('wk-n-'+k,n,v=>wizS(S=>{S.create.counts=Object.assign({},S.create.counts,{[k]:Math.max(0,Math.min(20,Math.round(v)))});}),1,0),el('span',{class:'small',style:'flex:none'},WK_UNIT[k]||'件'))),
         n?el('p',{class:'small',style:'margin:4px 0 0'},'作品の名前（あとで変えられます）'):null,
-        Array.from({length:n},(_,i)=>el('input',{type:'text','aria-label':l+'の'+(i+1)+'つ目の名前',value:nm[i]||l+(i+1),onchange:e=>wizS(S=>{const N=S.create.names=Object.assign({},S.create.names);const a=(N[k]||[]).slice();a[i]=e.target.value.trim()||l+(i+1);N[k]=a;})})));})):!c.none?qpre('それぞれいくつ作りますか？','作るものを選ぶと聞きます。'):null];}
+        Array.from({length:n},(_,i)=>el('input',{type:'text','aria-label':l+'の'+(i+1)+'つ目の名前',value:nm[i]||l+(i+1),onchange:e=>wizS(S=>{const N=S.create.names=Object.assign({},S.create.names);const a=(N[k]||[]).slice();a[i]=e.target.value.trim()||l+(i+1);N[k]=a;})})));})):!c.none?qpre('それぞれいくつ作りますか？','作るものを選ぶと尋ねます。'):null];}
 function wizDates(){
   const P=WIZ.P, S0=P.setup||{}, st=S0.study||{}, evs=S0.events||[], ws=P.works||[], t=today();
   const upSt=fn=>wizS(S=>{S.study=Object.assign({},S.study);fn(S.study);});
@@ -4285,10 +4334,10 @@ function wizDates(){
         d.ev==='no'?[el('b',{class:'small',style:'display:block;margin-top:12px'},'完成させたい日はありますか？'),dm]:null]),
       qb(q('2-7'),'入稿（印刷所・制作会社などへのデータ入稿）はありますか？',segQ('入稿',d.nyuko||'',[['yes','ある'],['no','ない']],v=>upW(w.id,o=>{o.nyuko=v;}))),
       d.nyuko!=='no'?qb(q('2-7b'),'入稿の締切を、このアプリで管理しますか？',segQ('管理',d.manage||'',[['yes','管理する'],['no','しない']],v=>upW(w.id,o=>{o.manage=v;}))):null,
-      d.nyuko!=='no'&&d.manage==='yes'&&book?qb(q('2-8'),'表紙と本文の締切は別ですか？',segQ('表紙と本文',d.sep||'',[['yes','別'],['no','同じ'],['unk','分からない']],v=>upW(w.id,o=>{o.sep=v;}))):d.nyuko!=='no'&&!d.manage&&book?qpre('表紙と本文の締切は別ですか？','「管理する」を選ぶと聞きます。'):null,
+      d.nyuko!=='no'&&d.manage==='yes'&&book?qb(q('2-8'),'表紙と本文の締切は別ですか？',segQ('表紙と本文',d.sep||'',[['yes','別'],['no','同じ'],['unk','分からない']],v=>upW(w.id,o=>{o.sep=v;}))):d.nyuko!=='no'&&!d.manage&&book?qpre('表紙と本文の締切は別ですか？','「管理する」を選ぶと尋ねます。'):null,
       d.nyuko!=='no'&&d.manage==='yes'?qb(q('2-8c'),'入稿の締切',[dl(w,'body',d.sep==='yes'&&book?'本文':'入稿',d.body,e),d.sep==='yes'&&book?dl(w,'cover','表紙',d.cover,e):null,
         (d.body||{}).early||(d.cover||{}).early?[el('p',{class:'small'},'早割は'),segQ('早割',d.early||'',[['try','使えれば使う'],['must','必ず早割'],['no','使わない']],v=>upW(w.id,o=>{o.early=v;})),
-          (d.early||'try')==='try'?pfield('dd-'+w.id,'早割の締切の何日前に、早割で出すか決めますか？',pnum('dd-'+w.id,d.decide,v=>upW(w.id,o=>{o.decide=Math.max(0,Math.round(v));}),1,0)):null]:null]):d.nyuko!=='no'&&!d.manage?qpre('入稿の締切','「管理する」を選ぶと聞きます。'):null);};
+          (d.early||'try')==='try'?pfield('dd-'+w.id,'早割の締切の何日前に、早割で出すか決めますか？',pnum('dd-'+w.id,d.decide,v=>upW(w.id,o=>{o.decide=Math.max(0,Math.round(v));}),1,0)):null]:null]):d.nyuko!=='no'&&!d.manage?qpre('入稿の締切','「管理する」を選ぶと尋ねます。'):null);};
   const made=(P.goals||[]).filter(g=>g.src==='setup').sort(byDate);
   return [
     study,
@@ -4630,6 +4679,7 @@ function viewHome(){
       el('div',{class:'grid2',style:'gap:14px'},
         act&&!ps&&openOf(plan2(),'study').length?openBar('study'):pb(tname('study'),st.pct,st.plan,'',T.study==='time'&&!act?fmtH(trackTotal('study')):'',ps,'study'),
         act&&!pc&&openOf(plan2(),'create').length?openBar('create'):(act?pc:works().length)?pb(tname('create'),mg.pct,mg.plan,'manga',T.manga==='time'&&!act?fmtH(trackTotal('manga')):'',pc,'create'):null),
+      weekStack(t),
       el('div',{class:'grid2'},el('a',{href:'#practice',class:'btn sm'+(realDocs().length?'':' sub')},'演習をはじめる'),el('a',{href:'#plan',class:'btn sub sm'},'計画を見る・編集する')));
     const late=[ps,pc].filter(x=>x&&x.gap<=-0.1);
     if(late.length) notice.push(el('div',{class:'card notice'},
@@ -4650,9 +4700,12 @@ function viewHome(){
       g.reward?el('p',{class:'small'},el('b',{},'🎁 「'+g.name+'」を達成しました！'),'ごほうび：'+g.reward):el('p',{class:'small'},el('b',{},'「'+g.name+'」を達成しました！')),
       el('button',{type:'button',class:'btn sub sm',onclick:()=>upP(x=>{x.goals.find(y=>y.id===g.id).got=true;})},g.reward?'ごほうびを受け取った':'閉じる')));
   }
-  // check-ins / report: one row; within an hour of the time and not yet done, the button turns orange
+  // 計画がなくても、いちばん上に今週の積み上げ・時間を記録する・演習をはじめる（2026-11-18）
+  if(!prog) prog=el('div',{class:'card topcard'},weekStack(t),realDocs().length?el('a',{href:'#practice',class:'btn sm'},'演習をはじめる'):null);
+  // check-ins / report: one row; within an hour of the time and not yet done, the button turns blue
   const cis=L.checkins.filter(c=>c.on);
   const ciRow=cis.length?el('div',{class:'cirow',style:'grid-template-columns:repeat('+cis.length+',minmax(0,1fr))'},cis.map(c=>{const s=ciState(c);
+    if(ciWaiting()) return el('button',{type:'button',class:'cib wait','aria-label':ciTitle(c)+'（まだ始めていません）',onclick:ciStartSheet},el('b',{},c.report?c.name+'レポート':c.name),el('span',{class:'num'},c.time));
     return el('a',{href:'#checkin/'+c.id,class:'cib '+s,'aria-label':ciTitle(c)+(s==='done'?'（済み）':s==='hot'?'（いまの時間です）':s==='due'?'（まだです）':'（'+c.time+'から）')},el('b',{},c.report?c.name+'レポート':c.name),el('span',{class:'num'},s==='done'?'済み ✓':c.time));})):null;
   // routines: a horizontal strip; the sleep goal shows a record button until sleep is recorded
   const rs=routines().filter(r=>routineApplies(t,r)), rate=dayRate(t);
@@ -5429,18 +5482,18 @@ function tocPrompt(){return [
   '',
   '進め方：',
   '1. 1回に送れる写真の枚数に上限があるときは、最初にその枚数を教えてください。写真は何回かに分けて送ることがあります。送り終えたら、私が「以上です」と送ります。それまではJSONを作らず、「○枚受け取りました（ここまで合計○枚）」とだけ返してください。',
-  '2. 「以上です」のあと、JSONを作る前に、下の「確かめること」を私に聞いてください。写真から分かることは案として書き、私の答えを待ちます。',
+  '2. 「以上です」のあと、JSONを作る前に、下の「確かめること」を私に確認してください。写真から分かることは案として書き、私の答えを待ちます。',
   '3. 私が答えたら、JSONを返します。1回の返事に収まらないときは、節の切れ目でJSONを閉じて「続きがあります」と書き、私が「続き」と送ったら、次の節から新しいJSONで返します。',
   '4. JSONのあとに1行だけ、「この返事のJSON：（最初の見出し）〜（最後の見出し）、○行」と書いてください。',
   '',
   '確かめること：',
   '- 受け取った写真の枚数と、写っている範囲（最初と最後の見出し・ページ）。抜けているページ、重なっているページ、読めない写真がないか。',
-  '- 書名。写真に写っていなければ聞いてください。',
-  '- 目次に出てこないページの扱い。目次からは分からないので、私に聞いてください。',
+  '- 書名。写真に写っていなければ確認してください。',
+  '- 目次に出てこないページの扱い。目次からは分からないので、私に確認してください。',
   '  - 章の頭の、導入（イントロダクション）だけのページや扉のページ',
   '  - 章末の、ページの切り替え（白いページ）、挿画、コラム、まとめ、確認問題のページ',
   '  - 巻末の、索引・付録・模擬問題など',
-  '  それぞれ、読む範囲に含めるか、含めないか。含めないなら、どのページかを私に聞き、そのページはどの節にも含めません（節の「はじめ」「おわり」をそのページを避けて決めます）。含めるなら、すぐ前の節の範囲に足します（章の頭のページなら、その章の最初の節の範囲に足します）。私が分からないと答えたら、目次のページ番号どおりにします。',
+  '  それぞれ、読む範囲に含めるか、含めないか。含めないなら、どのページかを私に確認し、そのページはどの節にも含めません（節の「はじめ」「おわり」をそのページを避けて決めます）。含めるなら、すぐ前の節の範囲に足します（章の頭のページなら、その章の最初の節の範囲に足します）。私が分からないと答えたら、目次のページ番号どおりにします。',
   '- 問題集で、同じ単元の中で問題番号が1から始まり直すとき（Basic・Step-Up、初級・中級などの段階ごと）、段階ごとに別の教材に分けるか。おすすめは、番号が重なるときだけ分け、番号が重ならなければ、1冊を1つの教材のままにすることです。',
   '- 単元の当てはめで迷う見出し。',
   '',
@@ -5461,9 +5514,9 @@ function qPrompt(){return [
   '',
   '進め方：',
   '1. 1回に送れる写真の枚数に上限があるときは、最初にその枚数を教えてください。',
-  '2. 最初の写真を受け取ったら（この文より前に写真を送っていたら、この文を読んだら）、JSONを作る前に、下の「最初に確かめること」を私に聞いてください。写真から分かることは案として書き、私の答えを待ちます。',
+  '2. 最初の写真を受け取ったら（この文より前に写真を送っていたら、この文を読んだら）、JSONを作る前に、下の「最初に確かめること」を私に確認してください。写真から分かることは案として書き、私の答えを待ちます。',
   '3. 私が答えたら、それ以降は、送られた写真の分ごとにJSONを返します。決めたことと名前は、最後まで変えません。',
-  '4. 写真を受け取るたびに、下の「写真ごとに確かめること」を見て、気になることがあれば、JSONより先に私に聞いてください。なければ、そのままJSONを返します。',
+  '4. 写真を受け取るたびに、下の「写真ごとに確かめること」を見て、気になることがあれば、JSONより先に私に確認してください。なければ、そのままJSONを返します。',
   '5. JSONのあとに1行だけ、「この返事のJSON：問題 ○〜○（○問）、受け取った写真 ○枚」と書いてください。',
   '6. 1回の返事に収まらないときは、問題の切れ目でJSONを閉じて「続きがあります」と書き、私が「続き」と送ったら、次の問題から新しいJSONで返します。',
   '',
@@ -5477,11 +5530,11 @@ function qPrompt(){return [
   '',
   '写真ごとに確かめること：',
   '- 受け取った枚数が、私が送った枚数と合っているか（「○枚受け取りました」と書いてください）。',
-  '- 抜けている番号、重なっている番号、ページをまたいで切れている問題や解説がないか。切れているときは、続きの写真を待つか私に聞きます。',
+  '- 抜けている番号、重なっている番号、ページをまたいで切れている問題や解説がないか。切れているときは、続きの写真を待つか私に確認します。',
   '- 読めない所。',
   '',
   '決まり：',
-  '- 「教材」には、写真に写っている問題集の名前をそのまま書いてください。名前が写っていなければ聞いてください。私が名前を伝えたら、それ以降はその名前にします。',
+  '- 「教材」には、写真に写っている問題集の名前をそのまま書いてください。名前が写っていなければ確認してください。私が名前を伝えたら、それ以降はその名前にします。',
   '- JSONの返事には、JSONとそのあとの1行のほかに、説明の文はいりません。',
   '- 問題文・選択肢・答え・解説は、本のとおりに書き写します。言い換えたり、足したりしないでください。',
   '- 「詳しい解説」には、決めた分け方のとおり、本の紙面の順に、囲みや見出し（例：これも覚える、根拠条文、アドバイス）も含めて書き写します。「解説」と「詳しい解説」の2つより細かくは分けません。',
@@ -5766,6 +5819,7 @@ function cleanupOnce(){
         if(w.state==='installed'&&navigator.serviceWorker.controller) toast('新しい版があります。アプリを開き直すと切り替わります');});});
     }).catch(()=>{});
   }
+  if(PUSHSUB&&!(S.meta.pushOn&&S.meta.pushOn.on)){S.meta.pushOn={on:true,t:Date.now()};save('meta/pushOn');}
   window.addEventListener('online',()=>{netDown=false;sync();if(PUSHSUB) pushUpload();});
   setInterval(cmLocalTick,15000);cmNotesSave();
   window.addEventListener('offline',updateStatus);
