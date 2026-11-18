@@ -733,6 +733,7 @@ details.detail>summary{cursor:pointer;padding:8px 0;font-size:14px;font-weight:6
   <a href="#plan" data-v="plan"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M12 4.6l1.7 5.7 5.7 1.7-5.7 1.7L12 19.4l-1.7-5.7L4.6 12l5.7-1.7z"/></svg>計画</a>
   <a href="#practice" data-v="practice"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3.5 16.5h17l-2.6 4H6.1z"/><path d="M12 3v13.5"/><path d="M12 4.5l6.5 10H12"/><path d="M10.2 7.5l-4.4 7h4.4"/></svg>演習</a>
   <a href="#progress" data-v="progress"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3.2 10.5c0-2.4 3.9-4.3 8.8-4.3s8.8 1.9 8.8 4.3-3.9 4.3-8.8 4.3-8.8-1.9-8.8-4.3z"/><path d="M3.6 9.2L1.8 6.9M3.6 11.8l-1.8 2.3"/><path d="M10 14.6v2.7h4v-2.7"/></svg>進捗</a>
+  <a href="#life" data-v="life"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3.2 18.8V7.6"/><path d="M3.2 7.6c0-1.3 1-2.3 2.3-2.3"/><path d="M20.8 18.8v-5.4"/><path d="M3.2 15.2h17.6"/><path d="M9 15.2v-2.4c0-.9.7-1.5 1.5-1.5h6.8a3.5 3.5 0 0 1 3.5 3.5"/><path d="M4.9 12.6c0-.9.6-1.4 1.4-1.4h.9c.8 0 1.4.6 1.4 1.4v.6c0 .8-.6 1.3-1.4 1.3h-.9c-.8 0-1.4-.5-1.4-1.3z"/></svg>習慣</a>
 </nav>
 
 <script>
@@ -864,7 +865,7 @@ function statusNode(short){const [c,t]=statusInfo();return el('span',{id:'status
 
 /* リセット（2026-11-18）：日々の記録・今日やることのチェック・演習の記録・計画を、選んで消す。消した時刻（meta の resets）は
    同期でほかの端末にも届き、その時刻より前の記録は受け取らない・持っていれば消す */
-const RESET_KINDS=[['days','日々の記録','ルーティン・生活の記録・学習と制作の時間・プライベートの予定・お休みの日'],['checks','今日やることのチェック','計画の進み具合が最初に戻ります'],
+const RESET_KINDS=[['days','日々の記録','ルーティン・暮らしの記録・学習と制作の時間・プライベートの予定・お休みの日'],['checks','今日やることのチェック','計画の進み具合が最初に戻ります'],
   ['prac','演習の記録','解いた記録・正解率・周回（問題は残ります）'],['plan','計画','組んだ計画と、計画を組むの答え（教材設定と時間割は残ります）']];
 function resets(){return (typeof S!=='undefined'&&S.meta&&S.meta.resets)||{};}
 function applyResets(){const R=resets();
@@ -2223,7 +2224,7 @@ function lifePanel(ds){
   return [
     L.quick&&L.quick.length?el('div',{class:'qrow'},L.quick.map(q=>el('button',{type:'button',class:'chip sm',onclick:()=>addQuick(q,ds)},'＋'+quickLabel(q)))):null,
     rs.length&&!d.off?el('div',{class:'card'},el('h2',{},'ルーティン'),rs.map((r,i)=>routineRow(ds,r,i===0))):null,
-    el('h2',{class:'sec'},'生活の記録'),
+    el('h2',{class:'sec'},'暮らしの記録'),
     items().map(it=>itemEditor(ds,it))];
 }
 
@@ -2268,7 +2269,7 @@ function viewDay(arg){
     pageStatus(),
     donut(ds),
     el('label',{class:'card row',for:'off-'+ds,style:'flex-direction:row'},el('input',{type:'checkbox',id:'off-'+ds,checked:!!d.off,onchange:e=>{setDay(ds,x=>{x.off=e.target.checked?1:0;});render();}}),el('span',{},'この日はお休み',el('br'),el('span',{class:'xs muted'},'ルーティンを休んでも、連続記録は途切れません'))),
-    swipeTabs([['study','学習・制作',studyPanel],['life','習慣',lifePanel(ds)]],'day'),
+    swipeTabs([['study','学習・制作',studyPanel],['life','暮らし',lifePanel(ds)]],'day'),
     el('a',{href:gcalUrl(ds),target:'_blank',rel:'noopener',class:'btn sub sm'},'Google カレンダーでこの日を開く')
   ];
 }
@@ -2285,10 +2286,10 @@ function viewCheckin(id){
     c.report&&(PLAN||planActive())?[el('h2',{class:'sec'},'学習と制作'),el('p',{class:'xs muted'},'今日やったことをチェックしてください。'+(tracks().study==='time'||tracks().manga==='time'?'使った時間も一緒に記録します。':'')),taskList(ds),trackEditors(ds)]
       :c.report?[el('h2',{class:'sec'},'学習と制作'),trackEditors(ds)]:null,
     rs.length?el('div',{class:'card'},el('h2',{},'ルーティン'),rs.map((r,i)=>routineRow(ds,r,i===0))):null,
-    its.length&&c.report?el('h2',{class:'sec'},'生活の記録'):null,
+    its.length&&c.report?el('h2',{class:'sec'},'暮らしの記録'):null,
     its.map(it=>itemEditor(ds,it)),
     c.report?ciTomorrow(c):null,
-    (!rs.length&&!its.length&&!c.report)?el('div',{class:'empty'},el('p',{class:'small'},'このチェックインで記録する項目がまだありません。'),el('a',{href:'#routines',class:'btn sub sm'},'習慣の設定で選ぶ')):null,
+    (!rs.length&&!its.length&&!c.report)?el('div',{class:'empty'},el('p',{class:'small'},'このチェックインで記録する項目がまだありません。'),el('a',{href:'#routines',class:'btn sub sm'},'ルーティンと記録の設定で選ぶ')):null,
     el('div',{class:'cifoot'},el('button',{type:'button',class:'btn',onclick:()=>{setDay(ds,d=>{d.ci=Object.assign({},d.ci,{[id]:Date.now()});});toast('記録しました');go('home');}},c.report?'レポートを終える':'チェックインを終える')),
     // 設定への誘導（2026-11-18）：いちばん下に小さく。「習慣の設定」でこのチェックインの折りたたみを開いて出す
     el('div',{class:'cisetrow'},pushHint(),el('button',{type:'button',class:'chip sm',onclick:()=>{OPEN.add('ci:'+c.id);go('routines');}},c.report?'このレポートの設定':'このチェックインの設定'))
@@ -2407,13 +2408,10 @@ function viewCal(){
   return [
     el('div',{class:'calhead'},navBtn('','前の月',-1,()=>shift(-1)),el('h1',{style:'text-align:center'},y+'年'+m+'月'),navBtn('','次の月',1,()=>shift(1))),
     // 「学習予定」「制作予定」は計画を組むまで出さない（2026-11-18）
-    el('div',{class:'chips togs'},planActive()?[tog('study',tnameS('study')+'予定'),tog('create',tnameS('create')+'予定')]:null,tog('habit','習慣'),tog('priv','プライベート'),tog('stamp','スタンプ')),
+    el('div',{class:'chips togs'},planActive()?[tog('study',tnameS('study')+'予定'),tog('create',tnameS('create')+'予定')]:null,tog('habit','ルーティン'),tog('priv','プライベート'),tog('stamp','スタンプ')),
     el('div',{class:'calgrid'},cells),
     el('div',{class:'legend'},el('span',{},el('b',{class:'dtl sm'},'A'),' 時間割'),SH.study&&planActive()?el('span',{},el('i',{class:'pl s lg'}),' '+tnameS('study')+'予定'):null,SH.create&&planActive()?el('span',{},el('i',{class:'pl c lg'}),' '+tnameS('create')+'予定'):null,SH.priv?el('span',{},el('span',{class:'pv'},'14:00'),' プライベート'):null,SH.habit?el('span',{},'緑の濃さ ルーティン'):null),
     dayPanel(CAL.sel),
-    SH.habit?el('div',{class:'card'},el('div',{class:'between'},el('h2',{},m+'月のルーティン'),el('span',{class:'small muted num'},days.length+'日のうち '+days.filter(hasActivity).length+'日に記録')),
-      el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'ルーティン'),el('th',{},'できた'),el('th',{},'記録した日'))),
-        el('tbody',{},rows.map(x=>el('tr',{},el('td',{},(x.r.emoji||'')+' '+x.r.name),el('td',{class:'num'},x.ans?x.ok+'日（'+Math.round(x.ok/x.ans*100)+'%）':'—'),el('td',{class:'num muted'},x.app+'日のうち '+x.ans+'日'))))))):null,
     gcalCalRow()
   ];
 }
@@ -2517,7 +2515,7 @@ function pushItems(){
     if(!brDone){const g=cmOn()?(cmDay(ds)||{}).go:null;if(g) out.push({id:'bring:'+ds,at:midnight+(ds0+g.leave-10)*60000,title:'🎒 持ち物',body:br.t,tag:'bring:'+ds,url:'#home'});}
     for(const c of L.checkins){
       if(!c.on||(d.ci||{})[c.id]) continue;
-      out.push({id:'c:'+c.id+':'+ds,at:at(c.time),title:ciTitle(c)+'（'+c.time+'）',body:c.report?'今日の学習と制作をふり返りましょう':'ルーティンと生活の記録をつけましょう',tag:'c:'+c.id+':'+ds,url:'#checkin/'+c.id});
+      out.push({id:'c:'+c.id+':'+ds,at:at(c.time),title:ciTitle(c)+'（'+c.time+'）',body:c.report?'今日の学習と制作をふり返りましょう':'ルーティンと暮らしの記録をつけましょう',tag:'c:'+c.id+':'+ds,url:'#checkin/'+c.id});
     }
   }
   return out.filter(x=>x.at>now-30000).sort((a,b)=>a.at-b.at).slice(0,250);
@@ -2633,7 +2631,7 @@ function pushGuide(){
       step('「My Profile」→「API Tokens」→「Create Token」→「Edit Cloudflare Workers」の「Use template」。自分のアカウントと「All zones」を選び、「Continue to summary」→「Create Token」。表示されたトークンをコピーします（1回しか表示されません）。'),
       step('GitHubのデータ用リポジトリの「Settings」→「Secrets and variables」→「Actions」→「New repository secret」で、Name「CLOUDFLARE_API_TOKEN」にトークンを、Name「CLOUDFLARE_ACCOUNT_ID」にアカウントIDを貼り付けて、2つ追加します。'),
       step('同じリポジトリの「Actions」→「通知の仕組みをCloudflareに置く」→「Run workflow」。'),
-      step('数分たったら、「同期・Googleカレンダー・バックアップ」の「今すぐ同期」を押し、「習慣の設定」の「この端末の通知」で「この端末で通知を受け取る」。')),
+      step('数分たったら、「同期・Googleカレンダー・バックアップ」の「今すぐ同期」を押し、「ルーティンと記録の設定」の「この端末の通知」で「この端末で通知を受け取る」。')),
     go2('https://dash.cloudflare.com/sign-up','Cloudflareを開く'),
     el('p',{class:'xs muted'},'iPhone・iPadは、ホーム画面に追加したアプリから開いたときに通知を受け取れます。'));
 }
@@ -3200,10 +3198,10 @@ function viewRoutines(){
 
   const help=el('details',{class:'set'},el('summary',{},'？ 使い方'),
     el('div',{class:'small',style:'display:flex;flex-direction:column;gap:8px'},
-      el('p',{},el('b',{},'ことばの使い分け：'),'「習慣」は暮らしの側の全体で、「ルーティン」と「生活の記録」からできています。学習と制作は「学習・制作の記録」として別に扱います（メニュー「学習と制作の記録方法」）。'),
+      el('p',{},el('b',{},'ことばの使い分け：'),'「暮らし」は学習と制作のほかの一日で、○×で整える「ルーティン」と、睡眠・仕事などの過ごし方を残す「暮らしの記録」からできています。メインメニューでは「習慣」と出ます。学習と制作の時間は、メニュー「学習と制作の記録方法」で扱います。'),
       el('p',{},el('b',{},'ルーティン：'),'時刻や曜日が決まっていて、ホームで ○（できた）か ×（できなかった）を付けるものです。答えなかった日は「記録なし」になり、責められることはありません。'),
       el('p',{},el('b',{},'チェックイン／レポート：'),'アプリを開くよう促す時刻と、そのときに記録する項目です（最大4回）。〆のレポートでは、学習と制作の記録が最初に出ます。同じ項目をいくつのチェックインに出してもよく、答え直すと上書きされます。'),
-      el('p',{},el('b',{},'生活の記録：'),'睡眠・仕事・家事・趣味・運動など、一日の過ごし方です。時間は15分〜6時間のボタンのほか、自由にも入力できます。「時間」の項目は内訳を選んで、分か時刻で入力します。ながら作業で時刻が重なっても大丈夫です。'),
+      el('p',{},el('b',{},'暮らしの記録：'),'睡眠・仕事・家事・趣味・運動など、一日の過ごし方です。時間は15分〜6時間のボタンのほか、自由にも入力できます。「時間」の項目は内訳を選んで、分か時刻で入力します。ながら作業で時刻が重なっても大丈夫です。'),
       el('p',{},el('b',{},'ワンタップ記録：'),'よく使う「内訳と時間」の組み合わせを、ボタン1つで記録できます（4つまで）。'),
       el('p',{},el('b',{},'使わない：'),'消さずに一時的に止めておけます。もう一度チェックすれば元に戻ります。'),
       el('p',{},el('b',{},'お休みの日：'),'記録画面でオンにすると、その日はルーティンを休んでも連続記録が途切れません。'),
@@ -3278,13 +3276,13 @@ function viewRoutines(){
     (L.quick||[]).length<4&&spanItems.length?el('button',{type:'button',class:'btn sub sm',onclick:()=>{const it=spanItems[0];setLife(x=>{x.quick=(x.quick||[]).concat([{id:'q'+Date.now().toString(36),item:it.id,sub:it.subs&&it.subs[0]?it.subs[0].id:'',m:30}]);});render();}},'＋ ボタンを追加'):null);
 
   return [
-    el('h1',{},'習慣の設定'),pageStatus(),pushCard(),help,
+    el('h1',{},'ルーティンと記録の設定'),pageStatus(),pushCard(),help,
     general,ciCards,quickCard,
     el('h2',{},'ルーティン'),
     PUSHSUB?null:el('p',{class:'xs muted'},PUSHCFG?'通知（何分前・時刻ちょうど）は、「この端末の通知」をオンにすると届きます。':'通知（何分前・時刻ちょうど）は、通知の設定が終わると届きます。'),
     RS.map((r,i)=>arrows(rEdit(r),'routines',r.id,i,RS.length,y=>y.kind!=='sleep',r.name)),
     el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id='r'+Date.now().toString(36);setLife(x=>{x.routines.push({id,name:freshName(x.routines,'新しいルーティン'),emoji:'✅',kind:'manual',by:'',days:ALLDAYS.slice(),before:10,at:true});});OPEN.add('r:'+id);render();}},'＋ ルーティンを追加'),
-    el('h2',{},'生活の記録項目'),
+    el('h2',{},'暮らしの記録の項目'),
     IT.map((it,i)=>arrows(iEdit(it),'items',it.id,i,IT.length,()=>true,it.name)),
     el('button',{type:'button',class:'btn sub sm',onclick:()=>{const id='i'+Date.now().toString(36);setLife(x=>{x.items.push({id,name:freshName(x.items,'新しい項目'),emoji:'⭐',color:'',type:'span',subs:[]});});OPEN.add('i:'+id);render();}},'＋ 記録項目を追加'),
     el('div',{class:'card',style:'margin-top:8px'},el('h2',{},'プリセットに戻す'),el('p',{class:'xs muted'},'この画面の設定を最初の状態に戻します。これまでの記録は消えません。'),
@@ -4505,7 +4503,7 @@ function viewPlan(){
 
 /* menu drawer */
 // line pictograms for the menu: motifs from a sky voyage toward the goal day
-const MICO={"home":["M12 2.8a6.6 6.6 0 0 0-6.6 6.6c0 3.1 2.6 5.3 4.6 6.8h4c2-1.5 4.6-3.7 4.6-6.8A6.6 6.6 0 0 0 12 2.8z","M12 2.8c-1.9 1.9-2.6 4.2-2.6 6.6 0 2.4.8 4.6 1.3 6.8M12 2.8c1.9 1.9 2.6 4.2 2.6 6.6 0 2.4-.8 4.6-1.3 6.8","M10.2 16.2l.3 2.6M13.8 16.2l-.3 2.6","M10 18.8h4v2.6h-4z"],"day":["M20.5 3.5c-6.6.4-11 4.4-12.6 11.4l-.6 2.3 2.3-.6C16.6 15 20.1 10.2 20.5 3.5z","M3.5 20.5l9.5-9.5"],"cal":["M5 5.5h14v10.5l-4 4H5z","M19 16h-4v4","M9 3.5v4M15 3.5v4","M8 11.5h8"],"morning":["M12 21v-7.4","M3.5 13.6h17","M18 11.3l2.5 2.3-2.5 2.3","M3.5 13.6l-1.2-1.7M3.5 13.6l-1.2 1.7","M8.4 11.8h6.7c.9-.9 1.3-2.1 1.2-3.3l1.7-.6-1.6-.8c-.3-1-1-1.6-2-1.6s-1.8.7-1.9 1.6l-.3 1.8c-1.2-.1-2-.6-2.7-1.4L8.2 4.6 7.6 7.4 6 6.2c-.1 2.2.7 4.1 2.4 5.6z","M14.2 6.4l.5-1.6.9.9.8-1.1"],"night":["M9.6 9.2h4.8l1.5 11.3H8.1z","M9.2 6.6h5.6v2.6H9.2z","M8.6 6.6L12 3.8l3.4 2.8","M3 6.5l3.6 1.3M3 10l3.6-.9M21 6.5l-3.6 1.3M21 10l-3.6-.9","M5.5 20.5h13","M9.1 14.5h5.8"],"report":["M3.6 12.6l12.8-6.3 1.6 3.3-12.8 6.3z","M16.4 6.3l2-1 2.2 4.6-2 1","M11 12.2l-3 8.3M11 12.2l3 8.3"],"progress":["M3.2 10.5c0-2.4 3.9-4.3 8.8-4.3s8.8 1.9 8.8 4.3-3.9 4.3-8.8 4.3-8.8-1.9-8.8-4.3z","M3.6 9.2L1.8 6.9M3.6 11.8l-1.8 2.3","M10 14.6v2.7h4v-2.7"],"share":[{"d":"M10.5 2.8h3v2h-3zM10.8 4.8v2.6c-2.1.9-3.1 2.6-3.1 4.7v6.7a1.5 1.5 0 0 0 1.5 1.5h5.6a1.5 1.5 0 0 0 1.5-1.5v-6.7c0-2.1-1-3.8-3.1-4.7V4.8","t":"rotate(62 12 12)"},{"d":"M10.2 11.5h3.6v4.8h-3.6zM10.2 13h3.6","t":"rotate(62 12 12)"},"M2.5 20.5c1.6-1 3.2-1 4.8 0s3.2 1 4.8 0 3.2-1 4.8 0 3.2 1 4.8 0"],"plan":["M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0","M12 4.6l1.7 5.7 5.7 1.7-5.7 1.7L12 19.4l-1.7-5.7L4.6 12l5.7-1.7z"],"bell":["M12 2.6v3.2","M11.99 2.4a0.01 0.01 0 1 0 0.02 0a0.01 0.01 0 1 0 -0.02 0","M6.3 17c1.1-1.3 1.7-3 1.7-5.6a4 4 0 0 1 8 0c0 2.6.6 4.3 1.7 5.6z","M5 17h14","M10.8 19.6a1.2 1.2 0 0 0 2.4 0"],"train":["M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0","M15.6 8.4l-2.3 4.9-4.9 2.3 2.3-4.9z"],"timer":["M6.5 3h11M6.5 21h11","M8 3c0 4.2 4 5.3 4 9s-4 4.8-4 9M16 3c0 4.2-4 5.3-4 9s4 4.8 4 9","M10 18.6h4"],"books":["M6.5 3.5H19v14.5H6.5A2 2 0 0 0 4.5 20V5.5a2 2 0 0 1 2-2z","M4.5 20a2 2 0 0 0 2 2H19v-4","M9 7.5h6"],"sync":["M6 10a6 6 0 1 0 12 0a6 6 0 1 0 -12 0","M6 10h12","M12 4c-1.7 1.7-2.5 3.7-2.5 6s.8 4.3 2.5 6M12 4c1.7 1.7 2.5 3.7 2.5 6s-.8 4.3-2.5 6","M18.6 5.2a8 8 0 0 1-8.4 12.6","M12 17.9v3.1M8.5 21h7"],"prefs":["M18.84 10.11L21.20 10.61L21.20 13.39L18.84 13.89L18.18 15.50L19.48 17.52L17.52 19.48L15.50 18.18L13.89 18.84L13.39 21.20L10.61 21.20L10.11 18.84L8.50 18.18L6.48 19.48L4.52 17.52L5.82 15.50L5.16 13.89L2.80 13.39L2.80 10.61L5.16 10.11L5.82 8.50L4.52 6.48L6.48 4.52L8.50 5.82L10.11 5.16L10.61 2.80L13.39 2.80L13.89 5.16L15.50 5.82L17.52 4.52L19.48 6.48L18.18 8.50ZM9 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"],"practice":["M3.5 16.5h17l-2.6 4H6.1z","M12 3v13.5","M12 4.5l6.5 10H12","M10.2 7.5l-4.4 7h4.4"],"check":["M4 4h16v16H4z","M8 12.5l3 3 5-6.5"],"noon":["M3.2 10.4L12 3.2l8.8 7.2","M5.8 8.6V17h12.4V8.6","M9.3 12.4a2.7 2.7 0 1 0 5.4 0a2.7 2.7 0 1 0 -5.4 0","M12 12.4v-1.6M12 12.4l1.1.8","M11 6.4h2v1.6h-2z","M9.5 17v2.4M14.5 17v3.4","M8.7 19.4h1.6v2.2H8.7zM13.7 20.4h1.6v1.4h-1.6z"]};
+const MICO={"home":["M12 2.8a6.6 6.6 0 0 0-6.6 6.6c0 3.1 2.6 5.3 4.6 6.8h4c2-1.5 4.6-3.7 4.6-6.8A6.6 6.6 0 0 0 12 2.8z","M12 2.8c-1.9 1.9-2.6 4.2-2.6 6.6 0 2.4.8 4.6 1.3 6.8M12 2.8c1.9 1.9 2.6 4.2 2.6 6.6 0 2.4-.8 4.6-1.3 6.8","M10.2 16.2l.3 2.6M13.8 16.2l-.3 2.6","M10 18.8h4v2.6h-4z"],"day":["M20.5 3.5c-6.6.4-11 4.4-12.6 11.4l-.6 2.3 2.3-.6C16.6 15 20.1 10.2 20.5 3.5z","M3.5 20.5l9.5-9.5"],"cal":["M5 5.5h14v10.5l-4 4H5z","M19 16h-4v4","M9 3.5v4M15 3.5v4","M8 11.5h8"],"morning":["M12 21v-7.4","M3.5 13.6h17","M18 11.3l2.5 2.3-2.5 2.3","M3.5 13.6l-1.2-1.7M3.5 13.6l-1.2 1.7","M8.4 11.8h6.7c.9-.9 1.3-2.1 1.2-3.3l1.7-.6-1.6-.8c-.3-1-1-1.6-2-1.6s-1.8.7-1.9 1.6l-.3 1.8c-1.2-.1-2-.6-2.7-1.4L8.2 4.6 7.6 7.4 6 6.2c-.1 2.2.7 4.1 2.4 5.6z","M14.2 6.4l.5-1.6.9.9.8-1.1"],"night":["M9.6 9.2h4.8l1.5 11.3H8.1z","M9.2 6.6h5.6v2.6H9.2z","M8.6 6.6L12 3.8l3.4 2.8","M3 6.5l3.6 1.3M3 10l3.6-.9M21 6.5l-3.6 1.3M21 10l-3.6-.9","M5.5 20.5h13","M9.1 14.5h5.8"],"report":["M3.6 12.6l12.8-6.3 1.6 3.3-12.8 6.3z","M16.4 6.3l2-1 2.2 4.6-2 1","M11 12.2l-3 8.3M11 12.2l3 8.3"],"progress":["M3.2 10.5c0-2.4 3.9-4.3 8.8-4.3s8.8 1.9 8.8 4.3-3.9 4.3-8.8 4.3-8.8-1.9-8.8-4.3z","M3.6 9.2L1.8 6.9M3.6 11.8l-1.8 2.3","M10 14.6v2.7h4v-2.7"],"share":[{"d":"M10.5 2.8h3v2h-3zM10.8 4.8v2.6c-2.1.9-3.1 2.6-3.1 4.7v6.7a1.5 1.5 0 0 0 1.5 1.5h5.6a1.5 1.5 0 0 0 1.5-1.5v-6.7c0-2.1-1-3.8-3.1-4.7V4.8","t":"rotate(62 12 12)"},{"d":"M10.2 11.5h3.6v4.8h-3.6zM10.2 13h3.6","t":"rotate(62 12 12)"},"M2.5 20.5c1.6-1 3.2-1 4.8 0s3.2 1 4.8 0 3.2-1 4.8 0 3.2 1 4.8 0"],"plan":["M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0","M12 4.6l1.7 5.7 5.7 1.7-5.7 1.7L12 19.4l-1.7-5.7L4.6 12l5.7-1.7z"],"bell":["M12 2.6v3.2","M11.99 2.4a0.01 0.01 0 1 0 0.02 0a0.01 0.01 0 1 0 -0.02 0","M6.3 17c1.1-1.3 1.7-3 1.7-5.6a4 4 0 0 1 8 0c0 2.6.6 4.3 1.7 5.6z","M5 17h14","M10.8 19.6a1.2 1.2 0 0 0 2.4 0"],"train":["M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0","M15.6 8.4l-2.3 4.9-4.9 2.3 2.3-4.9z"],"timer":["M6.5 3h11M6.5 21h11","M8 3c0 4.2 4 5.3 4 9s-4 4.8-4 9M16 3c0 4.2-4 5.3-4 9s4 4.8 4 9","M10 18.6h4"],"books":["M6.5 3.5H19v14.5H6.5A2 2 0 0 0 4.5 20V5.5a2 2 0 0 1 2-2z","M4.5 20a2 2 0 0 0 2 2H19v-4","M9 7.5h6"],"sync":["M6 10a6 6 0 1 0 12 0a6 6 0 1 0 -12 0","M6 10h12","M12 4c-1.7 1.7-2.5 3.7-2.5 6s.8 4.3 2.5 6M12 4c1.7 1.7 2.5 3.7 2.5 6s-.8 4.3-2.5 6","M18.6 5.2a8 8 0 0 1-8.4 12.6","M12 17.9v3.1M8.5 21h7"],"prefs":["M18.84 10.11L21.20 10.61L21.20 13.39L18.84 13.89L18.18 15.50L19.48 17.52L17.52 19.48L15.50 18.18L13.89 18.84L13.39 21.20L10.61 21.20L10.11 18.84L8.50 18.18L6.48 19.48L4.52 17.52L5.82 15.50L5.16 13.89L2.80 13.39L2.80 10.61L5.16 10.11L5.82 8.50L4.52 6.48L6.48 4.52L8.50 5.82L10.11 5.16L10.61 2.80L13.39 2.80L13.89 5.16L15.50 5.82L17.52 4.52L19.48 6.48L18.18 8.50ZM9 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"],"practice":["M3.5 16.5h17l-2.6 4H6.1z","M12 3v13.5","M12 4.5l6.5 10H12","M10.2 7.5l-4.4 7h4.4"],"check":["M4 4h16v16H4z","M8 12.5l3 3 5-6.5"],"bed":["M3.2 18.8V7.6","M3.2 7.6c0-1.3 1-2.3 2.3-2.3","M20.8 18.8v-5.4","M3.2 15.2h17.6","M9 15.2v-2.4c0-.9.7-1.5 1.5-1.5h6.8a3.5 3.5 0 0 1 3.5 3.5","M4.9 12.6c0-.9.6-1.4 1.4-1.4h.9c.8 0 1.4.6 1.4 1.4v.6c0 .8-.6 1.3-1.4 1.3h-.9c-.8 0-1.4-.5-1.4-1.3z"],"noon":["M3.2 10.4L12 3.2l8.8 7.2","M5.8 8.6V17h12.4V8.6","M9.3 12.4a2.7 2.7 0 1 0 5.4 0a2.7 2.7 0 1 0 -5.4 0","M12 12.4v-1.6M12 12.4l1.1.8","M11 6.4h2v1.6h-2z","M9.5 17v2.4M14.5 17v3.4","M8.7 19.4h1.6v2.2H8.7zM13.7 20.4h1.6v1.4h-1.6z"]};
 function mico(k){const NS='http://www.w3.org/2000/svg',s=document.createElementNS(NS,'svg');s.setAttribute('viewBox','0 0 24 24');for(const x of [].concat(MICO[k]||[])){const p=document.createElementNS(NS,'path');p.setAttribute('d',typeof x==='string'?x:x.d);if(x.t) p.setAttribute('transform',x.t);s.append(p);}return s;}
 function themeNow(){try{return localStorage.getItem('mx-theme')||'';}catch(_){return '';}}
 function themeColor(){const bg=getComputedStyle(document.body).backgroundColor;document.querySelectorAll('meta[name="theme-color"]').forEach(m=>{if(document.documentElement.getAttribute('data-theme')) m.setAttribute('content',bg);});}
@@ -4535,6 +4533,8 @@ function viewPrefs(){
     el('p',{class:'small muted'},'この端末だけの設定です。'),
     el('div',{class:'card'},el('h2',{},'表示の明るさ'),
       el('div',{class:'themeseg',role:'group','aria-label':'表示の明るさ'},tb('','端末に合わせる'),tb('light','ライト'),tb('dark','ダーク'))),
+    // メインメニューに「習慣」を出す（2026-11-18）。外すと、メニューの「毎日」のいちばん下に「暮らし」
+    el('div',{class:'card'},el('label',{class:'row',for:'pf-life'},el('input',{type:'checkbox',id:'pf-life',checked:lifeTab(),onchange:e=>setLifeTab(e.target.checked)}),el('span',{},'メインメニューに「習慣」を出す'))),
     el('div',{class:'card'},el('h2',{},'演習の問題の書体'),
       el('p',{class:'small muted'},'問題文・選択肢・解説の書体です。選んだ書体にない字は、その字だけ端末の書体で表示されます。'),
       el('div',{class:'qfontlist',role:'group','aria-label':'演習の問題の書体'},QFONTS.map(f=>
@@ -4555,10 +4555,11 @@ function openMenu(){
     el('div',{class:'between',style:'padding:0 4px 4px 12px'},brandNode(),el('button',{type:'button',class:'iconbtn','aria-label':'メニューを閉じる',onclick:()=>m.close()},'×')),
     el('h3',{},'毎日'),a('home','ホーム','home'),a('day/'+today(),'今日の記録','day'),a('cal','カレンダー','cal'),
     life().checkins.filter(c=>c.on).map(c=>a('checkin/'+c.id,ciTitle(c)+'（'+c.time+'）',ciIcon(c))),
+    lifeTab()?null:a('life','暮らし','bed'),
     el('h3',{},'学習と制作'),a('practice','演習','practice'),a('progress','進捗','progress'),a('share','Xへのシェア','share'),a('plan','計画','plan'),
     // 「設定と管理」はたたむ（2026-11-18）。開いたかどうかはこの端末で覚えておく。いまその画面にいれば開いて出す
     el('details',{class:'menuset',open:menuSetOpen()||['routines','commute','tracks','materials','import','prefs'].includes(VIEW),ontoggle:e=>{try{localStorage.setItem('mx-menuset',e.target.open?'1':'');}catch(_){}}},
-      el('summary',{},el('h3',{},'設定と管理')),a('routines','習慣の設定・通知','bell'),a('commute','通勤経路の設定','train'),a('tracks','学習と制作の記録方法','timer'),a('materials','教材設定','books'),a('import','同期・Googleカレンダー・バックアップ','sync'),a('prefs','その他の設定','prefs'))].flat());
+      el('summary',{},el('h3',{},'設定と管理')),a('routines','ルーティンと記録の設定','bell'),a('commute','通勤経路の設定','train'),a('tracks','学習と制作の記録方法','timer'),a('materials','教材設定','books'),a('import','同期・Googleカレンダー・バックアップ','sync'),a('prefs','その他の設定','prefs'))].flat());
   if(!m.open) m.showModal();
 }
 
@@ -4620,13 +4621,13 @@ const P={step:'setup',subject:null,book:'all',mode:'cont',count:10,queue:[],i:0,
 function go(v){if(location.hash!=='#'+v) location.hash=v; else render();}
 // views that are only being looked at can be redrawn when a sync brings news; pages being typed into are left alone
 function softRender(){updateStatus();if(VIEW==='home'||VIEW==='progress'||VIEW==='cal'||(VIEW==='practice'&&P.step==='setup')) render();}
-const VIEWS={prefs:viewPrefs,materials:viewMaterials,home:viewHome,day:viewDay,checkin:viewCheckin,cal:viewCal,routines:viewRoutines,tracks:viewTracks,commute:viewCommute,plan:viewPlan,practice:viewPractice,progress:viewProgress,share:viewShare,import:viewImport};
+const VIEWS={life:viewLife,prefs:viewPrefs,materials:viewMaterials,home:viewHome,day:viewDay,checkin:viewCheckin,cal:viewCal,routines:viewRoutines,tracks:viewTracks,commute:viewCommute,plan:viewPlan,practice:viewPractice,progress:viewProgress,share:viewShare,import:viewImport};
 const TAB_OF={share:'progress',day:'home',checkin:'home'};
 function render(){
   const h=(location.hash||'#home').slice(1), i=h.indexOf('/'), name=i<0?h:h.slice(0,i), arg=i<0?'':h.slice(i+1);
   VIEW=VIEWS[name]?name:'home';
   const tab=TAB_OF[VIEW]||VIEW;
-  document.querySelectorAll('nav.tabs a').forEach(a=>{if(a.dataset.v===tab) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');if(a.dataset.v==='practice') a.hidden=!appOn();});
+  document.querySelectorAll('nav.tabs a').forEach(a=>{if(a.dataset.v===tab) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');if(a.dataset.v==='practice') a.hidden=!appOn();if(a.dataset.v==='life') a.hidden=!lifeTab();});
   const cb=document.getElementById('calBtn');if(cb){if(VIEW==='cal') cb.setAttribute('aria-current','page'); else cb.removeAttribute('aria-current');}
   const slot=document.getElementById('topslot');
   slot.replaceChildren(...(VIEW==='home'?[el('div',{class:'tleft'},el('b',{class:'hdate'},String(jpDate(today())).split(/(\d+)/).map((x,i)=>i%2?el('span',{class:'n'},x):x)),statusNode(true))].filter(Boolean):[el('span',{class:'topname'},'芒学')]));
@@ -4758,7 +4759,7 @@ function viewHome(){
   const routineSec=[
     el('div',{class:'between'},el('h2',{class:'sec'},'ルーティン'),el('span',{class:'xs muted num'},d.off?'':(rs.length?'答えた '+answered.length+' / '+rs.length:'')+(sk>=2?'　記録 '+sk+'日目':''))),
     d.off?el('p',{class:'small muted'},'今日はお休みの日です。'):[cards.length?el('div',{class:'rstrip',role:'list','aria-label':'まだ答えていないルーティン'},cards):(rs.length?el('p',{class:'small alldone'},rs.every(r=>routineState(t,r)===1)?'今日のルーティンは、ぜんぶできました！':'今日のルーティンには、ぜんぶ答えました。'):null),ansRow],
-    el('div',{class:'qrow'},el('button',{type:'button',class:'hrec',onclick:()=>{TABSTATE.day='life';go('day/'+t);}},mico('day'),'今日の習慣記録'),(L.quick||[]).slice(0,4).map(q=>el('button',{type:'button',class:'chip sm',onclick:()=>addQuick(q,t)},'＋'+quickLabel(q))))];
+    el('div',{class:'qrow'},el('button',{type:'button',class:'hrec',onclick:()=>{TABSTATE.day='life';go('day/'+t);}},mico('day'),'今日の暮らしの記録'),(L.quick||[]).slice(0,4).map(q=>el('button',{type:'button',class:'chip sm',onclick:()=>addQuick(q,t)},'＋'+quickLabel(q))))];
   const next=milestones().find(m=>m[0]>=t);
   return [
     notice,prog,ciRow,routineSec,
@@ -5185,7 +5186,10 @@ function weekSum(from){const P=plan2(), to=addDays(from,6), t=today(), E=to<t?to
   return r;}
 // 記録が1日でもあるか（週のまとめを出すかどうか）
 function weekHasRec(){return Object.keys(daysStore().d).some(hasActivity)||Object.values(S.log).some(L=>L&&(L.e||[]).length);}
-function weekCard(from,nav){const W=weekSum(from), wd=ds=>md(ds)+'（'+WD[parseYmd(ds).getDay()]+'）';
+// 進捗は学習と制作だけ（2026-11-18）：学習・制作の時間か演習の記録があれば週のまとめを出す
+function weekHasWork(){return Object.values(daysStore().d).some(d=>d&&d.rec&&['@study','@manga'].some(k=>Array.isArray(d.rec[k])&&d.rec[k].length))||Object.values(S.log).some(L=>L&&(L.e||[]).length);}
+// part：'work'＝学習と制作だけ（進捗）、'life'＝暮らしの記録だけ（暮らし）、なし＝両方（〆のレポート）（2026-11-18）
+function weekCard(from,nav,part){const W=weekSum(from), wd=ds=>md(ds)+'（'+WD[parseYmd(ds).getDay()]+'）', work=part!=='life', lifeOn=part!=='work';
   const row=(l,v)=>el('div',{class:'between small'},el('span',{style:'min-width:0'},l),el('span',{class:'num',style:'flex:none;text-align:right'},v));
   const h3=x=>el('h3',{class:'small',style:'margin:6px 0 0'},x), L=W.life;
   return el('div',{class:'card wkcard'},
@@ -5193,22 +5197,61 @@ function weekCard(from,nav){const W=weekSum(from), wd=ds=>md(ds)+'（'+WD[parseY
     // ◀ 日付 ▶（2026-11-18）：日付の期間をボタンの間に
     nav?el('div',{class:'wknav'},nav.prev||el('span',{class:'navbtn','aria-hidden':'true',style:'visibility:hidden'}),el('span',{class:'small num'},wd(W.from)+'〜'+wd(W.to)),nav.next||el('span',{class:'navbtn','aria-hidden':'true',style:'visibility:hidden'}))
       :el('p',{class:'xs muted num'},wd(W.from)+'〜'+wd(W.to)),
-    W.time.length?[h3('学習と制作の時間'),W.time.map(x=>row(tname(x.tr),fmtMin(x.rec)+(x.cap?'（コマ '+fmtMin(x.cap)+'）':'')))]:null,
-    W.prog.length?[h3('節目までの進み具合'),W.prog.map(x=>row(x.name+'（'+md(x.date)+'）',progTxt(x.diff)))]:null,
-    W.prac.on?[h3('演習'),W.prac.n?[row('解いた問題',W.prac.n+'問'),row('正解率',Math.round(W.prac.ok/W.prac.n*100)+'%'),
+    work&&W.time.length?[h3('学習と制作の時間'),W.time.map(x=>row(tname(x.tr),fmtMin(x.rec)+(x.cap?'（コマ '+fmtMin(x.cap)+'）':'')))]:null,
+    work&&W.prog.length?[h3('節目までの進み具合'),W.prog.map(x=>row(x.name+'（'+md(x.date)+'）',progTxt(x.diff)))]:null,
+    work&&W.prac.on?[h3('演習'),W.prac.n?[row('解いた問題',W.prac.n+'問'),row('正解率',Math.round(W.prac.ok/W.prac.n*100)+'%'),
         W.prac.aim==null?null:W.prac.low.length?el('p',{class:'small num'},'目指す点 '+W.prac.aim+'%に届いていない単元：'+W.prac.low.map(x=>x.name+' '+x.pct+'%').join('・')):el('p',{class:'small'},'どの単元も目指す点に届いています。')]
       :el('p',{class:'small muted'},'解いた問題はありません。')]:null,
-    [h3('暮らしの記録'),L.rans?row('ルーティン','できた '+L.rok+'回／答えた '+L.rans+'回'):null,
+    part==='work'&&!W.time.length&&!W.prog.length&&!W.prac.on?el('p',{class:'small muted'},'記録はありません。'):null,
+    lifeOn?[h3('暮らしの記録'),L.rans?row('ルーティン','できた '+L.rok+'回／答えた '+L.rans+'回'):null,
       L.sleep?row('睡眠','平均 '+fmtMin(L.sleep.avg)+'（目標に届いた日 '+L.sleep.ok+'日）'):null,
       L.items.map(x=>row((x.it.emoji?x.it.emoji+' ':'')+x.it.name,x.it.type==='span'?fmtMin(x.v):x.it.type==='count'?x.v+'回':x.v+'日')),
-      !L.rans&&!L.sleep&&!L.items.length?el('p',{class:'small muted'},'記録はありません。'):null]);}
+      !L.rans&&!L.sleep&&!L.items.length?el('p',{class:'small muted'},'記録はありません。'):null]:null);}
+/* 暮らし（2026-11-18）：メインメニューでは「習慣」。続けて記録している日数・週のまとめ（暮らしの記録）・睡眠の移り変わり・月ごとのルーティン。
+   「その他の設定」でメインメニューから外すと、メニューの「毎日」のいちばん下に「暮らし」が出る */
+function lifeTab(){try{return localStorage.getItem('mx-lifetab')!=='0';}catch(_){return true;}}
+function setLifeTab(v){try{v?localStorage.removeItem('mx-lifetab'):localStorage.setItem('mx-lifetab','0');}catch(_){}render();}
+const LIFEM={ym:''};
+function viewLife(){
+  const t=today(), sk=streak();
+  return [el('h1',{},'暮らし'),
+    el('div',{class:'card'},el('span',{class:'small muted'},'続けて記録している日数'),el('span',{class:'big num'},String(sk),el('small',{},'日'))),
+    weekHasRec()?weekPick('life'):null,
+    sleepTrend(t),
+    lifeMonth(t)];
+}
+function sleepTrend(t){
+  const days=Array.from({length:14},(_,i)=>addDays(t,i-13)), vs=days.map(ds=>sleepMin(dayRec(ds).rec.sleep));
+  const got=vs.filter(v=>v!=null);if(!got.length) return null;
+  const mx=Math.max(...got), avg=got.reduce((a,b)=>a+b,0)/got.length;
+  return el('div',{class:'card'},el('h2',{},'睡眠の移り変わり'),
+    el('p',{class:'small num'},'直近14日の平均 '+fmtMin(Math.round(avg))+'（記録した日 '+got.length+'日）'),
+    el('div',{class:'prchart',role:'img','aria-label':'睡眠：'+days.map((ds,i)=>md(ds)+' '+(vs[i]==null?'記録なし':fmtMin(vs[i]))).join('、')},
+      el('div',{class:'prbars',style:'grid-template-columns:repeat(14,minmax(0,1fr))'},days.map((ds,i)=>el('div',{class:'prcol',title:md(ds)+' '+(vs[i]==null?'記録なし':fmtMin(vs[i]))},
+        el('span',{class:'xs num prv'},vs[i]!=null&&(i===13||vs[i]===mx)?(Math.round(vs[i]/6)/10)+'h':''),
+        el('i',{style:'height:'+(vs[i]==null?0:Math.round(vs[i]/mx*56))+'px'}),
+        el('span',{class:'xs muted num'},String(+ds.slice(8))))))));
+}
+function lifeMonth(t){
+  if(!LIFEM.ym) LIFEM.ym=t.slice(0,7);
+  const [y,m]=LIFEM.ym.split('-').map(Number), n=new Date(y,m,0).getDate(), RS=routines();
+  const days=[];for(let i=1;i<=n;i++){const ds=LIFEM.ym+'-'+String(i).padStart(2,'0');if(ds<=t) days.push(ds);}
+  const rows=RS.map(r=>{let ok=0,ans=0,app=0;for(const ds of days){if(!routineApplies(ds,r)||dayRec(ds).off) continue;app++;const s=routineState(ds,r);if(s!=null){ans++;if(s) ok++;}}return {r,ok,ans,app};});
+  const shift=d=>{const dt=new Date(y,m-1+d,1);LIFEM.ym=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');render();};
+  const cur=LIFEM.ym>=t.slice(0,7);
+  return el('div',{class:'card'},el('h2',{},'月ごとのルーティン'),
+    el('div',{class:'wknav'},navBtn('','前の月',-1,()=>shift(-1)),el('span',{class:'small num'},y+'年'+m+'月'),cur?el('span',{class:'navbtn','aria-hidden':'true',style:'visibility:hidden'}):navBtn('','次の月',1,()=>shift(1))),
+    el('p',{class:'small muted num'},days.length+'日のうち '+days.filter(hasActivity).length+'日に記録'),
+    rows.length?el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'ルーティン'),el('th',{},'できた'),el('th',{},'記録した日'))),
+      el('tbody',{},rows.map(x=>el('tr',{},el('td',{},(x.r.emoji||'')+' '+x.r.name),el('td',{class:'num'},x.ans?x.ok+'日（'+Math.round(x.ok/x.ans*100)+'%）':'—'),el('td',{class:'num muted'},x.app+'日のうち '+x.ans+'日')))))):el('p',{class:'small muted'},'ルーティンはまだありません。'));
+}
 // 進捗の画面：前の週まで（最初の記録の週から）
-function weekPick(){const P=plan2(), last=addDays(weekStartOf(today(),P),-7);let first=last;
+function weekPick(part){const P=plan2(), last=addDays(weekStartOf(today(),P),-7), key='wk'+(part||'');let first=last;
   for(const k of Object.keys(daysStore().d)) if(k<first) first=k;
   for(const [k,L] of Object.entries(S.log)) if(/^\d{4}-\d{2}$/.test(k)) for(const e of (L&&L.e)||[]){const ds=ymd(new Date(e[0]-dayStartMin()*60000));if(ds<first) first=ds;}
-  first=weekStartOf(first,P);let w=TABSTATE.wk&&TABSTATE.wk<=last&&TABSTATE.wk>=first?TABSTATE.wk:last;
-  const go2=d=>{TABSTATE.wk=addDays(w,7*d);render();};
-  return weekCard(w,{prev:w>first?navBtn('','前の週',-1,()=>go2(-1)):null,next:w<last?navBtn('','次の週',1,()=>go2(1)):null});}
+  first=weekStartOf(first,P);let w=TABSTATE[key]&&TABSTATE[key]<=last&&TABSTATE[key]>=first?TABSTATE[key]:last;
+  const go2=d=>{TABSTATE[key]=addDays(w,7*d);render();};
+  return weekCard(w,{prev:w>first?navBtn('','前の週',-1,()=>go2(-1)):null,next:w<last?navBtn('','次の週',1,()=>go2(1)):null},part);}
 function viewProgress(){
   const st=studyStats(), mg=mangaStats(), m=manga(), act=planActive();
   const setM=fn=>{const x=clone(manga());fn(x);x.t=Date.now();S.meta.manga=x;save('meta/manga');render();};
@@ -5229,7 +5272,7 @@ function viewProgress(){
         el('div',{class:'grid2'},act?null:el('button',{type:'button',class:'btn sm'+(mats?'':' sub'),onclick:()=>openWizard()},'計画を組む'),
           el('a',{href:'#materials',class:'btn sm'+(!mats||act?'':' sub')},'教材設定')));})(),
     act?planProgressCards():null,
-    weekHasRec()?weekPick():null,
+    weekHasWork()?weekPick('work'):null,
     act?practiceCard():null,
     !realDocs().length?null:(()=>{const w=weakTags();return el('div',{class:'card'},el('h2',{},'弱いところ'),
       w.length?el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'論点'),el('th',{},'正解率'),el('th',{},'回答'),el('th',{},'勘'))),
@@ -5304,7 +5347,7 @@ function viewImport(){
   return [
     el('h1',{},'同期・Googleカレンダー・バックアップ'),statusNode(),syncCard(),gcalCard(),
     el('div',{class:'card'},el('h2',{},'バックアップ'),
-      el('p',{class:'small'},'書き出すと、この端末の次のデータが1つのファイル（JSON）になります：取り込んだ問題と演習の記録、教材設定・計画・時間割、通勤経路、習慣の設定と日々の記録（ルーティン・生活の記録・学習と制作の時間）、Googleカレンダーの設定。同期のトークンとGoogleのログインは含みません。'),el('p',{class:'small muted'},'同期を設定していれば、記録は自動でほかの端末にもそろいます。書き出しは、念のための控えとして月に1回ほどで十分です。'),
+      el('p',{class:'small'},'書き出すと、この端末の次のデータが1つのファイル（JSON）になります：取り込んだ問題と演習の記録、教材設定・計画・時間割、通勤経路、ルーティンと記録の設定と日々の記録（ルーティン・暮らしの記録・学習と制作の時間）、Googleカレンダーの設定。同期のトークンとGoogleのログインは含みません。'),el('p',{class:'small muted'},'同期を設定していれば、記録は自動でほかの端末にもそろいます。書き出しは、念のための控えとして月に1回ほどで十分です。'),
       el('button',{type:'button',class:'btn sub sm',onclick:exportAll},'バックアップを書き出す'),
       el('label',{class:'field',for:'restore'},'ファイルを読み込む（問題ファイル・バックアップ）',el('input',{type:'file',id:'restore',accept:'application/json,.json',onchange:importFile}))),
     resetCard()
