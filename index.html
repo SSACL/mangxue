@@ -4200,7 +4200,7 @@ function extraGoals(P,up){
 function keepRewards(dst,cur){for(const g of dst.goals||[]){const c=(cur.goals||[]).find(x=>x.id===g.id);if(c&&c.reward&&!g.reward){g.reward=c.reward;if(c.got) g.got=c.got;}}}
 function wizBuild(){
   wizPull();
-  const t=today(), pick=WIZ.nb||{}, src=clone(WIZ.P), old=plan2();keepRewards(src,old);if(old.stars) src.stars=clone(old.stars); else delete src.stars;
+  const t=today(), pick=WIZ.nb||{}, src=clone(WIZ.P), old=plan2();delete src.dueEdit;keepRewards(src,old);if(old.stars) src.stars=clone(old.stars); else delete src.stars;
   for(const g of src.goals||[]) if(pick[g.id]&&diffDays(t,g.date)<=14) g.buffer=false;
   for(const o of Object.values(((src.setup||{}).study||{}).rounds||{})) if(o&&o.pending) delete o.pending;
   GMUTE=true;try{setPlan2(x=>{for(const k of Object.keys(x)) delete x[k];Object.assign(x,src);x.v=3;x.baseline=scheduleAll(x,t,{});x.start=t;});}finally{GMUTE=false;}
@@ -4246,15 +4246,43 @@ function planOverview(){
     el('div',{class:'legend'},el('span',{},'■ 作業の期間'),el('span',{},'▨ 予備日'),el('span',{},'｜ 今日'))];
 }
 /* ----- 節目 ----- */
+/* 見込みの日付①（2026-11-18）：計画の「節目」で期日（試験日・申込の締切・模試・イベントの日と申込・当落・配置・入稿の締切・納期）を直す。
+   直すのは答えとその節目の日付だけで、作業の並びは組み直すまで前の日付のまま。直したら「この日付で組み直す」をすすめる。 */
+function dueRef(P,g){if(g.src!=='setup'||!g.key) return null;const S0=P.setup||{}, k=g.key, after=pre=>k.startsWith(pre)?k.slice(pre.length):null;
+  const st=x=>(x.setup||{}).study||{}, ev=(x,id)=>((x.setup||{}).events||[]).find(e=>e.id===id), wk=(x,id)=>(x.works||[]).find(w=>w.id===id);
+  if(k==='s-exam') return {set:(x,v)=>{st(x).date=v;}};
+  if(k==='s-apply') return {set:(x,v)=>{st(x).apply=v;}};
+  let id;
+  if((id=after('s-mock-'))) return {set:(x,v)=>{const m=(st(x).mocks||[]).find(m=>m.id===id);if(m) m.date=v;}};
+  if((id=after('c-ev-'))) return {set:(x,v)=>{const e=ev(x,id);if(e) e.date=v;}};
+  for(const f of ['apply','result','place']) if((id=after('c-'+f+'-'))) return {set:(x,v)=>{const e=ev(x,id);if(e) e[f]=v;}};
+  const part=(x,id,p)=>{const w=wk(x,id);if(!w) return null;w.dl=w.dl||{};w.dl[p]=Object.assign({},w.dl[p]);return w.dl;};
+  if((id=after('c-body-'))) return {set:(x,v)=>{const d=part(x,id,'body');if(!d) return;if(d.body.early&&d.early!=='no') d.body.early=v; else d.body.normal=v;}};
+  if((id=after('c-normal-'))) return {set:(x,v)=>{const d=part(x,id,'body');if(d) d.body.normal=v;}};
+  if((id=after('c-cover-'))) return {set:(x,v)=>{const d=part(x,id,'cover');if(!d) return;if(d.cover.early&&(d.body||{}).early&&d.early!=='no') d.cover.early=v; else d.cover.normal=v;}};
+  if((id=after('c-done-'))){const w=wk(P,id);if(w&&wkKind(w)==='other') return {set:(x,v)=>{const w2=wk(x,id);if(w2){w2.dl=Object.assign({},w2.dl,{done:v});}}};}
+  return null;}
+function dueSave(g,v){const ref=dueRef(plan2(),g);if(!ref||!v) return;
+  const ap=x=>{x.setup=x.setup||{};ref.set(x,v);const y=(x.goals||[]).find(y=>y.src==='setup'&&y.key===g.key);if(y) y.date=v;};
+  setPlan2(x=>{ap(x);x.dueEdit={t:Date.now()};});
+  if(WIZ&&WIZ.P){ap(WIZ.P);wizSave();}}
+function dueSheet(g){const sh=()=>document.getElementById('sheet').close();let v=g.date||'';
+  openSheet('「'+g.name+'」の日付',el('input',{type:'date',id:'due-d',value:v,onchange:e=>{v=e.target.value;}}),
+    el('button',{type:'button',class:'btn',onclick:()=>{if(!v) return;dueSave(g,v);sh();render();}},'直す'),
+    el('button',{type:'button',class:'btn sub',onclick:sh},'やめる'));}
 function planGoals(){
   const P=plan2(), act=planActive(), B=P.baseline, done=act?doneMap():{};
   const gpct=gid=>{const b=B&&B.goals&&B.goals[gid];if(!b) return null;const tot=b.ids.reduce((a,id)=>a+(B.w[id]||0),0);return tot?Math.round(b.ids.reduce((a,id)=>a+(done[id]?(B.w[id]||0):0),0)/tot*100):100;};
   const gs=(P.goals||[]).slice().sort(byDate);
   return [
-    el('p',{class:'small muted'},'日付や中身を変えるときは、「全体」の「計画を組み直す」から変えます。ごほうびは、ここでも決められます。'),
-    el('div',{class:'card'},gs.map(g=>{const p=act&&isWork(g)?gpct(g.id):null;
+    act&&P.dueEdit?el('div',{class:'card notice'},el('p',{class:'small'},'期日を直しました。'),
+      el('div',{class:'grid2',style:'grid-template-columns:2fr 1fr'},el('button',{type:'button',class:'btn sm',onclick:()=>{openWizard('outlook');wizS(()=>{});}},'この日付で組み直す'),
+        el('button',{type:'button',class:'btn sub sm',onclick:()=>{setPlan2(x=>{delete x.dueEdit;});render();}},'あとで'))):null,
+    el('p',{class:'small muted'},'期日はここで直せます。ほかの日付や中身は、「全体」の「計画を組み直す」から変えます。'),
+    el('div',{class:'card'},gs.map(g=>{const p=act&&isWork(g)?gpct(g.id):null, due=dueRef(P,g);
       return el('div',{class:'gl'},
-        el('div',{class:'between'},el('span',{class:'small'},el('span',{class:'num muted'},(g.date?md(g.date):'未定')+'　'),g.name),el('span',{class:'xs muted'},GKIND[g.kind]||'')),
+        el('div',{class:'between'},el('span',{class:'small'},el('span',{class:'num muted'},(g.date?md(g.date):'未定')+'　'),g.name),
+          due?el('button',{type:'button',class:'chip sm',onclick:()=>dueSheet(g)},'日付を直す'):el('span',{class:'xs muted'},GKIND[g.kind]||'')),
         p!=null?el('p',{class:'xs num',style:p===100?'color:var(--good)':''},p===100?'達成 ✓':'進み '+p+'%'):null,
         isWork(g)?(g.reward?el('button',{type:'button',class:'rw',onclick:()=>rewardSheet(g)},'🎁 '+g.reward+(g.got?'（受け取りました）':'')):el('button',{type:'button',class:'rw none',onclick:()=>rewardSheet(g)},'＋ ごほうびを決める')):null);}))];
 }
