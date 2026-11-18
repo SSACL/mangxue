@@ -3535,9 +3535,9 @@ function timeEditor(P,up,rr){
 let WIZ=null;
 const TIMEKEYS=['dayTypes','week','dates','alloc','mode','dflt','weekStart','cycle'];
 function wizSteps(){const S0=(WIZ&&WIZ.P&&WIZ.P.setup)||{}, noS=(S0.study||{}).kind==='none', noC=!!(S0.create||{}).none;
-  const neu=!!((S0.study||{}).kind||(S0.create||{}).kinds||(S0.create||{}).none);
-  return (neu?['what','dates','study','create','time','check','outlook','build']:WIZ.method==='time'?['what','dates','method','time','study','create','outlook','build']:['what','dates','method','study','create','need','time','outlook','build']).filter(k=>!(k==='study'&&noS)&&!(k==='create'&&noC));}
-function wizName(k){const S0=(WIZ&&WIZ.P&&WIZ.P.setup)||{}, neu=!!((S0.study||{}).kind||(S0.create||{}).kinds);return {what:'何を計画するか',dates:'期日',method:'組み方',study:tname('study'),create:tname('create'),need:'必要な時間',check:'確かめ',time:neu?'使える時間':'時間割',outlook:'見通し',build:'組む'}[k];}
+  // the 組み方 and 必要な時間 steps of the earlier version are gone (2026-11-18): every plan goes the way of the questions
+  return ['what','dates','study','create','time','check','outlook','build'].filter(k=>!(k==='study'&&noS)&&!(k==='create'&&noC));}
+function wizName(k){const neu=true;return {what:'何を計画するか',dates:'期日',method:'組み方',study:tname('study'),create:tname('create'),need:'必要な時間',check:'確かめ',time:neu?'使える時間':'時間割',outlook:'見通し',build:'組む'}[k];}
 function openWizard(at){
   const cur=plan2();
   // the timetable is taken again from the plan only when it was changed outside (an import of books leaves the half-made one alone)
