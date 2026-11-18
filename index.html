@@ -721,7 +721,7 @@ function UNIT(id){return units().find(u=>u.id===id)||null;}
 function subj(id){const s2=UNIT(id)?null:(plan2().subjects||[]).find(x=>x.id===id);return UNIT(id)||{id:id,name:s2?s2.name:(id||''),short:s2?(s2.short||s2.name):(id||''),start:'9999-12-31',end:'9999-12-31'};}
 function practiceSubjects(){const u=units();return u.length?u:(plan2().subjects||[]).map(s=>({id:s.id,name:s.name,short:s.short||s.name}));}
 function weeksOf(u){return Math.max(1,Math.round((diffDays(u.start,u.end)+1)/7));}
-function bookName(id){const b=P_().study.books||{};const m=(plan2().materials||[]).find(x=>x.book&&x.book===id);return b[id]||(m&&m.name)||({exam:'本試験（公開問題）',sample:'サンプル問題'})[id]||id;}
+function bookName(id){const b=P_().study.books||{};const m=(plan2().materials||[]).find(x=>x.book&&x.book===id);return b[id]||(m&&m.name)||({exam:'本試験（公開問題）'})[id]||id;}
 function idPrefix(){return P_().study.idPrefix||{};}
 function isBlankBook(id){return (P_().study.blankBooks||[]).includes(id);}
 function currentSubject(ds){
@@ -981,7 +981,7 @@ function syncCard(){
 /* ---------- learning logic ---------- */
 // 周回方式：単元（問題集×単元）ごとに「今何周目か」だけを持ち、先の出題日は決めない
 function roundOf(docId){const s=S.state[docId];return (s&&s.round)||1;}
-function realDocs(){return Object.entries(S.qbank).filter(([,d])=>d&&d.book!=='sample');}
+function realDocs(){return Object.entries(S.qbank).filter(([,d])=>d&&(d.items||[]).length);}
 function allItems(filter){
   const out=[];
   for(const [docId,d] of Object.entries(S.qbank)){
@@ -1009,7 +1009,7 @@ function record(docId,q,ok,conf,ms,blanks){
 }
 function weakTags(){
   const m={};
-  for(const it of allItems(d=>d.book!=='sample')){
+  for(const it of allItems()){
     const s=stOf(it.docId,it.q.id); if(!s) continue; const tot=(s.c||0)+(s.w||0); if(!tot) continue;
     for(const g of (it.q.tags&&it.q.tags.length?it.q.tags:['その他'])){
       const k=subj(it.doc.subject).short+'・'+g; const x=m[k]||(m[k]={n:0,ok:0,kan:0}); x.n+=tot; x.ok+=Math.max(0,(s.c||0)-(s.k||0)); x.kan+=(s.k||0);}
@@ -1017,7 +1017,7 @@ function weakTags(){
   return Object.entries(m).filter(([,x])=>x.n>=3).map(([k,x])=>({k,rate:Math.round(x.ok/x.n*100),n:x.n,kan:x.kan})).sort((a,b)=>a.rate-b.rate).slice(0,5);
 }
 function coverage(subId){
-  const items=allItems(d=>d.subject===subId&&d.book!=='sample');
+  const items=allItems(d=>d.subject===subId);
   let answered=0,ok=0;
   for(const it of items){const s=stOf(it.docId,it.q.id);if(s&&(s.c+s.w)>0){answered++;if(s.lastOk) ok++;}}
   return {total:items.length,answered,ok};
@@ -1280,9 +1280,13 @@ function phSteps(P,s,round,ph,what){
 }
 /* 段階1: reading goes first; the questions on a part come right after the next part is read (so they can be solved on
    the next commute) */
-function baseSteps(P,s,ph){
-  let R=readSteps(P,s,ph), Q=qSteps(P,s,1,ph);
-  if(!R.length) R=phSteps(P,s,1,ph,'read');if(!Q.length) Q=phSteps(P,s,1,ph,'solve');
+function baseSteps(P,s,ph,w){
+  // w: one group of 教材 by 使う順番 (3-8c); the stand-ins for a unit without a 目次 come only in the first group
+  const Pw=w?Object.assign({},P,{materials:w.mats}):P;
+  let R=readSteps(Pw,s,ph), Q=qSteps(Pw,s,1,ph);
+  if(!R.length&&(!w||(w.first&&!readSteps(P,s,ph).length))) R=phSteps(P,s,1,ph,'read');
+  if(!Q.length&&(!w||(w.first&&!qSteps(P,s,1,ph).length))) Q=phSteps(P,s,1,ph,'solve');
+  if(!R.length) return Q.map(q=>Object.assign(q,{after:null}));if(!Q.length) return R;
   const TR=R.reduce((a,x)=>a+x.min,0)||1, TQ=Q.reduce((a,x)=>a+x.min,0)||1, out=[];let j=0,qa=0,ra=0,prev=0;
   for(let i=0;i<R.length;i++){out.push(R[i]);
     while(j<Q.length&&(qa+Q[j].min)/TQ<=prev+1e-9){Q[j].after=R[i-1]?R[i-1].id:null;out.push(Q[j]);qa+=Q[j].min;j++;}
@@ -1290,6 +1294,11 @@ function baseSteps(P,s,ph){
   while(j<Q.length){Q[j].after=R[R.length-1].id;out.push(Q[j]);j++;}
   return out;
 }
+// 使う順番: 「最初から」 is group 0; 「Aの1周目を終えてから」 comes in the group after A's. Same group = side by side.
+function matWaves(P){const ms=P.materials||[], lv={};
+  const get=(m,seen)=>{if(lv[m.id]!=null) return lv[m.id];const a=m.after&&ms.find(x=>x.id===m.after);if(!a||seen.has(m.id)) return lv[m.id]=0;seen.add(m.id);return lv[m.id]=get(a,seen)+1;};
+  ms.forEach(m=>get(m,new Set()));const n=Math.max(0,...Object.values(lv));
+  return Array.from({length:n+1},(_,k)=>ms.filter(m=>lv[m.id]===k)).filter(g=>g.length);}
 function hourSteps(P,it,ph){const tot=Math.round((+it.hours||0)*60);if(!tot) return [];
   if(it.kind==='solve'){const per=+P.perQ||3, ch=chunkQ(P,per), m=Math.round(ch*per), n=Math.max(1,Math.round(tot/m));
     return Array.from({length:n},(_,k)=>({id:'h:'+it.id+':'+k,title:it.name+' '+(k+1)+'/'+n,sub:'',min:m,n:ch,kind:'solve',phase:ph,app:null}));}
@@ -1300,7 +1309,7 @@ function studySteps(P,upto,subs){
   const ph=P.phases||[], lim=ph.findIndex(p=>p.id===upto), okS=id=>subs==='all'||[].concat(subs).includes(id), out=[];
   ph.forEach((p,pi)=>{if(lim>=0&&pi>lim) return;
     for(const it of p.items||[]){
-      if(it.type==='base'){for(const s of P.subjects||[]) if(okS(s.id)) out.push(...baseSteps(P,s,p.id));}
+      if(it.type==='base'){const W=matWaves(P);W.forEach((mats,k)=>{for(const s of P.subjects||[]) if(okS(s.id)) out.push(...baseSteps(P,s,p.id,W.length>1?{mats,first:k===0}:null));});}
       else if(it.type==='round'){for(const s of P.subjects||[]) if(okS(s.id)){let Q=qSteps(P,s,it.round||2,p.id);if(!Q.length) Q=phSteps(P,s,it.round||2,p.id,'solve');out.push(...Q);}}
       else if(it.type==='hours'&&subs==='all') out.push(...hourSteps(P,it,p.id));
     }});
@@ -1440,7 +1449,7 @@ function planStats(tr){
 function gapText(gap){const v=Math.round(gap*100);return '計画との差 '+(v>0?'+':v<0?'−':'±')+Math.abs(v)+'%';}
 
 /* a day's list: the parts of the (shifted) plan that fall on that day, placed into the day's コマ.
-   A commute コマ marked "アプリで演習" gets questions on parts already read; a piece never spans two コマ (it is split
+   A commute コマ marked "スキマ演習" gets questions on parts already read; a piece never spans two コマ (it is split
    into separate items); questions are never split */
 function slotOrder(a,b){return sinceStart(toMin(a.time||'03:59'))-sinceStart(toMin(b.time||'03:59'));}
 function planTasks(ds){
@@ -1475,7 +1484,7 @@ function planTasks(ds){
       for(const x of ahead){if(y.left<x.part*0.6) break;if(used.has(x.id)||!unlocked(x)) continue;y.left-=x.part;used.add(x.id);got.push(x);}
       if(!got.length&&!hasQ) continue;
       const f=got[0]&&got[0].st, mins=y.s.min;
-      T.push({id:'aq:'+y.s.id+':'+ds,kind:'study',cm:!!y.s.cm,time:L0+'・'+fmtMin(mins),title:(y.s.cm?'通勤で演習':'アプリで演習')+'：'+(f?(subjShort(P,f.subject)||f.title)+'の続きから':'間違えた問題の解き直し'),
+      T.push({id:'aq:'+y.s.id+':'+ds,kind:'study',cm:!!y.s.cm,time:L0+'・'+fmtMin(mins),title:(y.s.cm?'通勤で演習':'スキマ演習')+'：'+(f?(subjShort(P,f.subject)||f.title)+'の続きから':'間違えた問題の解き直し'),
         sub:got.length?got.map(x=>x.st.title).join('、')+(got.some(x=>x.carry)?'（持ち越しあり）':''):'計画の外のおまけです',plan:mins,_t:t00,steps:got.map(x=>x.id),slot:{min:mins,subject:f?f.subject:null,book:f&&f.app?f.app.book:null,review:!got.length}});
       y.left=0;
     }
@@ -2225,9 +2234,9 @@ function viewCal(){
     el('div',{class:'calgrid'},cells),
     el('div',{class:'legend'},el('span',{},el('b',{class:'dtl sm'},'A'),' 時間割'),SH.study?el('span',{},el('i',{class:'pl s lg'}),' '+tnameS('study')+'予定'):null,SH.create?el('span',{},el('i',{class:'pl c lg'}),' '+tnameS('create')+'予定'):null,SH.priv?el('span',{},el('span',{class:'pv'},'14:00'),' プライベート'):null,SH.habit?el('span',{},'緑の濃さ ルーティン'):null),
     dayPanel(CAL.sel),
-    SH.habit?el('div',{class:'card'},el('div',{class:'between'},el('h2',{},m+'月のルーティン'),el('span',{class:'small muted num'},'記録した日 '+days.filter(hasActivity).length+' / '+days.length+'日')),
+    SH.habit?el('div',{class:'card'},el('div',{class:'between'},el('h2',{},m+'月のルーティン'),el('span',{class:'small muted num'},days.length+'日のうち '+days.filter(hasActivity).length+'日に記録')),
       el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'ルーティン'),el('th',{},'できた'),el('th',{},'記録した日'))),
-        el('tbody',{},rows.map(x=>el('tr',{},el('td',{},(x.r.emoji||'')+' '+x.r.name),el('td',{class:'num'},x.ans?x.ok+'日（'+Math.round(x.ok/x.ans*100)+'%）':'—'),el('td',{class:'num muted'},x.ans+' / '+x.app+'日'))))))):null,
+        el('tbody',{},rows.map(x=>el('tr',{},el('td',{},(x.r.emoji||'')+' '+x.r.name),el('td',{class:'num'},x.ans?x.ok+'日（'+Math.round(x.ok/x.ans*100)+'%）':'—'),el('td',{class:'num muted'},x.app+'日のうち '+x.ans+'日'))))))):null,
     gcalCalRow()
   ];
 }
@@ -2672,8 +2681,8 @@ function titleName(name,label,onset){
 /* what the 作業コマ are for */
 function slotHelp(){return el('button',{type:'button',class:'help','aria-label':'作業コマについて',onclick:e=>{e.preventDefault();e.stopPropagation();openSheet('作業コマについて',
   el('p',{class:'small'},'ここに登録したコマが、この時間割の日の「今日やること」になります。計画は、学習・制作のコマの時間に合わせて、テキストや問題集、制作の作業を割り振ります。'),
-  el('p',{class:'small'},'「アプリで演習」のコマには、読み終えた範囲の問題を「演習○問」として出します。'),
-  el('p',{class:'small'},'通勤の機能を使っている時間割では、電車の中と立ち寄り先のコマは通勤の設定から自動で入ります。その日は、ここの「アプリで演習」のコマは使いません。'),
+  el('p',{class:'small'},'「スキマ演習」のコマには、読み終えた範囲の問題を「演習○問」として出します。'),
+  el('p',{class:'small'},'通勤の機能を使っている時間割では、電車の中と立ち寄り先のコマは通勤の設定から自動で入ります。その日は、ここの「スキマ演習」のコマは使いません。'),
   el('p',{class:'small'},'「そのほか」のコマは、今日やることに予定として出ますが、学習・制作の作業は割り振りません。'));}},'?');}
 /* what skipping the commute does, and what to add when other plans fill the time too */
 function skipHelp(){return el('button',{type:'button',class:'help','aria-label':'スキップについての説明',onclick:e=>{e.preventDefault();e.stopPropagation();openSheet('通勤設定のスキップ',
@@ -2818,7 +2827,7 @@ function viewCommuteBody(){
     el('div',{class:'card'},el('h2',{},'通知のタイミング'),
       el('div',{class:'grid3'},lab('gn-h','出る前（分）',num('gn-h',(C.notify||{}).home,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{home:v??10});}))),lab('gn-b','乗る前（分）',num('gn-b',(C.notify||{}).board,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{board:v??5});}))),lab('gn-x','乗り換えの前（分）',num('gn-x',(C.notify||{}).xfer,v=>cmLive(x=>{x.notify=Object.assign({},x.notify,{xfer:v??2});}))))),
     el('div',{class:'card'},el('h2',{},'演習と円グラフ'),
-      el('label',{class:'row',for:'cm-s'},el('input',{type:'checkbox',id:'cm-s',checked:C.study!==false,onchange:e=>cmLive(x=>{x.study=e.target.checked;})}),el('span',{class:'small'},'通勤中にアプリで演習する')),
+      el('label',{class:'row',for:'cm-s'},el('input',{type:'checkbox',id:'cm-s',checked:C.study!==false,onchange:e=>cmLive(x=>{x.study=e.target.checked;})}),el('span',{class:'small'},'通勤中にスキマ演習をする')),
       el('label',{class:'row',for:'cm-w'},el('input',{type:'checkbox',id:'cm-w',checked:!!C.waitOff,onchange:e=>cmLive(x=>{x.waitOff=e.target.checked;})}),el('span',{class:'small'},'駅での待ち時間（乗り換え待ちも）は、どの区間も演習に使わない',el('br'),el('span',{class:'xs muted'},'区間ごとの「待ち時間も演習に使う」より、こちらが優先されます'))),
       el('label',{class:'row',for:'cm-m'},el('input',{type:'checkbox',id:'cm-m',checked:!!C.moveSplit,onchange:e=>cmLive(x=>{x.moveSplit=e.target.checked;})}),el('span',{class:'small'},'徒歩・自転車を「通勤（運動）」として別に数える'))),
     el('h2',{class:'sec'},'経路'),
@@ -3162,7 +3171,7 @@ function matEditor(m,P){
   const fld=(fid,label,ctl)=>el('label',{class:'field',for:fid},label,ctl);
   const num=(fid,val,fn,min)=>el('input',{type:'number',id:fid,inputmode:'decimal',min,step:'any',value:val,onchange:e=>{const v=parseFloat(e.target.value);if(!isFinite(v)||v<min){e.target.value=val;toast('数字で入力してください');return;}fn(v);}});
   const sel=(fid,cur,opts,fn,label)=>el('select',{id:fid,'aria-label':label||null,onchange:e=>fn(e.target.value)},opts.map(([v,l])=>{const o=el('option',{value:v},l);if(String(cur??'')===String(v)) o.selected=true;return o;}));
-  const books=[...new Set([...Object.values(S.qbank).filter(d=>d&&(d.items||[]).length).map(d=>d.book).filter(b=>b&&b!=='sample'),m.book].filter(Boolean))];
+  const books=[...new Set([...Object.values(S.qbank).filter(d=>d&&(d.items||[]).length).map(d=>d.book),m.book].filter(Boolean))];
   const setR=(i,ev,k)=>{const lm=liveMat(id), e=lm&&(lm.toc||[])[i];if(!e) return;const r=tocRange(lm,e).slice(), v=parseInt(String(ev.target.value).normalize('NFKC'),10);
     if(!(v>0)){ev.target.value=r[k];toast('1以上の数字で入力してください');return;}
     r[k]=v;if(r[1]<r[0]){ev.target.value=tocRange(lm,e)[k];toast('おわりは、はじめと同じか後ろにしてください');return;}
@@ -3191,6 +3200,10 @@ function matEditor(m,P){
     el('div',{class:'grid2'},
       fld('mn-'+id,'教材の名前',el('input',{type:'text',id:'mn-'+id,value:m.name,onchange:e=>{const v=e.target.value.trim();if(!v){e.target.value=m.name;toast('名前を入力してください');return;}matSet(id,x=>{x.name=v;},true);}})),
       fld('mk-'+id,'種類',sel('mk-'+id,m.kind,[['read','読む'],['solve','解く']],v=>matSet(id,x=>matKind(x,v),true)))),
+    (()=>{const ms=P.materials||[];if(ms.length<2) return null;
+      const dependsOn=(x,target,seen=new Set())=>{if(!x||!x.after||seen.has(x.id)) return false;if(x.after===target) return true;seen.add(x.id);return dependsOn(ms.find(y=>y.id===x.after),target,seen);};
+      const opts=ms.filter(o=>o.id!==id&&!dependsOn(o,id));
+      return fld('mo-'+id,'使う順番',sel('mo-'+id,m.after&&opts.some(o=>o.id===m.after)?m.after:'',[['','最初から'],...opts.map(o=>[o.id,o.name+'の1周目を終えてから'])],v=>matSet(id,x=>{if(v) x.after=v; else delete x.after;})));})(),
     solve?[el('div',{class:'grid2'},fld('mq-'+id,'1問の目安（分）',num('mq-'+id,m.perQ||P.perQ||3,v=>matSet(id,x=>{x.perQ=v||3;}),0.5)),fld('mc-'+id,'何問ずつ区切る',num('mc-'+id,m.chunkQ||chunkQ(P,m.perQ||P.perQ||3),v=>matSet(id,x=>{x.chunkQ=Math.max(1,Math.round(v));}),1))),
         fld('mb-'+id,'アプリの問題集（取り込んだもの）',sel('mb-'+id,m.book||'',[['','（アプリに取り込まない・まだ）'],...books.map(b=>[b,bookName(b)])],v=>matSet(id,x=>{x.book=v||undefined;}))),
         (()=>{if(!m.book) return null;const qs=bookQs(m.book), mc=markCounts(qs), pts=m.parts||[];
@@ -3231,7 +3244,7 @@ function studyEditor(P,up){
       pfield('sh-'+s.id,'目安の時間（目次がないときに使います）',pnum('sh-'+s.id,s.hours,v=>up(x=>{x.subjects.find(y=>y.id===s.id).hours=v;}),1,0)),
       twoStepBtn('この単元を消す',()=>up(x=>{x.subjects=x.subjects.filter(y=>y.id!==s.id);}))),
     s.name,()=>up(x=>upDown(x.subjects,s.id,-1)),()=>up(x=>upDown(x.subjects,s.id,1)),i===0,i===subs.length-1);
-  const books=[...new Set(Object.values(S.qbank).map(d=>d&&d.book).filter(b=>b&&b!=='sample'))];
+  const books=[...new Set(Object.values(S.qbank).filter(d=>d&&(d.items||[]).length).map(d=>d.book).filter(Boolean))];
   const mEdit=(m,i)=>{const n=(m.toc||[]).length, c=(m.toc||[]).filter(e=>e.check).length;
     return ordRow(pdet('m:'+m.id,[el('span',{},m.kind==='solve'?'✏️':'📖'),el('span',{style:'flex:1;min-width:0'},m.name),el('span',{class:'xs muted num'},(n?'目次 '+n+'項目':'目次なし')+(c?'・要確認 '+c:''))],
       matEditor(m,P),
@@ -3347,7 +3360,7 @@ function timeEditor(P,up,rr){
     el('div',{class:'field'},'塗る時間割',el('div',{class:'dtchips'},types.map(d=>typeChip(P,d.id,TST.brush===d.id,()=>{TST.brush=d.id;rr();},true)),el('button',{type:'button',class:'dtc sm','aria-pressed':String(!TST.brush),onclick:()=>{TST.brush='';rr();}},'決めない'))),
     el('div',{class:'calhead'},navBtn('','前の月',-1,()=>{TST.ym=ymd(new Date(y,m-2,1)).slice(0,7);rr();}),el('h2',{style:'text-align:center'},y+'年'+m+'月'),navBtn('','次の月',1,()=>{TST.ym=ymd(new Date(y,m,1)).slice(0,7);rr();})),
     el('div',{class:'calgrid'},cells)];
-  // one 作業コマ: いつ｜作業区分｜分 on the first line, 何をする｜(アプリで演習)｜× on the second
+  // one 作業コマ: いつ｜作業区分｜分 on the first line, 何をする｜(スキマ演習)｜× on the second
   const shut=()=>document.getElementById('sheet').close();
   // a コマ's menu: move it up or down within the 時間割, copy it (just below), or remove it
   const sMenu=(d,s,si)=>{const n=(d.slots||[]).length;
@@ -3379,7 +3392,7 @@ function timeEditor(P,up,rr){
     el('label',{class:'sf'},el('span',{},'作業区分'),el('select',{onchange:e=>upT(d.id,x=>{x.slots[si].track=e.target.value;if(e.target.value==='study') x.slots[si].use=x.slots[si].use||'any';})},[['study',tname('study')],['create',tname('create')],['other','そのほか']].map(([v,l])=>el('option',{value:v,selected:s.track===v},l)))),
     el('label',{class:'sf'},el('span',{},'分'),mI),
     el('label',{class:'sf'+(s.track==='study'?'':' wide')},el('span',{},'何をする'),el('input',{type:'text',value:s.label,onchange:e=>upT(d.id,x=>{x.slots[si].label=e.target.value.trim()||s.label;})})),
-    s.track==='study'?el('label',{class:'sf'},el('span',{},'使い方'),el('select',{onchange:e=>upT(d.id,x=>{x.slots[si].use=e.target.value;})},[['any','何でも'],['app','アプリで演習']].map(([v,l])=>el('option',{value:v,selected:(s.use||'any')===v},l)))):null,
+    s.track==='study'?el('label',{class:'sf'},el('span',{},'使い方'),el('select',{onchange:e=>upT(d.id,x=>{x.slots[si].use=e.target.value;})},[['any','何でも'],['app','スキマ演習']].map(([v,l])=>el('option',{value:v,selected:(s.use||'any')===v},l)))):null,
     el('button',{type:'button',class:'ordb sdel','aria-label':'このコマの並べ替え・複製・削除',onclick:()=>sMenu(d,s,si)},'⋯'));};
   const tEdit=d=>Object.assign(pdet('t:'+d.id,[el('b',{class:'dtl'},dtLetter(d.id,P)),titleName(d.name,'時間割の名前',(v,inp)=>{if(types.some(x=>x.id!==d.id&&x.name===v)){toast('同じ名前の時間割があります');inp.value=d.name;return;}upT(d.id,x=>{x.name=v;});}),el('span',{class:'xs muted num tsum',style:'flex:0 1 auto;text-align:right'},typeSummary(d,P)),
     el('button',{type:'button',class:'ordb rmenu','aria-label':'「'+d.name+'」の並べ替え・複製・削除',onclick:e=>{e.preventDefault();e.stopPropagation();tMenu(d);}},'⋯')],
@@ -3890,10 +3903,7 @@ function starCard(P){const c=starCfg(P);
       (c.n?[]:[[0,'選ぶ']]).concat([2,3,4,5].map(v=>[v,v+'段階'])).map(([v,l])=>{const o=el('option',{value:v},l);if(c.n===v) o.selected=true;return o;}))):null);}
 
 /* practice */
-function poolFor(subject,book){
-  const hasReal=allItems(d=>d.subject===subject&&d.book!=='sample').length>0;
-  return allItems(d=>d.subject===subject&&(book==='all'?(d.book!=='sample'||!hasReal):d.book===book));
-}
+function poolFor(subject,book){return allItems(d=>d.subject===subject&&(book==='all'||d.book===book));}
 function modeFilter(mode){
   if(mode==='cont') return it=>{const s=stOf(it.docId,it.q.id);return !s||(s.lr||0)<roundOf(it.docId);};
   if(mode==='miss') return it=>{const s=stOf(it.docId,it.q.id);return s&&(s.note||s.lastOk===false);};
@@ -3952,7 +3962,7 @@ function avgAnswer(book){
 function bookPerQ(book){const m=(plan2().materials||[]).find(x=>x.kind==='solve'&&x.book===book);return +(m&&m.perQ)||+plan2().perQ||3;}
 function recCount(min,book){const a=avgAnswer(book), per=a?a.sec:bookPerQ(book)*60, exp=min*60/per;return {n:Math.max(10,Math.ceil(exp/10)*10),exp:Math.max(1,Math.round(exp)),avg:a,per,book:book&&book!=='all'?book:null};}
 function fmtSec(sec){sec=Math.round(sec);return (sec>=60?Math.floor(sec/60)+'分':'')+(sec%60?sec%60+'秒':'');}
-function startSlot(k){const s=k.slot;P.step='setup';P.mode=s.review?'miss':'cont';if(s.subject) P.subject=s.subject;P.book=s.book||'all';P.rec={min:s.min,label:k.cm?'通勤':'アプリで演習'};P.count=recCount(s.min,P.book).n;go('practice');}
+function startSlot(k){const s=k.slot;P.step='setup';P.mode=s.review?'miss':'cont';if(s.subject) P.subject=s.subject;P.book=s.book||'all';P.rec={min:s.min,label:k.cm?'通勤':'スキマ演習'};P.count=recCount(s.min,P.book).n;go('practice');}
 function startRange(items){if(!items.length) return;P.queue=items.map(x=>[x.docId,x.q.id]);P.i=0;P.stats={n:0,ok:0};P.step='q';P.conf=0;P.t0=Date.now();go('practice');}
 function curItem(){const [docId,qid]=P.queue[P.i];const d=S.qbank[docId];const q=d&&d.items.find(x=>x.id===qid);return q?{docId,doc:d,q}:null;}
 function confPicker(){
@@ -3974,7 +3984,6 @@ function tags(it){
   else out.push(el('span',{class:'pill gray'},'はじめて'));
   if(it.q.numeric) out.push(el('span',{class:'pill gray'},'数字あり'));
   for(const g of (it.q.tags||[]).slice(0,2)) out.push(el('span',{class:'pill gray'},g));
-  if(it.doc.book==='sample') out.push(el('span',{class:'pill gray'},'サンプル'));
   return el('div',{class:'row',style:'flex-wrap:wrap;gap:6px'},out);
 }
 const RICH_TAGS=new Set(['B','STRONG','EM','I','U','MARK','BR','P','UL','OL','LI','TABLE','THEAD','TBODY','TR','TH','TD','CAPTION','H4','H5','SMALL','SUP','SUB']);
