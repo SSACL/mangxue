@@ -4595,15 +4595,24 @@ function rewardSheet(g){
     el('div',{class:'grid2'},el('button',{type:'button',class:'btn',onclick:()=>put(inp.value.trim())},'これにする'),g.reward?el('button',{type:'button',class:'btn sub',onclick:()=>put('')},'なしにする'):el('button',{type:'button',class:'btn sub',onclick:()=>document.getElementById('sheet').close()},'やめる')));
   setTimeout(()=>inp.focus(),50);
 }
+// 3-3b: the score aimed at, as a rate (満点 100, 合格の基準 from the first 形式 that has it, or the rate set)
+function aimPct(P){const st=((P||plan2()).setup||{}).study||{}, a=st.aim||{};if(a.mode==='full') return 100;if(a.mode==='pct'&&+a.pct>0) return +a.pct;
+  if(a.mode==='pass'){const f=Object.values(((st.pass||{}).fmt)||{}).find(x=>+x.full>0&&+x.min>0);return f?Math.round(f.min/f.full*100):null;}return null;}
+function practiceRetry(sid){P.subject=sid;P.book='all';P.mode='miss';P.step='setup';go('practice');}
 function practiceCard(){
-  const P=plan2(), t=today(), bands=(phaseBands(P,P.baseline,adjOf(P).q.study)[0]||{subs:[]}).subs, when=Object.fromEntries(bands.map(b=>[b.s.id,b]));
+  const P=plan2(), t=today(), aim=aimPct(P), bands=((phaseBands(P,P.baseline,adjOf(P).q.study)).find(b=>b.p.id==='p1')||{subs:[]}).subs, when=Object.fromEntries(bands.map(b=>[b.s.id,b]));
   return el('div',{class:'card'},el('h2',{},'演習の記録（単元ごと）'),
     el('p',{class:'xs muted'},'取り込んだ問題のうち、1回以上解いたもの。「計画」は'+tname('study')+'の計画でその単元を進める期間です。'),
     el('div',{class:'scroll'},el('table',{class:'table'},el('thead',{},el('tr',{},el('th',{},'単元'),el('th',{},'解いた'),el('th',{},'正解'),el('th',{},'計画'))),
       el('tbody',{},(P.subjects||[]).map(s=>{const c=coverage(s.id), b=when[s.id];return el('tr',{style:b&&t>=b.from&&t<=b.to?'background:var(--accent-soft)':''},el('td',{},s.short||s.name),
         el('td',{class:'num'},c.total?c.answered+' / '+c.total:'未取り込み'),
-        el('td',{class:'num'},c.answered?Math.round(c.ok/c.answered*100)+'%':'—'),
+        el('td',{class:'num',style:aim!=null&&c.answered&&c.ok/c.answered*100<aim?'color:var(--warn-ink);font-weight:700':''},c.answered?Math.round(c.ok/c.answered*100)+'%':'—'),
         el('td',{class:'num muted'},b?(t>b.to?'済み予定':md(b.from)+'〜'+md(b.to)):'—'));})))),
+    aim!=null?(()=>{const low=(P.subjects||[]).filter(s=>{const c=coverage(s.id);return c.answered&&c.ok/c.answered*100<aim;});
+      return [el('p',{class:'small num'},'目指す点 '+aim+'%'+(low.length?'：届いていない単元':'：どの単元も届いています')),
+        low.map(s=>el('div',{class:'between small'},el('span',{},s.short||s.name),el('span',{class:'row',style:'gap:6px'},
+          el('button',{type:'button',class:'chip sm',onclick:()=>practiceRetry(s.id)},'間違えた問題を解き直す'),
+          el('button',{type:'button',class:'chip sm',onclick:()=>openWizard('study')},'この単元に時間を足す'))))];})():null,
     trackTotal('study')?el('p',{class:'small num'},'これまでの学習時間 '+fmtH(trackTotal('study'))):null);
 }
 function viewProgress(){
