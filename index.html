@@ -128,6 +128,12 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);margin:0;
 .stepper button{height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:18px;cursor:pointer}
 .stepper input{text-align:center;padding:10px 2px;-moz-appearance:textfield;appearance:textfield}
 .stepper input::-webkit-inner-spin-button,.stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.gauge{position:relative;height:30px;margin:8px 7px 4px;border-radius:8px;background:var(--chip);touch-action:none}
+.gauge .gseg{position:absolute;top:0;bottom:0;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--surface);background:var(--accent-soft);font-style:normal;font-size:12px;color:var(--accent-ink);overflow:hidden}
+.gauge .gseg:nth-child(even){background:var(--chip)}
+.gauge .gtick{position:absolute;top:-6px;bottom:-6px;width:18px;margin-left:-9px;border:0;border-radius:6px;background:var(--accent);cursor:ew-resize;touch-action:none;padding:0}
+.gauge .gtick:focus-visible{outline:3px solid var(--accent-ink);outline-offset:2px}
+.cutrow{padding:10px 0;border-top:1px solid var(--line)}
 .msrow{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;margin:10px 0}
 .msrow input[type=checkbox]{width:22px;height:22px}
 .msrow input[type=date]{grid-column:2}
@@ -1263,13 +1269,46 @@ function capSum(P,tr,a,b){let c=0;for(let ds=a;ds<=b;ds=addDays(ds,1)) c+=capOf(
 /* steps: study (three 段階) and 制作 */
 function appSlotMin(P){const a=[];for(const d of P.dayTypes||[]) for(const s of d.slots||[]) if(s.track==='study'&&s.use==='app'&&+s.min>0) a.push(+s.min);return a.length?Math.min(...a):30;}
 function chunkQ(P,per){return Math.max(1,Math.floor(appSlotMin(P)/Math.max(0.5,per)));}
+/* 区切り (2026-11-05): by 章 or 節; each is cut into n pieces (n starts from 1つの作業の分数, the ratios move on a gauge or as 40/40/20);
+   the last piece can go with the next one's first, even into another unit (the piece counts for the unit it mostly holds). */
+function studySlotMin(P){const a=[];for(const d of P.dayTypes||[]) for(const s of d.slots||[]) if(s.track==='study'&&+s.min>0) a.push(+s.min);return a.length?Math.min(...a):30;}
+function cutUnits(m){const toc=m.toc||[], solve=m.kind==='solve', byCh=(m.cut||{}).by==='ch', out=[];let gi=-1,lastCh=null;
+  toc.forEach((e,ei)=>{const r=tocRow(e), p0=+(e.p||[])[0]||1, size=solve?Math.max(0,+e.q||0):Math.max(1,(+(e.p||[])[1]||p0)-p0+1);
+    if(r.ch!==lastCh){gi++;lastCh=r.ch;}
+    const key=byCh&&r.ch?'c'+gi:'r'+ei;let u=out[out.length-1];
+    if(!u||u.key!==key){u={key,label:byCh&&r.ch?r.ch:(e.t||r.sec||'（見出しなし）'),rows:[],size:0};out.push(u);}
+    if(size>0){u.rows.push({ei,s:e.s,size,p0});u.size+=size;}});
+  return out.filter(u=>u.size>0);}
+function cutRatios(r,n){if(Array.isArray(r)&&r.length===n&&r.every(x=>+x>0)){const t=r.reduce((a,x)=>a+ +x,0);return r.map(x=>+x/t);}return Array.from({length:n},()=>1/n);}
+function cutN(P,m,u){const c=m.cut||{}, cfg=(c.parts||{})[u.key]||{}, per=m.kind==='solve'?(+m.perQ||+P.perQ||3):(+m.perPage||+P.perPage||4), unit=Math.max(5,+c.unit||studySlotMin(P));
+  return Math.min(Math.max(1,u.size),Math.max(1,Math.round(+cfg.n||Math.ceil(u.size*per/unit))));}
+function cutPieces(P,m){
+  const c=m.cut||{}, toc=m.toc||[], U=cutUnits(m), off={}, rowOff={};
+  toc.forEach((e,ei)=>{rowOff[ei]=off[e.s]||0;off[e.s]=(off[e.s]||0)+(+e.q||0);});
+  const pcs=[];
+  U.forEach((u,ui)=>{const n=cutN(P,m,u), r=cutRatios(((c.parts||{})[u.key]||{}).r,n);let acc=0,prev=0;
+    for(let k=0;k<n;k++){acc+=r[k];const x1=k===n-1?u.size:Math.max(prev+1,Math.min(Math.round(u.size*acc),u.size-(n-1-k)));
+      const segs=[];let rs=0;for(const w of u.rows){const re=rs+w.size, a=Math.max(prev,rs), b=Math.min(x1,re);if(b>a) segs.push({ei:w.ei,s:w.s,p0:w.p0,l0:a-rs,l1:b-rs});rs=re;}
+      pcs.push({ui,k,n,segs,label:u.label});prev=x1;}});
+  // 章末（節の終わり）を次の初めとまとめる
+  for(let ui=U.length-2;ui>=0;ui--) if(((c.parts||{})[U[ui].key]||{}).join){const li=pcs.findIndex((x,i)=>x.ui===ui&&(i===pcs.length-1||pcs[i+1].ui!==ui)), nx=pcs[li+1];
+    if(nx&&nx.ui===ui+1){nx.segs=pcs[li].segs.concat(nx.segs);nx.label=pcs[li].label+'・'+nx.label;nx.joined=true;pcs.splice(li,1);}}
+  return pcs.map(x=>{const by={};for(const g of x.segs) by[g.s]=(by[g.s]||0)+(g.l1-g.l0);
+    const subject=Object.keys(by).reduce((a,k)=>a==null||by[k]>=by[a]?k:a,null), size=Object.values(by).reduce((a,v)=>a+v,0), g0=x.segs[0], g1=x.segs[x.segs.length-1];
+    const one=Object.keys(by).length===1, cnt=pcs.filter(y=>y.ui===x.ui).length;
+    return {id:'c'+x.ui+':'+x.k,subject,size,label:x.label+(!x.joined&&cnt>1?'（'+(x.k+1)+'/'+x.n+'）':''),
+      pages:[g0.p0+g0.l0,g1.p0+g1.l1-1],app:one?{from:rowOff[g0.ei]+g0.l0+1,to:rowOff[g1.ei]+g1.l1}:null};});}
 function readSteps(P,s,ph){const out=[];
-  for(const m of P.materials||[]) if(m.kind!=='solve') (m.toc||[]).forEach((e,ei)=>{if(e.s!==s.id) return;
+  for(const m of P.materials||[]) if(m.kind!=='solve'&&m.cut){const per=+m.perPage||+P.perPage||4;
+    for(const x of cutPieces(P,m)) if(x.subject===s.id) out.push({id:'t:'+m.id+':'+x.id,title:(s.short||s.name)+'　'+x.label,sub:m.name+' p.'+x.pages[0]+'〜'+x.pages[1],min:Math.max(5,Math.round(x.size*per)),subject:s.id,kind:'read',phase:ph});}
+  for(const m of P.materials||[]) if(m.kind!=='solve'&&!m.cut) (m.toc||[]).forEach((e,ei)=>{if(e.s!==s.id) return;
     const p0=+(e.p||[])[0]||1, p1=+(e.p||[])[1]||p0, ch=Math.max(1,+m.chunkPages||20), n=Math.ceil((p1-p0+1)/ch), per=+m.perPage||+P.perPage||4;
     for(let k=0;k<n;k++){const a=p0+k*ch,b=Math.min(p1,a+ch-1);out.push({id:'t:'+m.id+':'+ei+':'+k,title:(s.short||s.name)+'　'+e.t+(n>1?'（'+(k+1)+'/'+n+'）':''),sub:m.name+' p.'+a+'〜'+b,min:Math.max(5,Math.round((b-a+1)*per)),subject:s.id,kind:'read',phase:ph});}});
   return out;}
 function qSteps(P,s,round,ph){const out=[];
-  for(const m of P.materials||[]) if(m.kind==='solve') (m.toc||[]).forEach((e,ei)=>{if(e.s!==s.id) return;
+  for(const m of P.materials||[]) if(m.kind==='solve'&&m.cut){const per=+m.perQ||+P.perQ||3;
+    for(const x of cutPieces(P,m)) if(x.subject===s.id) out.push({id:'q'+round+':'+m.id+':'+x.id,title:(s.short||s.name)+'　'+x.label,sub:m.name+(round>1?'（'+round+'周目）':''),min:Math.round(x.size*per),n:x.size,subject:s.id,kind:'solve',phase:ph,app:m.book&&x.app?{book:m.book,subject:s.id,from:x.app.from,to:x.app.to,round}:null});}
+  for(const m of P.materials||[]) if(m.kind==='solve'&&!m.cut) (m.toc||[]).forEach((e,ei)=>{if(e.s!==s.id) return;
     const q=+e.q||0, per=+m.perQ||+P.perQ||3, ch=Math.max(1,+m.chunkQ||chunkQ(P,per));let off=0;
     for(let j=0;j<ei;j++) if(m.toc[j].s===e.s) off+=(+m.toc[j].q||0);
     for(let a=1,k=0;a<=q;a+=ch,k++){const b=Math.min(q,a+ch-1);out.push({id:'q'+round+':'+m.id+':'+ei+':'+k,title:(s.short||s.name)+'　'+e.t+' 問'+a+'〜'+b,sub:m.name+(round>1?'（'+round+'周目）':''),min:Math.round((b-a+1)*per),n:b-a+1,subject:s.id,kind:'solve',phase:ph,app:m.book?{book:m.book,subject:s.id,from:off+a,to:off+b,round}:null});}});
@@ -3169,6 +3208,60 @@ function tocRange(m,e){if(m.kind==='solve'){const a=+e.from||1;return [a,+e.to||
 function tocSetRange(m,e,a,b){if(m.kind==='solve'){e.from=a;e.to=b;e.q=b-a+1;delete e.p;}else{e.p=[a,b];delete e.from;delete e.to;delete e.q;}}
 // switching between 読む and 解く keeps each row's numbers (pages ⇄ question numbers)
 function matKind(m,k){if(m.kind===k) return;const rs=(m.toc||[]).map(e=>tocRange(m,e));m.kind=k;(m.toc||[]).forEach((e,i)=>tocSetRange(m,e,rs[i][0],rs[i][1]));if(k==='solve'&&!m.book) m.book=newId('b');}
+// 区切り in 直す: opened only on demand (a book can have 100+ 節)
+function cutUI(m,P){
+  if(!(m.toc||[]).length) return null;const id=m.id, key='cut:'+id, open=POPEN.has(key), c=m.cut;
+  return el('details',{class:'set',open,ontoggle:e=>{if(e.target.open===POPEN.has(key)) return;e.target.open?POPEN.add(key):POPEN.delete(key);matRedraw();}},
+    el('summary',{},el('span',{style:'flex:1;min-width:0'},'区切り'),el('span',{class:'xs muted num'},c?(c.by==='ch'?'章':'節')+'ごと・1つ '+(c.unit||studySlotMin(P))+'分':'初めの区切り')),
+    open?cutBody(m,P):null);}
+function cutBody(m,P){
+  const id=m.id, c=m.cut;
+  if(!c) return el('button',{type:'button',class:'btn sub sm',onclick:()=>matSet(id,x=>{x.cut={by:'sec',unit:studySlotMin(plan2()),parts:{}};},true)},'区切りを自分で決める');
+  const hasCh=(m.toc||[]).some(e=>tocRow(e).ch), U=cutUnits(m);
+  const setPart=(k,fn,redraw)=>matSet(id,x=>{if(!x.cut) return;x.cut.parts=x.cut.parts||{};fn(x.cut.parts[k]||(x.cut.parts[k]={}));},redraw);
+  return [
+    hasCh?el('div',{class:'seg',style:'grid-template-columns:1fr 1fr',role:'group','aria-label':'区切る単位'},[['sec','節ごと'],['ch','章ごと']].map(([v,l])=>el('button',{type:'button','aria-pressed':String((c.by||'sec')===v),onclick:()=>matSet(id,x=>{x.cut.by=v;},true)},l))):null,
+    el('label',{class:'field',for:'cu-'+id},'1つの作業（分）',el('input',{type:'number',id:'cu-'+id,inputmode:'numeric',min:5,step:5,value:c.unit||studySlotMin(P),onchange:e=>{const v=parseInt(String(e.target.value).normalize('NFKC'),10);if(!(v>=5)){e.target.value=c.unit||studySlotMin(P);toast('5以上の数字で入力してください');return;}matSet(id,x=>{x.cut.unit=v;},true);}})),
+    U.map((u,ui)=>cutRow(m,P,u,ui<U.length-1,setPart)),
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>matSet(id,x=>{delete x.cut;},true)},'初めの区切りに戻す')];}
+function cutRow(m,P,u,hasNext,setPart){
+  const n=cutN(P,m,u), cfg=((m.cut||{}).parts||{})[u.key]||{}, r=cutRatios(cfg.r,n), rid=m.id+'-'+u.key, solve=m.kind==='solve';
+  const cum=[];{let a=0;for(let k=0;k<n-1;k++){a+=r[k];cum.push(a);}}
+  const sizes=()=>{const out=[];let prev=0;for(let k=0;k<n;k++){const x1=k===n-1?u.size:Math.max(prev+1,Math.round(u.size*cum[k]));out.push(x1-prev);prev=x1;}return out;};
+  const pct=()=>{const out=[];let p=0;for(const y of cum.concat([1])){out.push(Math.round((y-p)*100));p=y;}return out;};
+  const bar=el('div',{class:'gauge'}), segEls=[], tickEls=[];
+  const txt=el('input',{type:'text',id:'cr-'+rid,inputmode:'numeric',value:pct().join('/'),onchange:e=>{const v=String(e.target.value).normalize('NFKC').split(/[\/／、,\s]+/).map(Number).filter(x=>x>0);
+    if(v.length<1||v.length>u.size){e.target.value=pct().join('/');toast('40/40/20 のように、スラッシュで区切って入力してください');return;}setPart(u.key,o=>{o.n=v.length;o.r=v;},true);}});
+  const upd=()=>{const sz=sizes();let prev=0;segEls.forEach((g,k)=>{const x=k===n-1?1:cum[k];g.style.left=prev*100+'%';g.style.width=(x-prev)*100+'%';g.firstChild.textContent=String(sz[k]);prev=x;});tickEls.forEach((t,k)=>{t.style.left=cum[k]*100+'%';});};
+  const save=()=>{txt.value=pct().join('/');setPart(u.key,o=>{o.n=n;o.r=pct();},false);};
+  for(let k=0;k<n;k++){const g=el('i',{class:'gseg'},el('span',{class:'num'},''));segEls.push(g);bar.appendChild(g);}
+  cum.forEach((_,k)=>{const lo=()=>(k?cum[k-1]:0)+1/u.size, hi=()=>(k<cum.length-1?cum[k+1]:1)-1/u.size;
+    const t=el('button',{type:'button',class:'gtick','aria-label':u.label+'の目盛り'+(k+1)});
+    t.addEventListener('pointerdown',e=>{e.preventDefault();try{t.setPointerCapture(e.pointerId);}catch(_){}const rect=bar.getBoundingClientRect();
+      const mv=ev=>{cum[k]=Math.min(hi(),Math.max(lo(),(ev.clientX-rect.left)/rect.width));upd();};
+      const end=()=>{t.removeEventListener('pointermove',mv);t.removeEventListener('pointerup',end);t.removeEventListener('pointercancel',end);save();};
+      t.addEventListener('pointermove',mv);t.addEventListener('pointerup',end);t.addEventListener('pointercancel',end);});
+    t.addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight') return;e.preventDefault();cum[k]=Math.min(hi(),Math.max(lo(),cum[k]+(e.key==='ArrowLeft'?-1:1)/u.size));upd();save();});
+    tickEls.push(t);bar.appendChild(t);});
+  upd();
+  return el('div',{class:'cutrow'},
+    el('div',{class:'between'},el('span',{class:'small'},u.label),el('span',{class:'xs muted num'},u.size+(solve?'問':'p'))),
+    bar,
+    el('div',{class:'grid2'},
+      el('label',{class:'field',for:'cn-'+rid},'分ける数',el('input',{type:'number',id:'cn-'+rid,inputmode:'numeric',min:1,max:u.size,value:n,onchange:e=>{const v=parseInt(String(e.target.value).normalize('NFKC'),10);if(!(v>=1)||v>u.size){e.target.value=n;toast('1から'+u.size+'までの数字で入力してください');return;}setPart(u.key,o=>{o.n=v;delete o.r;},true);}})),
+      el('label',{class:'field',for:'cr-'+rid},'比率',txt)),
+    hasNext?el('label',{class:'row',for:'cj-'+rid,style:'min-height:40px'},el('input',{type:'checkbox',id:'cj-'+rid,checked:!!cfg.join,onchange:e=>setPart(u.key,o=>{if(e.target.checked) o.join=true; else delete o.join;},true)}),el('span',{class:'small'},'最後を次の初めとまとめる')):null);}
+// no 目次: just the number of 章 and the whole size, cut evenly
+function tocByCount(m,P){const id=m.id, subs=P.subjects||[], st=TOCN[id]||(TOCN[id]={n:'',size:'',s:''}), solve=m.kind==='solve';
+  return el('div',{class:'unitmerge'},
+    el('div',{class:'grid2'},
+      el('label',{class:'field',for:'tn-'+id},'章の数',el('input',{type:'number',id:'tn-'+id,inputmode:'numeric',min:1,value:st.n,oninput:e=>{st.n=e.target.value;}})),
+      el('label',{class:'field',for:'tz-'+id},solve?'全部の問題数':'全部のページ数',el('input',{type:'number',id:'tz-'+id,inputmode:'numeric',min:1,value:st.size,oninput:e=>{st.size=e.target.value;}}))),
+    subs.length?el('label',{class:'field',for:'tsu-'+id},'単元',el('select',{id:'tsu-'+id,onchange:e=>{st.s=e.target.value;}},[['','（単元を選ぶ）'],...subs.map(x=>[x.id,x.short||x.name])].map(([v,l])=>{const o=el('option',{value:v},l);if(st.s===v) o.selected=true;return o;}))):null,
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>{const n=parseInt(String(st.n).normalize('NFKC'),10), z=parseInt(String(st.size).normalize('NFKC'),10);
+      if(!(n>=1)||!(z>=n)){toast('章の数と、それ以上の'+(solve?'問題数':'ページ数')+'を入力してください');return;}
+      matSet(id,x=>{x.toc=[];let a=1;for(let k=0;k<n;k++){const b=k===n-1?z:Math.round(z*(k+1)/n), e={ch:'第'+(k+1)+'章',sec:'',t:'第'+(k+1)+'章'};if(st.s) e.s=st.s;tocSetRange(x,e,a,b);x.toc.push(e);a=b+1;}},true);delete TOCN[id];}},'章の数で目次を作る'));}
+const TOCN={};
 function matEditor(m,P){
   const id=m.id, subs=P.subjects||[], toc=m.toc||[], ck=toc.filter(e=>e.check).length, only=ck>0&&MATCHK.has(id), solve=m.kind==='solve';
   const fld=(fid,label,ctl)=>el('label',{class:'field',for:fid},label,ctl);
@@ -3207,18 +3300,19 @@ function matEditor(m,P){
       const dependsOn=(x,target,seen=new Set())=>{if(!x||!x.after||seen.has(x.id)) return false;if(x.after===target) return true;seen.add(x.id);return dependsOn(ms.find(y=>y.id===x.after),target,seen);};
       const opts=ms.filter(o=>o.id!==id&&!dependsOn(o,id));
       return fld('mo-'+id,'使う順番',sel('mo-'+id,m.after&&opts.some(o=>o.id===m.after)?m.after:'',[['','最初から'],...opts.map(o=>[o.id,o.name+'の1周目を終えてから'])],v=>matSet(id,x=>{if(v) x.after=v; else delete x.after;})));})(),
-    solve?[el('div',{class:'grid2'},fld('mq-'+id,'1問の目安（分）',num('mq-'+id,m.perQ||P.perQ||3,v=>matSet(id,x=>{x.perQ=v||3;}),0.5)),fld('mc-'+id,'何問ずつ区切る',num('mc-'+id,m.chunkQ||chunkQ(P,m.perQ||P.perQ||3),v=>matSet(id,x=>{x.chunkQ=Math.max(1,Math.round(v));}),1))),
+    solve?[el('div',{class:'grid2'},fld('mq-'+id,'1問の目安（分）',num('mq-'+id,m.perQ||P.perQ||3,v=>matSet(id,x=>{x.perQ=v||3;}),0.5)),m.cut?el('span',{}):fld('mc-'+id,'何問ずつ区切る',num('mc-'+id,m.chunkQ||chunkQ(P,m.perQ||P.perQ||3),v=>matSet(id,x=>{x.chunkQ=Math.max(1,Math.round(v));}),1))),
         fld('mb-'+id,'アプリの問題集（取り込んだもの）',sel('mb-'+id,m.book||'',[['','（アプリに取り込まない・まだ）'],...books.map(b=>[b,bookName(b)])],v=>matSet(id,x=>{x.book=v||undefined;}))),
         (()=>{if(!m.book) return null;const qs=bookQs(m.book), mc=markCounts(qs), pts=m.parts||[];
           const inPart=q=>!q.mark&&q.from&&pts.some(x=>x.book===q.from), own=qs.filter(q=>!q.mark&&!inPart(q)).length;
           const parts=pts.map((x,i)=>({label:x.name,noMark:qs.filter(q=>!q.mark&&q.from===x.book).length,star:x.star!=null?x.star:m.star,onStar:v=>matSet(id,y=>{y.parts[i].star=v;})}));
           return [starMapUI(plan2(),'mst-'+id,{counts:mc.counts,noMark:own,parts,star:m.star,marks:m.marks,onStar:v=>matSet(id,x=>{x.star=v;}),onMark:(mk,v)=>matSet(id,x=>{x.marks=Object.assign({},x.marks,{[mk]:v});})}),
             qs.length?renumUI(m):null];})()]
-      :el('div',{class:'grid2'},fld('mp-'+id,'1ページを読む時間（分）',num('mp-'+id,m.perPage||P.perPage||4,v=>matSet(id,x=>{x.perPage=v||4;}),0.5)),fld('mc-'+id,'何ページずつ区切る（節より長いとき）',num('mc-'+id,m.chunkPages||20,v=>matSet(id,x=>{x.chunkPages=Math.max(1,Math.round(v));}),1))),
+      :el('div',{class:'grid2'},fld('mp-'+id,'1ページを読む時間（分）',num('mp-'+id,m.perPage||P.perPage||4,v=>matSet(id,x=>{x.perPage=v||4;}),0.5)),m.cut?el('span',{}):fld('mc-'+id,'何ページずつ区切る（節より長いとき）',num('mc-'+id,m.chunkPages||20,v=>matSet(id,x=>{x.chunkPages=Math.max(1,Math.round(v));}),1))),
+    cutUI(m,P),
     el('div',{class:'between'},el('h3',{class:'tochead'},'目次（'+toc.length+'行'+(ck?'・要確認 '+ck:'')+'）'),
       ck?el('button',{type:'button',class:'chip sm','aria-pressed':String(only),onclick:()=>{only?MATCHK.delete(id):MATCHK.add(id);matRedraw();}},'要確認の行だけ'):null),
     only?el('div',{class:'toclist'},toc.map((e,i)=>e.check?rowEd(i,true):null))
-      :[groups.map(gEd),el('button',{type:'button',class:'btn sub sm',onclick:()=>addAfter(toc.length-1,'新しい章')},'＋ 章を追加')]);
+      :[toc.length?null:tocByCount(m,P),groups.map(gEd),el('button',{type:'button',class:'btn sub sm',onclick:()=>addAfter(toc.length-1,'新しい章')},'＋ 章を追加')]);
 }
 
 /* ----- 学習の前提 ----- */
