@@ -5390,15 +5390,23 @@ async function copyText(text,what){try{await navigator.clipboard.writeText(text)
 
 /* the text that came in → {kind:'toc'|'q', rows:[{…the Japanese column names…}]} */
 // the JSON in an AI reply, even when the whole reply was copied (```json blocks, words before or after)
+/* 貼り付けの中から、芒学のJSONをすべて拾う（2026-11-22）：```で囲まれていても、{ … } が続けて並んでいても、間に文があってもよい。
+   AIの「続き」は新しいJSONで返るので、続けて貼った分を貼った順にすべて読む。途中で切れたJSONがあれば null（何も取り込まない） */
+function jsonEnd(s,st){let d=0,q=false,e=false;
+  for(let k=st;k<s.length;k++){const c=s[k];
+    if(q){if(e) e=false; else if(c==='\\') e=true; else if(c==='"') q=false;continue;}
+    if(c==='"') q=true; else if(c==='{'||c==='[') d++; else if(c==='}'||c===']'){d--;if(d===0) return k+1;if(d<0) return -1;}}
+  return -1;}
 function impJsonList(s){
   const P=t=>{try{return JSON.parse(t);}catch(e){return undefined;}};
   const ours=j=>j!==undefined&&(Array.isArray(j)?j:[j]).some(o=>o&&typeof o==='object'&&(Array.isArray(o['目次'])||Array.isArray(o['問題'])));
   if(/^[\[{]/.test(s)){const j=P(s);if(ours(j)) return [j];}
-  const fs=[...s.matchAll(/```[^\n`]*\n?([\s\S]*?)```/g)].map(m=>P(m[1].trim())).filter(ours);
-  if(fs.length) return fs;
-  const a=s.search(/[\[{]/), b=Math.max(s.lastIndexOf('}'),s.lastIndexOf(']'));
-  if(a>=0&&b>a){const j=P(s.slice(a,b+1));if(ours(j)) return [j];}
-  return null;
+  const out=[];let i=0, cut=false;
+  while(i<s.length){const a=s.slice(i).search(/[\[{]/);if(a<0) break;const st=i+a, end=jsonEnd(s,st);
+    if(end<0){cut=true;break;}
+    const j=P(s.slice(st,end));if(ours(j)){out.push(j);i=end;continue;}
+    i=st+1;}
+  return out.length&&!cut?out:null;
 }
 function impRead(text){
   const s=String(text||'').replace(/^\uFEFF/,'').trim();
@@ -5637,6 +5645,7 @@ function tocPrompt(){return [
   '  - 章末の、ページの切り替え（白いページ）、挿画、コラム、まとめ、確認問題のページ',
   '  - 巻末の、索引・付録・模擬問題など',
   '  それぞれ、読む範囲に含めるか、含めないか。含めないなら、どのページかを私に確認し、そのページはどの節にも含めません（節の「はじめ」「おわり」をそのページを避けて決めます）。含めるなら、すぐ前の節の範囲に足します（章の頭のページなら、その章の最初の節の範囲に足します）。私が分からないと答えたら、目次のページ番号どおりにします。',
+  '- 本が分冊（第1分冊・第2分冊、上巻・下巻など）に分かれているか。分かれているときは、1つの教材にまとめるか、分冊ごとに別の教材にするか。',
   '- 問題集で、同じ単元の中で問題番号が1から始まり直すとき（Basic・Step-Up、初級・中級などの段階ごと）、段階ごとに別の教材に分けるか。おすすめは、番号が重なるときだけ分け、番号が重ならなければ、1冊を1つの教材のままにすることです。',
   '- 単元の当てはめで迷う見出し。',
   '',
@@ -5644,6 +5653,7 @@ function tocPrompt(){return [
   '- 「教材」には、書名をそのまま書きます。',
   '- 出力は、下の形のJSONと、そのあとの1行だけです。',
   '- 1冊につき1つのJSONにします。段階ごとに分けるときは、JSONを段階の数だけ [ ] の中に並べ、「教材」は「書名（Basic）」のようにします。',
+  '- 分冊を1つの教材にまとめるときは、第1分冊から順に、同じ「教材」の名前で書きます。ページは本に印刷されたとおりに書き、分冊の境目でページが戻っても「確認」は付けません。分冊ごとに別の教材にするときは、「教材」を「書名（第1分冊）」のようにします。',
   '- 「種類」は、読むもの（テキスト・入門書）なら「読む」、問題集なら「解く」です。',
   '- 「目次」には、いちばん細かい見出し（節）を1つずつ、本の順に書きます。節がない章は、「節」を "" にして章を1つ書きます。',
   '- 「はじめ」「おわり」は数字です。読むものはページ、問題集は問題番号です。',
