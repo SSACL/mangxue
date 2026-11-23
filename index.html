@@ -5404,7 +5404,9 @@ function impJsonList(s){
   const out=[];let i=0, cut=false;
   while(i<s.length){const a=s.slice(i).search(/[\[{]/);if(a<0) break;const st=i+a, end=jsonEnd(s,st);
     if(end<0){cut=true;break;}
-    const j=P(s.slice(st,end));if(ours(j)){out.push(j);i=end;continue;}
+    const seg=s.slice(st,end), j=P(seg);if(ours(j)){out.push(j);i=end;continue;}
+    // 芒学のJSONに見えるのに読めないもの（書き間違い・欠け）があれば、読めた分だけを取り込まない（2026-11-23）
+    if(j===undefined&&/"(形式|教材|目次|問題)"\s*:/.test(seg)){cut=true;break;}
     i=st+1;}
   return out.length&&!cut?out:null;
 }
@@ -5412,7 +5414,7 @@ function impRead(text){
   const s=String(text||'').replace(/^\uFEFF/,'').trim();
   if(!s) throw '中身がありません。';
   const js=impJsonList(s);
-  if(js||/^[\[{]/.test(s)){
+  if(js||/^[\[{]/.test(s)||/"(形式|教材|目次|問題)"\s*:/.test(s)){
     if(!js){let ok=true;try{JSON.parse(s);}catch(e){ok=false;}
       throw ok?'「目次」も「問題」も見つかりませんでした。形は、この画面の「形の説明」を見てください。':'JSONとして読めませんでした。AIの返事が途中で切れていないか確かめてください。';}
     const list=js.flatMap(j=>Array.isArray(j)?j:[j]), out={toc:[],q:[]};
