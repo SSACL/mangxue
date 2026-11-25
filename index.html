@@ -1115,11 +1115,22 @@ function allItems(filter){
   for(const [docId,d] of Object.entries(S.qbank)){
     if(!d||!Array.isArray(d.items)) continue;
     if(filter&&!filter(d)) continue;
-    for(const q of d.items) out.push({docId,doc:d,q});
+    const eps=qEps(d.items);for(const q of d.items) out.push({docId,doc:d,q,ep:eps.get(q)});
   }
-  out.sort((a,b)=>(a.doc.book>b.doc.book?1:a.doc.book<b.doc.book?-1:0)||(qOrd(a.q)-qOrd(b.q))||(a.q.id>b.q.id?1:a.q.id<b.q.id?-1:0));
+  out.sort((a,b)=>(a.doc.book>b.doc.book?1:a.doc.book<b.doc.book?-1:0)||qCmp(a.ep,b.ep,a.q,b.q));
   return out;
 }
+/* 本の中の問題の並び（2026-11-26 ユーザーが「ページの順」を選んだ）：本のページの順。同じページの中は、取り込んだ順（前からある問題は本の番号の順）。
+   ページのない問題は、同じ単元の中で前にある問題のページのすぐあと（前になければ、後ろにある問題のページのすぐ前）に置く。
+   束ねた問題集は、元の本ごとに、束ねたときに選んだ順に並べ、その中をページの順にする（元の本どうしのページは比べない）。表示する番号（No.）は変えない */
+function qEps(items){const m=new Map(), pg=q=>typeof q.page==='number'&&isFinite(q.page)?q.page:null, nx=new Array(items.length);
+  const fmin=new Map();for(const q of items) if(q.from) fmin.set(q.from,Math.min(fmin.has(q.from)?fmin.get(q.from):Infinity,qOrd(q)));
+  const fr=new Map([...fmin.entries()].sort((a,b)=>a[1]-b[1]).map(([f],i)=>[f,i])), rk=q=>q.from&&fr.has(q.from)?fr.get(q.from):(fr.size?fr.size:0);
+  let n=null;for(let i=items.length-1;i>=0;i--){nx[i]=n;const p=pg(items[i]);if(p!=null) n=p;}
+  let prev=null;items.forEach((q,i)=>{const p=pg(q);let e;if(p!=null){e=p;prev=p;} else e=prev!=null?prev+0.5:nx[i]!=null?nx[i]-0.5:9e6;m.set(q,rk(q)*1e7+e);});return m;}
+function qTie(q){return q.pi!=null?1e6+q.pi:(q.no||0);}
+function qCmp(ea,eb,a,b){return (ea-eb)||(qTie(a)-qTie(b))||(qOrd(a)-qOrd(b))||(a.id>b.id?1:a.id<b.id?-1:0);}
+function qSortDoc(items){const e=qEps(items);return items.sort((a,b)=>qCmp(e.get(a),e.get(b),a,b));}
 // the app's own number (after 振り直す・束ねる・続きの番号) or else the book's
 function qOrd(q){return q.seq!=null?q.seq:(q.no||0);}
 function stOf(docId,qid){const s=S.state[docId];return s&&s.s?s.s[qid]:null;}
@@ -5581,6 +5592,7 @@ function impQs(rows){
     const pg=impNum(r['ページ']);if(pg!=null) q.page=pg;
     if(g('確認')) q.check=g('確認');
     if(g('印')) q.mark=g('印');
+    q._pi=i;  // 貼り付けた順（2026-11-26）
     (books[book]||(books[book]={}))[unit]=((books[book]||{})[unit]||[]).concat([q]);
   });
   return {books,errs};
@@ -5597,15 +5609,16 @@ function applyQs(res){
       for(const [u,qs] of Object.entries(units)) docs.push({book:m.book,sid:unitId(x,u),qs});
     }
   });
+  const piBase={};for(const d of docs) if(!(d.book in piBase)) piBase[d.book]=Math.max(-1,...bookQs(d.book).map(q=>q.pi!=null?q.pi:-1));
   for(const d of docs){
     const docId=d.book+'-'+d.sid, cur=S.qbank[docId], items=cur&&Array.isArray(cur.items)?cur.items.slice():[];
     // a number already used (in this import, or in the book when 続きの番号 was chosen) gets the next number
     const had=new Set(items.map(x=>x.no)), seen=new Set();let top=Math.max(0,...bookQs(d.book).map(qOrd),...d.qs.map(q=>q.no||0));
-    for(const q of d.qs){const mode=q._mode;delete q._mode;const base=d.book.toUpperCase()+'-'+d.sid+'-'+String(q.no).padStart(4,'0');
+    for(const q of d.qs){const mode=q._mode;delete q._mode;if(q._pi!=null){q.pi=piBase[d.book]+1+q._pi;delete q._pi;}const base=d.book.toUpperCase()+'-'+d.sid+'-'+String(q.no).padStart(4,'0');
       if(seen.has(q.no)||(mode==='cont'&&had.has(q.no))){q.seq=++top;q.id=base+'-'+q.seq;items.push(q);}
-      else {q.id=base;const i=items.findIndex(x=>x.id===q.id);if(i>=0){if(items[i].seq!=null) q.seq=items[i].seq;if(items[i].from) q.from=items[i].from;items[i]=q;} else items.push(q);}
+      else {q.id=base;const i=items.findIndex(x=>x.id===q.id);if(i>=0){if(items[i].seq!=null) q.seq=items[i].seq;if(items[i].from) q.from=items[i].from;if(items[i].pi!=null) q.pi=items[i].pi; else delete q.pi;items[i]=q;} else items.push(q);}
       seen.add(q.no);n++;}
-    items.sort((a,b)=>qOrd(a)-qOrd(b));
+    qSortDoc(items);
     S.qbank[docId]={book:d.book,subject:d.sid,items,t:Date.now(),local:1};save('qbank/'+docId);
   }
   CAPV++;
@@ -5847,7 +5860,7 @@ function renumberBook(book,scheme){
   const docs=Object.entries(S.qbank).filter(([,d])=>d&&d.book===book&&Array.isArray(d.items)&&d.items.length).sort((a,b)=>(order.get(a[1].subject)??99)-(order.get(b[1].subject)??99));
   let n=0;
   for(const [id,d0] of docs){const d=clone(d0);if(scheme==='unit') n=0;
-    d.items.sort((a,b)=>qOrd(a)-qOrd(b)||(a.id>b.id?1:a.id<b.id?-1:0));for(const q of d.items) q.seq=++n;
+    qSortDoc(d.items);for(const q of d.items) q.seq=++n;
     d.t=Date.now();d.local=1;S.qbank[id]=d;save('qbank/'+id);}
   CAPV++;}
 const RN_OPTS=[['','選ぶ'],['unit','単元ごとに1から'],['all','問題集全体で通す']];
@@ -5865,7 +5878,7 @@ function mergeBooks(books,name,scheme){
   for(const [sid,list] of Object.entries(units)){
     const tid=tb+'-'+sid, items=[];
     for(const b of books){const x=list.find(y=>y.d.book===b);if(!x) continue;
-      for(const q0 of x.d.items.slice().sort((a,c)=>qOrd(a)-qOrd(c))){const q=clone(q0);if(!q.from) q.from=b;items.push(q);}
+      for(const q0 of qSortDoc(x.d.items.slice())){const q=clone(q0);if(!q.from) q.from=b;items.push(q);}
       if(x.docId===tid) continue;
       const src=S.state[x.docId];   // the records move with their questions
       if(src&&src.s){const dst=S.state[tid]||(S.state[tid]={s:{}});for(const [qid,v] of Object.entries(src.s)) if(!dst.s[qid]||(v.t||0)>(dst.s[qid].t||0)) dst.s[qid]=clone(v);dst.round=Math.max(dst.round||1,src.round||1);}
