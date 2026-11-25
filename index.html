@@ -5708,7 +5708,7 @@ const IMP_Q_EX={'形式':'芒学の問題','教材':'（問題集の名前）','
 function rangesTxt(ns){const a=[...new Set(ns)].filter(n=>n>0).sort((x,y)=>x-y), out=[];let i=0;
   while(i<a.length){let j=i;while(j+1<a.length&&a[j+1]===a[j]+1) j++;out.push(i===j?String(a[i]):a[i]+'〜'+a[j]);i=j+1;}return out.join('、');}
 function knownLines(m,what){if(!m) return [];const P=plan2(), uname=id=>{const x=(P.subjects||[]).find(s=>s.id===id);return x?x.name:'（単元なし）';};
-  const out=['この教材の名前は「'+m.name+'」です。JSONの「教材」には、この名前をそのまま書いてください。'];
+  const out=m.name?['この教材の名前は「'+m.name+'」です。JSONの「教材」には、この名前をそのまま書いてください。']:[];
   if(what==='q'){const by={};if(m.book) for(const d of Object.values(S.qbank)) if(d&&d.book===m.book&&Array.isArray(d.items)) (by[d.subject]=by[d.subject]||[]).push(...d.items.map(q=>q.no));
     const us=Object.keys(by);
     if(!us.length) out.push('この教材の問題は、まだ1問も取り込んでいません。');
@@ -5731,7 +5731,7 @@ function tocPrompt(m){return [
   '',
   '確かめること：',
   '- 受け取った写真の枚数と、写っている範囲（最初と最後の見出し・ページ）。抜けているページ、重なっているページ、読めない写真がないか。',
-  m?null:'- 書名。写真に写っていなければ確認してください。',
+  m&&m.name?null:'- 書名。写真に写っていなければ確認してください。',
   '- 目次に出てこないページの扱い。目次からは分からないので、私に確認してください。',
   '  - 章の頭の、導入（イントロダクション）だけのページや扉のページ',
   '  - 章末の、ページの切り替え（白いページ）、挿画、コラム、まとめ、確認問題のページ',
@@ -5742,7 +5742,7 @@ function tocPrompt(m){return [
   '- 単元の当てはめで迷う見出し。',
   '',
   '決まり：',
-  m?'- 「教材」には「'+m.name+'」と書きます。':'- 「教材」には、書名をそのまま書きます。',
+  m&&m.name?'- 「教材」には「'+m.name+'」と書きます。':'- 「教材」には、書名をそのまま書きます。',
   '- 出力は、下の形のJSONと、進め方の3・4に書いた行だけです。',
   '- 1冊につき1つのJSONにします。段階ごとに分けるときは、JSONを段階の数だけ [ ] の中に並べ、「教材」は「書名（Basic）」のようにします。',
   '- 分冊を1つの教材にまとめるときは、第1分冊から順に、同じ「教材」の名前で書きます。ページは本に印刷されたとおりに書き、分冊の境目でページが戻っても「確認」は付けません。分冊ごとに別の教材にするときは、「教材」を「書名（第1分冊）」のようにします。',
@@ -5780,7 +5780,7 @@ function qPrompt(m){return [
   '- 読めない所。',
   '',
   '決まり：',
-  m?'- 「教材」には「'+m.name+'」と書いてください。':'- 「教材」には、写真に写っている問題集の名前をそのまま書いてください。名前が写っていなければ確認してください。私が名前を伝えたら、それ以降はその名前にします。',
+  m&&m.name?'- 「教材」には「'+m.name+'」と書いてください。':'- 「教材」には、写真に写っている問題集の名前をそのまま書いてください。名前が写っていなければ確認してください。私が名前を伝えたら、それ以降はその名前にします。',
   '- JSONの返事には、JSONとそのあとの1行のほかに、説明の文はいりません。',
   '- 問題文・選択肢・答え・解説は、本のとおりに書き写します。言い換えたり、足したりしないでください。',
   '- 「詳しい解説」には、決めた分け方のとおり、本の紙面の順に、囲みや見出し（例：これも覚える、根拠条文、アドバイス）も含めて書き写します。「解説」と「詳しい解説」の2つより細かくは分けません。',
@@ -5989,8 +5989,8 @@ function matImportSheet(m,what){
       m?null:seg([['read','読む（テキスト）'],['solve','解く（問題集）']],st.kind,k=>{st.kind=k;},'教材の種類'),
       !m&&st.kind==='solve'?seg([['toc','目次を取り込む'],['q','問題を取り込む']],st.what,k=>{st.what=k;},'取り込むもの'):null,
       el('button',{type:'button',class:'btn',style:'width:100%;margin-top:4px',onclick:()=>{if(qNew()){const q=picked();if(!q){toast(qMats().length?'教材の名前を選んでください':'先に目次を取り込んでください');return;}copyText(qPrompt(q),'問題用のプロンプト');return;}
-        if(!m&&!st.name.trim()){toast('教材の名前を手入力してください');return;}
-        copyText(w==='q'?qPrompt(tgt):tocPrompt(tgt),w==='q'?'問題用のプロンプト':'目次用のプロンプト');}},'プロンプトをコピー'),
+        // 名前の手入力は、コピーの前には求めない（2026-11-25）。押したときに入力している名前を使い、空なら書名をAIに確かめてもらう
+        const t2=m||{name:st.name.trim(),kind:st.kind,toc:[]};copyText(w==='q'?qPrompt(t2):tocPrompt(t2),w==='q'?'問題用のプロンプト':'目次用のプロンプト');}},'プロンプトをコピー'),
       el('div',{class:'ailinks',style:'margin:8px 0'},[['ChatGPT','https://chatgpt.com/'],['Claude','https://claude.ai/new'],['Gemini','https://gemini.google.com/app'],['Copilot','https://copilot.microsoft.com/']].map(([n,u])=>el('a',{href:u,target:'_blank',rel:'noopener noreferrer',class:'ailink'},n))),
       ta,
       el('button',{type:'button',class:'btn sub',style:'width:100%;margin-top:8px',onclick:async()=>{try{const t=await navigator.clipboard.readText();if(!t){toast('クリップボードが空です');return;}ta.value=t;sync();toast('貼り付けました（'+t.length+'文字）');}catch(_){toast('ここからは貼り付けられませんでした。欄を長押しして「ペースト」を選んでください');}}},'クリップボードから貼り付ける'),
