@@ -172,7 +172,7 @@ nav.tabs a{display:flex;flex-direction:column;align-items:center;justify-content
 nav.tabs a[aria-current="page"]{color:var(--accent-ink);font-weight:700}
 nav.tabs a[hidden]{display:none}
 nav.tabs svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:9;max-width:calc(100% - 32px)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:9;max-width:calc(100% - 32px);pointer-events:none}
 .brand{display:flex;align-items:baseline;gap:.4em;flex-wrap:wrap}
 .brand ruby{font-family:var(--font-display);ruby-position:over}
 .brand rt{font-family:var(--font-body);font-size:.42em;font-weight:500;color:var(--muted);letter-spacing:.06em}
@@ -228,6 +228,10 @@ details.set>summary::-webkit-details-marker{display:none}
 details.set>summary::after{content:"開く";flex:none;font-size:12px;font-weight:700;padding:3px 12px;border-radius:999px;border:1px solid var(--accent);color:var(--accent-ink);background:var(--surface);margin-left:auto}
 details.set[open]>summary::after{content:"閉じる";background:var(--accent-soft)}
 details.set[open]{padding-bottom:14px;display:flex;flex-direction:column;gap:10px}
+.setrow{display:flex;align-items:center;gap:8px;width:100%;min-height:52px;padding:0 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);font:inherit;font-weight:500;text-align:left;cursor:pointer}
+.setrow::after{content:"›";flex:none;margin-left:auto;font-size:28px;font-weight:400;line-height:1;color:var(--muted)}
+.sheetdone{position:sticky;bottom:calc(-20px - env(safe-area-inset-bottom,0px));margin-bottom:calc(-20px - env(safe-area-inset-bottom,0px));padding:8px 0 calc(20px + env(safe-area-inset-bottom,0px));background:var(--surface);box-shadow:0 -8px 12px -8px rgba(0,0,0,.12)}.sheetdone>.btn{width:100%}
+#sheet .dset{border:0;padding:0;background:none}
 .pal{display:flex;gap:8px;flex-wrap:wrap}
 .pal button{width:34px;height:34px;border-radius:50%;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer}
 .pal button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
@@ -689,14 +693,18 @@ h2{text-wrap:balance}
 .unitrow .unitname{flex:1;min-width:0}
 .unitmerge{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;background:var(--accent-soft)}
 .ailinks{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-inline:-2px;padding:2px}.ailinks::-webkit-scrollbar{display:none}.ailinks>*{flex:none;white-space:nowrap}
-.mk{border-left:6px solid var(--k);background:color-mix(in srgb,var(--k) 7%,var(--surface))}.mk.read{--k:var(--accent)}.mk.solve{--k:var(--good)}.mk.off{--k:#9AA0B2}.mk>summary{font-weight:700;display:flex;gap:8px;align-items:center;cursor:pointer;list-style:none}.mk>summary::-webkit-details-marker{display:none}.mk .kind{font-size:12px;font-weight:600;color:var(--k);margin-left:auto;white-space:nowrap}.mk .grid2,.mk .grid1{margin-top:8px}.mk .grid2>.btn,.mk .grid1>.btn{width:100%}.grid1{display:grid;grid-template-columns:1fr}.mk .mklow{margin-top:12px}
-#sheet>*{flex-shrink:0}
+.mk{border-left:6px solid var(--k);background:color-mix(in srgb,var(--k) 7%,var(--surface))}.mk.read{--k:var(--accent)}.mk.solve{--k:var(--good)}.mk.off{--k:#9AA0B2}.mk>summary{font-weight:700;display:flex;gap:8px;align-items:center;cursor:pointer;list-style:none}.mk>summary::-webkit-details-marker{display:none}.mk .kind{font-size:12px;font-weight:600;color:var(--k);margin-left:auto;white-space:nowrap}.mk>summary::after{content:"開く";flex:none;font-size:12px;font-weight:700;padding:3px 12px;border-radius:999px;border:1px solid var(--accent);color:var(--accent-ink);background:var(--surface);margin-left:6px}.mk[open]>summary::after{content:"閉じる";background:var(--accent-soft)}.mk .grid2,.mk .grid1{margin-top:8px}.mk .grid2>.btn,.mk .grid1>.btn{width:100%}.grid1{display:grid;grid-template-columns:1fr}.mk .mklow{margin-top:12px}
+#sheet>*{flex-shrink:0}.imperr{margin-top:8px;color:var(--bad);font-size:14px;font-weight:600}.imperr p{margin:0}.imperr ul{margin:4px 0 0;padding-left:1.2em}
 .ailink{font-size:12.5px;padding:4px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);text-decoration:none}
 .ailink:hover,.ailink:focus-visible{color:var(--accent-ink);border-color:var(--accent)}
 .helpt{border-top:1px solid var(--line);padding:2px 0}
 .helpt:first-of-type{border-top:0}
-.helpt>summary{cursor:pointer;padding:10px 0;font-size:14px;font-weight:600;list-style-position:inside}
-.helpt>ul{padding-bottom:10px}
+.helpt>summary{padding:4px 0}
+/* 1 読むだけ：「＋」で開き「−」で閉じる。同じ並びで開くのは1つだけ（2026-11-25） */
+details.rd>summary{list-style:none;display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;font-size:14px;font-weight:600}details.rd>summary::-webkit-details-marker{display:none}
+details.rd>summary::after{content:"＋";flex:none;margin-left:auto;font-size:22px;line-height:1;font-weight:400;color:var(--accent-ink)}details.rd[open]>summary::after{content:"−"}
+.rdb{background:color-mix(in srgb,var(--accent) 7%,var(--surface));padding:10px 12px;border-radius:10px;margin:0 0 10px}.rdb>ul{margin:0}.rdb>p{margin:0}.rdb>p+p{margin-top:4px}
+.hintrow{display:flex;align-items:flex-start;gap:8px}.hintrow>p{flex:1;min-width:0}
 /* explanations: limited HTML (emphasis, lists, tables) */
 .rich{line-height:1.8;font-size:15px}
 .rich>:is(h4,h5,p,ul,ol,.richtable){margin-top:8px}
@@ -710,7 +718,7 @@ h2{text-wrap:balance}
 .richtable th,.richtable td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
 .richtable th{background:var(--chip);font-weight:600}
 details.detail{border-top:1px solid var(--line);padding-top:6px}
-details.detail>summary{cursor:pointer;padding:8px 0;font-size:14px;font-weight:600;color:var(--accent-ink)}
+details.detail>summary{color:var(--accent-ink)}
 .wordlist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:4px 12px;font-size:14.5px;line-height:1.5}
 .wordlist li{display:flex;gap:6px}
 .wordlist .wn{flex:none;color:var(--muted)}
@@ -831,8 +839,43 @@ function el(tag,props,...kids){
   for(const c of kids.flat(9)){if(c==null||c===false) continue; e.append(c instanceof Node?c:document.createTextNode(String(c)));}
   return e;
 }
-let toastTimer=null;
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.hidden=true;},3200);}
+let toastTimer=null,MODALZ=0;const TOAST_EL=document.getElementById('toast');
+/* 下から開く画面などが開いているときは、知らせをいちばん手前の画面の中に置き、裏に隠れないようにする（2026-11-25） */
+function modalOpen(d){d.dataset.z=++MODALZ;if(!d.dataset.tw){d.dataset.tw='1';d.addEventListener('close',()=>{if(TOAST_EL.parentNode===d) toastKeep(true);});}d.showModal();}
+function toastHost(){let h=document.body,z=-1;document.querySelectorAll('dialog[open]').forEach(d=>{const n=+(d.dataset.z||0);if(n>z){z=n;h=d;}});return h;}
+function toastKeep(force){if(force||(!TOAST_EL.hidden&&!TOAST_EL.isConnected)){const h=toastHost();if(TOAST_EL.parentNode!==h) h.appendChild(TOAST_EL);}}
+/* 下から開く画面のうち、中で値を変えるもの（全体の設定・操作のボタン）（2026-11-25）
+   ・画面を描き直すたびに中身も描き直す（同期のあとの描き直しは、文字を入力している最中なら入力を終えてから）
+   ・中から別の下から開く画面（説明・確認など）を開いて閉じると、元の画面に戻る */
+let SHEETLIVE=null, SHEETSTACK=[], LIVEDRAWING=false, LIVEPEND=false, BGR=false;
+function sheetPush(){const s=document.getElementById('sheet');if(!s.open) SHEETSTACK=[]; else if(SHEETLIVE) SHEETSTACK.push(SHEETLIVE);}
+function openLive(title,build,opt){opt=opt||{};sheetPush();SHEETLIVE={title,build,keep:!!opt.keep,nodes:null};liveDraw(true);}
+function liveDraw(first){const L=SHEETLIVE, s=document.getElementById('sheet');if(!L||(!first&&(!s.open||L.keep))) return;
+  const a=document.activeElement;if(!first&&BGR&&a&&s.contains(a)&&a.matches('input:not([type=checkbox]):not([type=radio]):not([type=button]),textarea')){LIVEPEND=true;return;}
+  LIVEPEND=false;const y=s.scrollTop;
+  if(!L.nodes||!L.keep) L.nodes=[].concat(L.build()).flat(9).filter(x=>x!=null&&x!==false);
+  if(!L.nodes.length&&!first){s.close();return;}
+  LIVEDRAWING=true;try{openSheet(typeof L.title==='function'?L.title():L.title,...L.nodes,L.keep?null:el('div',{class:'sheetdone'},el('button',{type:'button',class:'btn',onclick:()=>s.close()},'完了')));}finally{LIVEDRAWING=false;}
+  if(!first) s.scrollTop=y;}
+{const s=document.getElementById('sheet');s.addEventListener('close',()=>{if(s.open) return;if(SHEETSTACK.length){SHEETLIVE=SHEETSTACK.pop();liveDraw(true);}else SHEETLIVE=null;});
+  s.addEventListener('focusout',()=>{if(LIVEPEND) setTimeout(()=>{if(LIVEPEND) liveDraw();},0);});}
+window.addEventListener('hashchange',()=>{SHEETSTACK=[];});
+function helpBtn(label,fn){return el('button',{type:'button',class:'help','aria-label':label,onclick:fn},'?');}
+function cardBody(card){const k=[...card.childNodes];if(k[0]&&k[0].classList&&k[0].classList.contains('between')) k.shift();return k;}
+/* 3 全体にかかる設定：名前（といまの値）と「›」の行。押すと下から開く画面 */
+function setRow(label,onclick,id){return el('button',{type:'button',class:'setrow',id:id||null,onclick},label);}
+/* たたむ欄は、同じ並びで開くのは1つだけ（2026-11-25）。別の欄を開くと前の欄は閉じ、開いた欄の位置はずらさない。
+   「＋」の欄（読むだけ）と「開く」の欄（確認が主体）は別に数える。メニューの「設定と管理」は除く */
+document.addEventListener('toggle',e=>{const d=e.target;if(!(d instanceof HTMLDetailsElement)||!d.open||d.classList.contains('menuset')||!d.parentElement) return;
+  const rd=d.classList.contains('rd'), up=n=>n.parentElement&&n.parentElement.closest('details'), pd=up(d);
+  const box=d.parentElement.closest('.card,.dpart,#sheet,.wizbody,#main,#menu')||d.parentElement, wide=box.matches('#sheet,.wizbody,#main,#menu');
+  // 並べ替えのボタンなどと1行になっているときは、その行を1つの欄として数える
+  const row=x=>{const q=x.parentElement;return q&&q!==box&&q.querySelectorAll(':scope>details').length===1&&!q.matches('.card,.dpart')?q:x;}, dr=row(d);
+  const others=[...box.querySelectorAll('details[open]')].filter(x=>x!==d&&!x.classList.contains('menuset')&&x.classList.contains('rd')===rd&&up(x)===pd&&!x.contains(d)&&(!wide||row(x).parentElement===dr.parentElement));
+  if(!others.length) return;const sc=d.closest('#sheet,.wizbody,#menu'), y0=d.getBoundingClientRect().top;
+  others.forEach(x=>{x.open=false;});const dy=d.getBoundingClientRect().top-y0;if(dy){if(sc) sc.scrollTop+=dy; else window.scrollBy(0,dy);}
+},true);
+function toast(msg){const t=TOAST_EL;toastKeep(true);t.textContent=msg;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.hidden=true;},3200);}
 
 /* ---------- device storage (IndexedDB) ---------- */
 const IDB=(()=>{let p=null;
@@ -1002,7 +1045,7 @@ async function sync(){
     else if(c==='rate'||c==='conflict'){syncErr='';scheduleSync(60000);}
     else syncErr=ERR[c]||('GitHubでエラー（'+c+'）');
   }
-  finally{syncing=false;IDB.put('__known',KNOWN);updateStatus();softRender();if(planChanged&&!(VIEW==='practice'&&P.step!=='setup')){planChanged=false;qChanged=false;render();}else if(qChanged&&(VIEW==='import'||VIEW==='materials')){qChanged=false;render();}if(syncAgain){syncAgain=false;scheduleSync(1500);}}
+  finally{syncing=false;IDB.put('__known',KNOWN);updateStatus();BGR=true;try{softRender();if(planChanged&&!(VIEW==='practice'&&P.step!=='setup')){planChanged=false;qChanged=false;render();}else if(qChanged&&(VIEW==='import'||VIEW==='materials')){qChanged=false;render();}}finally{BGR=false;}if(syncAgain){syncAgain=false;scheduleSync(1500);}}
 }
 function parseSyncPayload(s){
   try{const t=s.replace(/-/g,'+').replace(/_/g,'/');const bin=atob(t+'==='.slice((t.length+3)%4));
@@ -2031,9 +2074,9 @@ function routineBy(ds,r){
 
 /* sheet: a small dialog for quick input */
 function openSheet(title,...kids){
-  const s=document.getElementById('sheet');
+  const s=document.getElementById('sheet');if(!LIVEDRAWING){sheetPush();SHEETLIVE=null;}
   s.replaceChildren(...[el('div',{class:'between'},el('h2',{},title),el('button',{type:'button',class:'iconbtn','aria-label':'閉じる',onclick:()=>s.close()},'×')),...kids].flat().filter(x=>x!=null));
-  if(!s.open) s.showModal();return s;
+  if(!s.open) modalOpen(s);toastKeep();return s;
 }
 function sleepSheet(ds){
   const v=dayRec(ds).rec.sleep||{}, st={bed:v.bed||'',wake:v.wake||''};
@@ -2367,16 +2410,18 @@ function plannedOn(ds){const o={study:0,create:0};if(!planActive()) return o;for
 /* the calendar page's Google buttons: open it, and (once the client ID is set) import and export by hand */
 /* カレンダー画面の「Googleカレンダー」（2026-11-18）：標準でたたむ。設定ずみなら取り込み・書き出しをここでも押せる（押したら表示を更新するだけ）。
    「同期・Googleカレンダー・バックアップ」への誘導は小さなボタン1つ */
-function gcalCalRow(){
+function gcalCalRow(want){
   const cfg=gcalCfg(), imp=cfg.imp||{}, exp=cfg.exp||{}, on=!!cfg.clientId;gisPreload();
   const open=el('a',{href:gcalUrl(CAL.ym+'-01',true),target:'_blank',rel:'noopener',class:'btn sub sm'},'Googleで開く');
-  const toSet=label=>el('button',{type:'button',class:'chip sm',onclick:()=>{if(on) POPEN.add('gcset');FOCUS='#gcal-card';go('import');}},label);
   const done=on&&(imp.acct||exp.acct);
-  return pdet('calgc',el('span',{style:'flex:1;min-width:0'},'Googleカレンダー'),
+  const toSet=label=>el('button',{type:'button',class:'chip sm',onclick:()=>{document.getElementById('sheet').close();FOCUS='#gcal-card';go('import');if(done) gcsetSheet();}},label);
+  // 操作が主体：ボタンで下から開く画面（2026-11-25）
+  if(want!=='body') return el('button',{type:'button',class:'btn sub sm',onclick:()=>openLive('Googleカレンダー',()=>gcalCalRow('body'))},'Googleカレンダー');
+  return [
     done?el('div',{class:'grid2',style:'grid-template-columns:1fr'},
-      el('button',{type:'button',class:'btn sub sm',disabled:!imp.acct||!(imp.cals||[]).length,onclick:()=>gRun('取り込んでいます',async()=>{await gcalImport();toast('予定を取り込みました');})},'Googleから予定を取り込む'),
-      el('button',{type:'button',class:'btn sub sm',disabled:!exp.acct,onclick:()=>gRun('書き出しています',async()=>{await gcalExport();toast('節目を書き出しました');})},'Googleに節目を書き出す')):null,
-    el('div',{class:'row gcrow'},open,toSet(done?'アカウントとカレンダーの設定':'Googleとの連携を設定する')));
+      el('button',{type:'button',class:'btn sub sm',disabled:!imp.acct||!(imp.cals||[]).length,onclick:()=>gRun('取り込んでいます',async()=>{await gcalImport();document.getElementById('sheet').close();toast('予定を取り込みました');})},'Googleから予定を取り込む'),
+      el('button',{type:'button',class:'btn sub sm',disabled:!exp.acct,onclick:()=>gRun('書き出しています',async()=>{await gcalExport();document.getElementById('sheet').close();toast('節目を書き出しました');})},'Googleに節目を書き出す')):null,
+    el('div',{class:'row gcrow'},open,toSet(done?'アカウントとカレンダーの設定':'Googleとの連携を設定する'))];
 }
 function viewCal(){
   const t=today();if(!CAL.ym) CAL.ym=t.slice(0,7);if(!CAL.sel) CAL.sel=t;
@@ -2421,7 +2466,7 @@ function viewCal(){
   ];
 }
 /* the tapped day: what is planned, the habits, private events, and the day's type and 配分 */
-function dayPanel(ds){
+function dayPanel(ds,want){
   const P=plan2(), act=planActive(), d=dayRec(ds), SH=CAL.show, id=dayTypeOf(ds,P), dt=dtById(id,P), t=today(), past=ds<t, look=ds<=t;
   const tasks=act?planTasks(ds):(PLAN?tasksFor(ds):[]), pe=privEvents(ds);
   const setDates=(fn)=>{liveUp(x=>{x.dates=x.dates||{};x.alloc=x.alloc||{};fn(x);});};
@@ -2461,11 +2506,11 @@ function dayPanel(ds){
     :el('p',{class:'small muted'},d.off?'お休みの日です。':'この日の予定はありません。');
   // 3) changing the day: kept apart; for a day gone by it is folded away
   const evList=pe.map(e=>el('div',{class:'between'},el('span',{class:'small num'},(e.s||'')+'〜'+(e.e||'')+'　'+(e.t||'予定あり'),e.src==='gcal'?el('span',{class:'gtag',title:'Googleから取り込んだ予定（もう一度取り込むと、Googleの内容に戻ります）'},'Google'):null),el('button',{type:'button',class:'ordb','aria-label':'この予定を消す',onclick:()=>withEffect(()=>setDay(ds,x=>{x.g=(Array.isArray(x.g)?x.g:[]).filter(y=>!(y&&y.id===e.id));}))},'×')));
-  const evAdd=el('details',{class:'more evfold',open:EVOPEN.has(ds),ontoggle:e=>{if(e.target.open) EVOPEN.add(ds); else EVOPEN.delete(ds);}},el('summary',{},'予定を追加'),
-    el('div',{class:'evadd'},ptime('ev-s',addEv.s,v=>{addEv.s=v;},'はじまり'),el('span',{},'〜'),ptime('ev-e',addEv.e,v=>{addEv.e=v;},'おわり'),
+  // 操作が主体：「＋ 予定を追加」で下から開く画面。追加すると閉じて、元の画面に戻る（2026-11-25）
+  const evAdd=el('button',{type:'button',class:'btn sub sm',onclick:()=>openLive('予定を追加',()=>[el('div',{class:'evadd'},ptime('ev-s',addEv.s,v=>{addEv.s=v;},'はじまり'),el('span',{},'〜'),ptime('ev-e',addEv.e,v=>{addEv.e=v;},'おわり'),
       el('input',{type:'text',id:'ev-t',placeholder:'メモ（任意）','aria-label':'メモ',onchange:e=>{addEv.t=e.target.value.trim();}}),
       el('button',{type:'button',class:'btn sub sm',onclick:()=>{if(!addEv.s||!addEv.e){toast('はじまりとおわりの時刻を入力してください');return;}
-        withEffect(()=>setDay(ds,x=>{x.g=(Array.isArray(x.g)?x.g.filter(y=>y&&typeof y==='object'):[]).concat([{id:newId('ev'),s:addEv.s,e:addEv.e,t:addEv.t||'予定あり',src:'manual'}]);}));}},'追加する')));
+        document.getElementById('sheet').close();withEffect(()=>setDay(ds,x=>{x.g=(Array.isArray(x.g)?x.g.filter(y=>y&&typeof y==='object'):[]).concat([{id:newId('ev'),s:addEv.s,e:addEv.e,t:addEv.t||'予定あり',src:'manual'}]);}));}},'追加する'))],{keep:true})},'＋ 予定を追加');
   const settings=[
     el('div',{class:'dpart'},el('h4',{},'時間割'),
       el('div',{class:'dtchips'},(P.dayTypes||[]).map(t=>typeChip(P,t.id,id===t.id,()=>setDates(x=>{const def=baseTypeOf(ds,x);if(t.id===def) delete x.dates[ds]; else x.dates[ds]=t.id;})))),
@@ -2478,15 +2523,17 @@ function dayPanel(ds){
       el('div',{class:'grid2'},pselect('al-r',CAL.range,[['day','この日だけに'],['week','この週ぜんぶに'],['until','日付までに']],v=>{CAL.range=v;if(v==='until'&&(!CAL.until||CAL.until<ds)) CAL.until=addDays(ds,6);render();}),
         CAL.range==='until'?pdate('al-u',CAL.until,v=>{CAL.until=v;}):el('span',{class:'xs muted',style:'align-self:center'},CAL.range==='week'?'週のはじまりから7日':'')),
       el('p',{class:'xs muted'},'範囲を選んでから、配分を押します。通勤のコマは動かしません。'))];
+  if(want==='settings') return settings;
   return el('div',{class:'card daypanel'},
     el('div',{class:'between dphead'},el('h2',{},jpDate(ds)),d.off?el('span',{class:'pill'},'お休み'):dt?el('span',{class:'small'},el('b',{class:'dtl'},dtLetter(id,P)),' '+dt.name):el('span',{class:'small muted'},'時間割なし')),
     tiles.length&&!d.off?el('div',{class:'dtiles'+(tiles.length===1?' one':'')},tiles):null,
     flow,
     look&&rows.some(r=>r.st)?el('p',{class:'xs muted flowkey'},el('span',{class:'k ok'},'✓'),' できた　',el('span',{class:'k ng'},'×'),' できなかった　',past?[el('span',{class:'k none'},'—'),' 記録なし']:null):null,
     el('a',{href:'#day/'+ds,class:'btn'},'この日の記録を開く'),
-    past?el('details',{class:'more dsetfold',open:CAL.fix===ds,ontoggle:e=>{CAL.fix=e.target.open?ds:'';}},el('summary',{class:'small'},'時間割や通勤のパターンを訂正する'),el('div',{class:'dset'},settings))
+    // 操作が主体：ボタンで下から開く画面（2026-11-25）
+    past?el('button',{type:'button',class:'btn sub sm',onclick:()=>openLive('時間割や通勤のパターンを訂正する',()=>el('div',{class:'dset'},dayPanel(ds,'settings')))},'時間割や通勤のパターンを訂正する')
       // たたむ（2026-11-18）。名前はユーザーが決めた「この日だけのスケジュール調整」
-      :el('details',{class:'more dsetfold',open:CAL.adj===ds,ontoggle:e=>{CAL.adj=e.target.open?ds:'';}},el('summary',{class:'small'},'この日だけのスケジュール調整'),el('div',{class:'dset'},el('p',{class:'xs muted'},'この日だけ、時間割・予定・通勤などを変えられます。'),settings)));
+      :el('button',{type:'button',class:'btn sub sm',onclick:()=>openLive('この日だけのスケジュール調整',()=>el('div',{class:'dset'},el('p',{class:'xs muted'},'この日だけ、時間割・予定・通勤などを変えられます。'),dayPanel(ds,'settings')))},'この日だけのスケジュール調整'));
 }
 
 
@@ -2855,7 +2902,8 @@ function gcalHelp(){return el('button',{type:'button',class:'help','aria-label':
   el('p',{class:'xs muted'},'クライアントIDは公開されても困らない番号です。一緒に出る「クライアントシークレット」は使いません。どこにも貼らないでください。ログインのとき「このアプリは確認されていません」と出ますが、ご自分で登録したものなので、そのまま進めます。'));}},'?');}
 function calAsk(done){const sh=()=>document.getElementById('sheet').close();
   openSheet(done+'。カレンダーで確かめますか？',el('button',{type:'button',class:'btn',onclick:()=>{sh();go('cal');}},'カレンダーを開く'),el('button',{type:'button',class:'btn sub',onclick:sh},'このまま'));}
-function gcalCard(){
+function gcsetSheet(){openLive('アカウントとカレンダーの設定',()=>gcalCard('settings'));}
+function gcalCard(want){
   const cfg=gcalCfg(), id=cfg.clientId||'', imp=cfg.imp, exp=cfg.exp, chosen=new Set((imp.cals||[]).map(c=>c.id));let idv=id;
   gisPreload();
   const acctLine=(label,acct)=>el('div',{class:'between',style:'gap:8px'},el('span',{class:'small'},label),acct?el('b',{class:'small',style:'word-break:break-all;text-align:right'},acct):el('span',{class:'pill gray'},'未設定'));
@@ -2879,12 +2927,13 @@ function gcalCard(){
     el('button',{type:'button',class:'btn sub sm',onclick:()=>gRun('Googleにつないでいます',gcalPickExp)},exp.acct?'アカウントを変える':'Googleにログインして、書き出し用のアカウントを選ぶ'),
     el('p',{class:'xs muted'},(exp.acct&&exp.acct===imp.acct?'取り込みと同じアカウントです。':'')+(exp.cal?'このアカウントの「'+GCALNAME+'」カレンダーに、節目・期日を '+Object.keys(exp.ev||{}).length+' 件書き出しています'+(cfg.lastExport?'（'+md(ymd(new Date(cfg.lastExport)))+' '+hm(cfg.lastExport)+'）':'')+'。':'はじめて書き出すとき、書き出し用のアカウントに「'+GCALNAME+'」というカレンダーを作ります。ほかのカレンダーには書き込みません。')+'ログインしたのが書き出し用のアカウントでなければ、書き出さずに止めます。'),
     Object.keys(GTOK).length?el('button',{type:'button',class:'chip sm',style:'align-self:flex-start',onclick:()=>{for(const t of Object.values(GTOK)){try{google.accounts.oauth2.revoke(t.token,()=>{});}catch(_){}}GTOK={};GCALS=null;toast('この端末のGoogleのログインを取り消しました');render();}},'この端末のログインを取り消す'):null]:null];
-  // 設定ずみなら、ふだん押すボタンだけを出し、設定の欄は折りたたむ（2026-11-18）
+  if(want==='settings') return settings();
+  // 設定ずみなら、ふだん押すボタンだけを出し、設定は「›」の行から下から開く画面で（2026-11-18・2026-11-25）
   const done=!!(id&&(imp.acct||exp.acct));
   return el('div',{class:'card',id:'gcal-card'},
     el('div',{class:'between'},el('h2',{class:'row',style:'gap:6px'},'Googleカレンダー',gcalHelp()),el('span',{class:'pill'+(id?'':' gray')},id?'設定済み':'未設定')),
     el('p',{class:'small muted'},'プライベートの予定の取り込みと、節目・期日の書き出しができます。どちらもボタンを押したときだけ動きます。取り込みと書き出しは、別々のGoogleアカウントにできます。'),
-    done?[imB(),exB,caB,pdet('gcset',el('span',{class:'small'},'アカウントとカレンダーの設定'),settings())]
+    done?[imB(),exB,caB,setRow('アカウントとカレンダーの設定',gcsetSheet)]
       :[settings(),id?[imB(),exB,caB]:null]);
 }
 
@@ -3201,8 +3250,8 @@ function viewRoutines(){
   const offPill=off=>off?el('span',{class:'pill gray',style:'padding:2px 8px;font-size:11px'},'使わない'):null;
   const sr=sleepRoutine();
 
-  const help=el('details',{class:'set'},el('summary',{},'？ 使い方'),
-    el('div',{class:'small',style:'display:flex;flex-direction:column;gap:8px'},
+  const help=el('details',{class:'rd'},el('summary',{},'？ 使い方'),
+    el('div',{class:'small rdb',style:'display:flex;flex-direction:column;gap:8px'},
       el('p',{},el('b',{},'ことばの使い分け：'),'「暮らし」は学習と制作のほかの一日で、○×で整える「ルーティン」と、睡眠・仕事などの過ごし方を残す「暮らしの記録」からできています。メインメニューでは「習慣」と出ます。学習と制作の時間は、メニュー「学習と制作の記録方法」で扱います。'),
       el('p',{},el('b',{},'ルーティン：'),'時刻や曜日が決まっていて、ホームで ○（できた）か ×（できなかった）を付けるものです。答えなかった日は「記録なし」になり、責められることはありません。'),
       el('p',{},el('b',{},'チェックイン／レポート：'),'アプリを開くよう促す時刻と、そのときに記録する項目です（最大4回）。〆のレポートでは、学習と制作の記録が最初に出ます。同じ項目をいくつのチェックインに出してもよく、答え直すと上書きされます。'),
@@ -3585,7 +3634,7 @@ function timeEditor(P,up,rr){
       el('button',{type:'button',class:'btn sub',onclick:sh},'やめる'));};
   const oversCard=()=>nOver?el('div',{class:'card overs'},
       el('p',{class:'small'},'カレンダーで、曜日の決まりとは別の時間割にした日が ',el('b',{},nOver+'日'),' あります（今日以降）。その日は、上の曜日の決まりより日ごとの指定が優先されます。'),
-      el('details',{class:'more'},el('summary',{},'変えた日の一覧'),overs.map(k=>el('p',{class:'xs num'},overLine(k)))),
+      el('details',{class:'rd'},el('summary',{},'変えた日の一覧'),el('div',{class:'rdb'},overs.map(k=>el('p',{class:'xs num'},overLine(k))))),
       el('button',{type:'button',class:'btn sub sm',onclick:clearOvers},'日ごとの指定を消して、曜日の決まりに戻す')):null;
   // 隔週: 2〜4 weeks, each with its own weekday pattern, taken in turn; which one this week is can be set
   const cyc=P.cycle||{}, cn=cycleN(P), ck=mode==='cycle'?cycleWeek(today(),P):0, w0=weekStartOf(today(),P);
@@ -3693,7 +3742,7 @@ function openWizard(at){
   else if(WIZ.tk!=null?WIZ.tk!==tk:(cur.t||0)!==WIZ.src){for(const k of TIMEKEYS) WIZ.P[k]=clone(cur[k]);keepRewards(WIZ.P,cur);WIZ.src=cur.t||0;WIZ.tk=tk;}
   wizPull();
   if(at){const k=wizSteps().indexOf(at);if(k>=0) WIZ.i=k;}
-  CAPV++;const d=document.getElementById('wiz');wizRender(true);if(!d.open) d.showModal();
+  CAPV++;const d=document.getElementById('wiz');wizRender(true);if(!d.open) modalOpen(d);
 }
 // 光るボタン（2026-11-18）：答えていない質問（任意のもの、「あとで答える」にしたものを除く）が残っている段
 function wizOpen(body){return [...body.querySelectorAll('.qb')].some(q=>{if(q.classList.contains('later')) return false;const t=(q.querySelector('.qbh b')||{}).textContent||'';if(/任意/.test(t)) return false;
@@ -3762,7 +3811,7 @@ function wizRender(top){
       T?el('p',{class:'xs muted num'},'作業 '+tnameS('study')+' '+hrs(T.study.W)+'・'+tnameS('create')+' '+hrs(T.create.W)+'　使える時間（予備日を除く） '+tnameS('study')+' '+hrs(T.study.C)+'・'+tnameS('create')+' '+hrs(T.create.C)):el('p',{class:'xs muted'},'閉じても、ここまでの内容は残ります。'),
       el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub',disabled:WIZ.i===0,onclick:()=>wizGo(WIZ.i-1)},'戻る'),k==='build'?el('span',{}):el('button',{type:'button',class:'btn'+(askKeep||wizOpen(nb)?' sub':''),onclick:()=>wizGo(WIZ.i+1)},'次へ'))));
   const b2=d.querySelector('.wizbody');if(b2) b2.scrollTop=y;
-  const cur=d.querySelector('.wizsteps li.cur');if(cur&&cur.scrollIntoView) cur.scrollIntoView({block:'nearest',inline:'center'});
+  const cur=d.querySelector('.wizsteps li.cur');if(cur&&cur.scrollIntoView) cur.scrollIntoView({block:'nearest',inline:'center'});toastKeep();liveDraw();
 }
 function wizMethod(){
   const c=(id,title,desc)=>el('button',{type:'button',class:'choice wizchoice','aria-pressed':String(WIZ.method===id),onclick:()=>{WIZ.method=id;WIZ.i=2;wizSave();wizRender();}},el('b',{},title),el('span',{class:'small muted'},desc));
@@ -3824,13 +3873,14 @@ function shortCard(P,R,tr,gid,g,G,need,cumW){const t=today(), bufCap=g.buf&&!G.e
     if(m[1]==='done') w.dl.done=nd; else {const part=m[1];w.dl[part]=Object.assign({},w.dl[part]);if(w.dl[part].early&&(w.dl.early||'try')!=='no') w.dl[part].early=nd; else w.dl[part].normal=nd;}});
   const evBased=G.src==='setup'&&/^c-done-/.test(G.key||'')&&(((P.works||[]).find(w=>'c-done-'+w.id===G.key)||{}).dl||{}).ev==='yes';
   return el('div',{class:'notice card'},
-    el('p',{class:'small'},el('b',{},'「'+g.name+'」まで、あと'+hrs(need)+'ほど足りなさそうです。'),G.eatBuf?'予備日をすべて使っても足りません。':'どう整えましょうか？'),
+    el('div',{class:'hintrow'},el('p',{class:'small'},el('b',{},'「'+g.name+'」まで、あと'+hrs(need)+'ほど足りなさそうです。'),G.eatBuf?'予備日をすべて使っても足りません。':'どう整えましょうか？'),
+      el('button',{type:'button',class:'help','aria-label':'足りないときの説明','aria-expanded':'false',onclick:e=>{const b=e.currentTarget, t=b.parentNode.nextSibling, on=b.getAttribute('aria-expanded')!=='true';b.setAttribute('aria-expanded',String(on));t.hidden=!on;}},'?')),
+    el('p',{class:'xs rdb',hidden:true},'1つ選んでまだ足りなければ、この画面に戻って、ほかの案も組み合わせられます。'),
     el('div',{class:'chips'},
       !G.eatBuf&&g.buf&&need<=bufCap?el('button',{type:'button',class:'chip sm',onclick:()=>wizUp(x=>{x.goals.find(y=>y.id===gid).eatBuf=true;})},'予備日から回す'):null,
       perDay?el('button',{type:'button',class:'chip sm',onclick:()=>wizUp(x=>{for(const d of x.dayTypes) for(const sl of d.slots||[]) if(sl.track===tr&&sl.use!=='app') sl.min=Math.ceil((+sl.min||0)*k/5)*5;})},'コマを伸ばす（1日あと約'+fmtMin(perDay)+'）'):null,
       mv&&!evBased?el('button',{type:'button',class:'chip sm',onclick:()=>moveTo(mv)},'目標日を'+mv+'日後ろにする'):null,
-      el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf(tr))},tname(tr)+'の作業を減らす')),
-    el('details',{class:'helpt'},el('summary',{},'?'),el('p',{class:'xs'},'1つ選んでまだ足りなければ、この画面に戻って、ほかの案も組み合わせられます。')));}
+      el('button',{type:'button',class:'chip sm',onclick:()=>wizGo(wizSteps().indexOf(tr))},tname(tr)+'の作業を減らす')));}
 // 7-2b: 「まだ決めていない」 added books with nothing kept for them: offer to bring the 修了目標日 forward
 function pullCard(P,R){const st=(P.setup||{}).study||{};if(st.addQ!=='later'||(st.tmp||{}).keep==='yes'||!setupTargetDate(st)) return null;
   const up=fn=>wizS(S=>{S.study=Object.assign({},S.study);fn(S.study);});
@@ -4161,7 +4211,9 @@ function wizCreate(){
           el('select',{'aria-label':'時間の数え方',onchange:e=>upW(w.id,x=>{x.steps[si].perPage=e.target.value==='p';})},el('option',{value:'p',selected:!!sd.perPage},'1'+unit+'ごと'),el('option',{value:'t',selected:!sd.perPage},'作品で1回'))),
         sd.name,()=>upW(w.id,x=>upDown(x.steps,sd.id,-1)),()=>upW(w.id,x=>upDown(x.steps,sd.id,1)),si===0,si===st.length-1)),
         el('button',{type:'button',class:'btn sub sm',onclick:()=>upW(w.id,x=>{let n='新しい工程',kk=2;while(x.steps.some(y=>y.name===n)) n='新しい工程'+(kk++);x.steps.push({id:newId('st'),name:n,perPage:true,hours:0});})},'＋ 工程を追加'),
-        on.length?el('details',{class:'set'},el('summary',{},el('span',{class:'small'},'工程を外す')),el('div',{class:'chips'},on.map(sd=>el('button',{type:'button',class:'chip sm',onclick:()=>upW(w.id,x=>{x.steps=x.steps.filter(y=>y.id!==sd.id);})},sd.name+' ×')))):null]),
+        // 操作が主体：ボタンで下から開く画面。外すものがなくなったら閉じる（2026-11-25）
+        on.length?el('button',{type:'button',class:'btn sub sm',onclick:()=>openLive('工程を外す',()=>{const w2=((WIZ&&WIZ.P.works)||[]).find(y=>y.id===w.id), on2=w2?(w2.steps||[]).filter(x=>!x.off):[];
+          return on2.length?el('div',{class:'chips'},on2.map(sd=>el('button',{type:'button',class:'chip sm',onclick:()=>upW(w.id,x=>{x.steps=x.steps.filter(y=>y.id!==sd.id);})},sd.name+' ×'))):[];})},'工程を外す'):null]),
       qb(q('4-4'),'いまどの工程ですか？',[pselect('wc-'+w.id,(w.cur||{}).step||'',[['','まだ始めていない'],...on.map(sd=>[sd.id,sd.name])],v=>upW(w.id,x=>{if(v) x.cur=Object.assign({},x.cur,{step:v}); else delete x.cur;})),
         (w.cur||{}).step?pfield('wcp-'+w.id,'その工程で済んだ'+unit+'の数',pnum('wcp-'+w.id,(w.cur||{}).pages||0,v=>upW(w.id,x=>{x.cur=Object.assign({},x.cur,{pages:Math.max(0,Math.round(v))});}),1,0)):null]),
       qb(q('4-5'),'工程ごとに、どれくらいかかりますか？',el('div',{class:'grid2'},on.map(sd=>pfield('wh-'+w.id+'-'+sd.id,sd.name+'（'+(sd.perPage?'1'+unit+'あたり':'1回あたり')+'・時間）',pnum('wh-'+w.id+'-'+sd.id,sd.hours||'',v=>upW(w.id,x=>{x.steps.find(y=>y.id===sd.id).hours=Math.max(0,v);}),0.25,0))))));};
@@ -4350,8 +4402,9 @@ function wizDates(){
     return pfield('ev-'+w.id,'どのイベント',pselect('ev-'+w.id,d.event||'',opts,v=>upW(w.id,(o,_,S)=>{if(v==='new'){const id=newId('e');S.events=(S.events||[]).concat([{id,name:'',date:''}]);o.event=id;} else o.event=v;})));};
   const evEdit=e=>{const upE=fn=>wizS(S=>{S.events=(S.events||[]).map(y=>y.id===e.id?Object.assign({},y):y);fn(S.events.find(y=>y.id===e.id));});
     return el('div',{class:'unitmerge'},el('div',{class:'grid2'},pfield('evn-'+e.id,'イベントの名前',ptext('evn-'+e.id,e.name,v=>upE(o=>{o.name=v;}))),pfield('evd-'+e.id,'イベントの日',pdate('evd-'+e.id,e.date,v=>upE(o=>{o.date=v;})))),
-      pdet('evx:'+e.id,[el('span',{class:'small'},'申込の締切・当落・配置の発表（任意）')],el('div',{class:'grid2'},
-        pfield('eva-'+e.id,'申込の締切',pdate('eva-'+e.id,e.apply,v=>upE(o=>{o.apply=v;}))),pfield('evr-'+e.id,'当落の発表',pdate('evr-'+e.id,e.result,v=>upE(o=>{o.result=v;}))),pfield('evp-'+e.id,'配置の発表',pdate('evp-'+e.id,e.place,v=>upE(o=>{o.place=v;}))))));};
+      // 操作が主体：ボタンで下から開く画面（2026-11-25）
+      el('button',{type:'button',class:'btn sub sm',onclick:()=>openLive('申込の締切・当落・配置の発表（任意）',()=>{const x=(((WIZ&&WIZ.P.setup)||{}).events||[]).find(y=>y.id===e.id);if(!x) return [];return el('div',{class:'grid2'},
+        pfield('eva-'+e.id,'申込の締切',pdate('eva-'+e.id,x.apply,v=>upE(o=>{o.apply=v;}))),pfield('evr-'+e.id,'当落の発表',pdate('evr-'+e.id,x.result,v=>upE(o=>{o.result=v;}))),pfield('evp-'+e.id,'配置の発表',pdate('evp-'+e.id,x.place,v=>upE(o=>{o.place=v;}))));})},'申込の締切・当落・配置の発表（任意）'));};
   const dl=(w,part,label,o,e)=>{const id=w.id+'-'+part;o=o||{};const auto=!o.normal&&o.weeks!==''&&o.weeks!=null&&e&&e.date?addDays(e.date,-7*(+o.weeks||0)):'';
     return el('div',{class:'grid2'},pfield('dn-'+id,label+'の締切',pdate('dn-'+id,o.normal,v=>upW(w.id,d=>{d[part]=Object.assign({},d[part],{normal:v});}))),
       pfield('de-'+id,'早割の締切（あれば）',pdate('de-'+id,o.early,v=>upW(w.id,d=>{d[part]=Object.assign({},d[part],{early:v});}))),
@@ -4375,7 +4428,7 @@ function wizDates(){
     study,
     ws.length?[el('h2',{class:'sec'},tname('create')),ws.map(work)]:null,
     made.length?el('div',{class:'card'},el('h2',{},'この段階で決まったこと'),made.map(g=>el('div',{class:'between small'},el('span',{},g.name),el('span',{class:'num'+(g.date?'':' muted')},g.open?'日付を決めずに続ける':g.date?g.date.replace(/-/g,'/'):'日付がまだ')))):null,
-    pdet('extra-goals',[el('span',{class:'small'},'ほかの節目・日付だけの予定（任意）')],extraGoals(P,wizUp))];}
+    el('button',{type:'button',class:'btn sub sm',onclick:()=>openLive('ほかの節目・日付だけの予定（任意）',()=>extraGoals(WIZ.P,wizUp))},'ほかの節目・日付だけの予定（任意）')];}
 function extraGoals(P,up){
   const G=(P.goals||[]).filter(g=>g.src!=='setup'&&(g.kind==='mid'||g.kind==='date')).sort(byDate);
   const sum=g=>[el('span',{class:'num xs muted',style:'flex:none;width:3.6em'},g.date?md(g.date):'未定'),el('span',{style:'flex:1;min-width:0'},g.name)];
@@ -4567,7 +4620,7 @@ function openMenu(){
     // 「設定と管理」はたたむ（2026-11-18）。開いたかどうかはこの端末で覚えておく。いまその画面にいれば開いて出す
     el('details',{class:'menuset',open:menuSetOpen()||['routines','commute','tracks','materials','import','prefs'].includes(VIEW),ontoggle:e=>{try{localStorage.setItem('mx-menuset',e.target.open?'1':'');}catch(_){}}},
       el('summary',{},el('h3',{},'設定と管理')),a('routines','ルーティンと記録の設定','bell'),a('commute','通勤経路の設定','train'),a('tracks','学習と制作の記録方法','timer'),a('materials','教材設定','books'),a('import','同期・Googleカレンダー・バックアップ','sync'),a('prefs','その他の設定','prefs'))].flat().filter(Boolean));
-  if(!m.open) m.showModal();
+  if(!m.open) modalOpen(m);toastKeep();
 }
 
 /* ---------- line breaks at phrase boundaries ----------
@@ -4640,7 +4693,7 @@ function render(){
   slot.replaceChildren(...(VIEW==='home'?[el('div',{class:'tleft'},el('b',{class:'hdate'},String(jpDate(today())).split(/(\d+)/).map((x,i)=>i%2?el('span',{class:'n'},x):x)),statusNode(true))].filter(Boolean):[el('span',{class:'topname'},'芒学')]));
   const main=document.getElementById('main'); main.replaceChildren(); main.className='wrap v-'+VIEW;
   main.append(...[].concat(VIEWS[VIEW](arg)).flat(9).filter(x=>x!=null&&x!==false));
-  retOverlay();
+  retOverlay();liveDraw();
 }
 let LASTHASH=location.hash||'#home';
 window.addEventListener('hashchange',()=>{
@@ -4922,8 +4975,8 @@ function pracRecord(){
     el('h3',{class:'sub'},'週ごと'),
     bars('解いた数（下は正答率）',cnt,x=>cnt(x)+'問',x=>x&&x.n?pct(x.ok,x.n)+'%':'—'),
     bars('1問の時間',avg,x=>avg(x)?fmtSec(Math.max(1,Math.round(avg(x)))):'—'),
-    pdet('resitems',el('span',{class:'small'},'「演習の結果」に出す項目'),
-      RES_ITEMS.map(([k,l])=>el('label',{class:'row',for:'ri-'+k},el('input',{type:'checkbox',id:'ri-'+k,checked:!hid[k],onchange:e=>setResHidden(k,!e.target.checked)}),el('span',{class:'small'},l)))));
+    setRow('「演習の結果」に出す項目',()=>openLive('「演習の結果」に出す項目',()=>{const hid=resHidden();
+      return RES_ITEMS.map(([k,l])=>el('label',{class:'row',for:'ri-'+k},el('input',{type:'checkbox',id:'ri-'+k,checked:!hid[k],onchange:e=>setResHidden(k,!e.target.checked)}),el('span',{class:'small'},l)));})));
 }
 /* the average time per answer over the last 100 answers (only for the suggestion below; the plan does not use it) */
 let AVGA=null, QBOOK=null;
@@ -5047,7 +5100,7 @@ function viewAnswer(){
         blanksScore?el('span',{class:'small muted num'},'空欄 '+blanksScore):null,
         el('span',{class:'small muted num'},a.round+'周目 ・ これまで ○'+Math.max(0,(s.c||0)-(s.k||0))+' ×'+(s.w||0)+((s.k||0)?' 勘'+s.k:'')))),
     el('div',{class:'card'},el('h2',{class:'muted',style:'font-size:13px'},'解説'),q.expl?richNode(q.expl):el('p',{class:'small muted'},'解説は取り込まれていません。'),
-      q.detail?el('details',{class:'detail'},el('summary',{},'詳しい解説'),richNode(q.detail)):null,
+      q.detail?el('details',{class:'detail rd'},el('summary',{},'詳しい解説'),el('div',{class:'rdb'},richNode(q.detail))):null,
       q.type==='mc5'&&q.choiceNotes?el('div',{style:'display:flex;flex-direction:column;gap:4px'},Object.entries(q.choiceNotes).map(([k,v])=>el('p',{class:'small muted qfont'},k+'：'+v))):null),
     el('span',{class:'xs muted'},'出典 '+bookName(it.doc.book)+' '+qNoTxt(it)+(q.page?' ・ p.'+q.page:'')),
     el('label',{class:'field',for:memoId},'自分のことばでメモ',el('textarea',{id:memoId,rows:2,value:s.memo||'',oninput:e=>{const v=e.target.value;clearTimeout(memoTimer);memoTimer=setTimeout(()=>{const sd=S.state[it.docId];sd.s[q.id].memo=v;sd.s[q.id].t=Date.now();save('state/'+it.docId);},600);}})),
@@ -5748,7 +5801,7 @@ function qTemplate(){return csvRows(IMP_Q_COLS,[
   ['（例）問題集B','4','単元の名前','並び替え','何を並べるか','1番目／2番目／3番目','','解説','','','','','']]);}
 // help topics fold, so each one is opened only when needed
 function helpTopics(title,topics){const UL=xs=>el('ul',{class:'small',style:'margin:0;padding-left:1.2em'},xs.map(x=>el('li',{},x)));
-  openSheet(title,topics.map(([t,...xs])=>el('details',{class:'helpt'},el('summary',{},t),UL(xs))));}
+  openSheet(title,topics.map(([t,...xs])=>el('details',{class:'helpt rd'},el('summary',{},t),el('div',{class:'rdb'},UL(xs)))));}
 function formHelp(){helpTopics('取り込みの形',[
   ['JSONファイル','AIが作ったJSONを、ファイルにして選ぶこともできます。'],
   ['CSV（手入力）','テンプレートに手入力し、CSVで保存して選びます。','「（例）」で始まる行は読み込みません。'],
@@ -5877,6 +5930,18 @@ function unitsCard(P){
         setPlan2(x=>{x.subjects=(x.subjects||[]).concat([{id:newId('s'),name:nm,short:nm}]);});if(WIZ) wizPull();UNITADD='';unitTouched();toast('「'+nm+'」を追加しました');render();}},'＋ 単元を追加')):null);
 }
 const MATCARD=new Set();
+function unitsSheet(){openLive(()=>['単元（'+(plan2().subjects||[]).length+'／'+UNIT_MAX+'個）',' ',helpBtn('単元と取り込む順番',unitHelp)],()=>cardBody(unitsCard(plan2())));}
+function starSheet(){openLive(['星（問題の重要度・難しさ）',' ',helpBtn('星の説明',starHelp)],()=>cardBody(starCard(plan2())));}
+// 操作が主体：ファイル・CSVで取り込む。貼り付けた文は、説明を開いて戻っても残る。取り込むときは画面を閉じる
+function fileSheet(){openLive(['ファイル・CSVで取り込む',' ',helpBtn('取り込みの形の説明',formHelp)],()=>{const sh=()=>document.getElementById('sheet').close();
+  // the 取り込む button lights up (and works) only once something is pasted
+  const impBtn=el('button',{type:'button',class:'btn sub sm',disabled:true,onclick:()=>{const v=paste.value;sh();impRun(v);}},'貼り付けた中身を取り込む');
+  const impSync=()=>{const has=!!paste.value.trim();impBtn.disabled=!has;impBtn.className='btn sm'+(has?'':' sub');};
+  const paste=el('textarea',{id:'imp-paste',rows:5,placeholder:'AIが作ったJSON（{ から } まで）か、CSVの中身を貼り付け',oninput:()=>impSync()});
+  const pick=e=>{const f=e.target.files&&e.target.files[0];if(!f) return;const r=new FileReader();r.onload=()=>{sh();impRun(r.result);};r.onerror=()=>toast('ファイルを読めませんでした');r.readAsText(f);e.target.value='';};
+  return [el('label',{class:'btn sub sm',for:'imp-file',style:'cursor:pointer'},'ファイルを選ぶ（JSON・CSV）',el('input',{type:'file',id:'imp-file',accept:'.json,.csv,.txt,application/json,text/csv,text/plain',style:'display:none',onchange:pick})),
+    el('label',{class:'field',for:'imp-paste'},'または貼り付け',paste),impBtn,el('p',{class:'xs muted'},'テンプレートを保存'),
+    el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>saveFile('mangxue-toc-template.csv','\uFEFF'+tocTemplate(),'text/csv')},'目次用'),el('button',{type:'button',class:'btn sub sm',onclick:()=>saveFile('mangxue-questions-template.csv','\uFEFF'+qTemplate(),'text/csv')},'問題用'))];},{keep:true});}
 function matFold(k,v){let o={};try{o=JSON.parse(localStorage.getItem('mx-matfold')||'{}')||{};}catch(_){}
   if(v===undefined) return !!o[k];o[k]=!!v;try{localStorage.setItem('mx-matfold',JSON.stringify(o));}catch(_){}}
 // 問題集の「編集する」：単元ごとの問題数と、ほかの問題集を束ねる（「取り込んだ問題」のカードから移した）
@@ -5892,18 +5957,22 @@ const AI_HELP=[['進め方','「プロンプトをコピー」を押し、AIの�
   ['取り込み直すとき','目次は追加されます。同じ単元・章・節の行は置き換わります。','同じ単元・番号の問題は、上書きするか、続きの番号を付けるかを選べます。'],
   ['分冊・段階のある本','分冊の本は、1つの教材にまとめるか分けるかを、AIが尋ねます。','同じ単元の中で問題番号が1から始まり直す問題集（Basic・Step-Up など）は、段階ごとに別の教材にします。']];
 function matImportSheet(m,what){
-  const st={name:'',kind:'read',what:what||'toc'};let helpOn=false;
+  const st={name:'',kind:'read',what:what||'toc',err:false};let helpOn=false;
   const ta=el('textarea',{rows:4,placeholder:'AIの返事をここに貼り付け',style:'width:100%'});
-  const go=el('button',{type:'button',class:'btn',style:'width:100%;margin-top:8px',disabled:true,onclick:()=>{
-    const name=m?m.name:st.name.trim();if(!name){toast('教材の名前を手入力してください');return;}
-    document.getElementById('sheet').close();impRun(ta.value,{name,kind:m?m.kind:(st.kind==='solve'?'solve':'read')});}},'取り込む');
-  const sync=()=>{go.disabled=!ta.value.trim();};ta.addEventListener('input',sync);
+  // 足りないもの（2026-11-25）：押したときに、この画面の中に赤い字で表示する（知らせは下から開く画面の裏に隠れるため）
+  const miss=()=>[!m&&!st.name.trim()?'教材の名前を手入力してください。':null,!ta.value.trim()?'AIの返事を貼り付けてください。':null].filter(Boolean);
+  const errBox=el('div',{role:'alert',class:'imperr',hidden:true});
+  const sync=()=>{const ms=st.err?miss():[];errBox.hidden=!ms.length;errBox.replaceChildren(...(ms.length?[el('p',{},'取り込めません。次を確かめてください。'),el('ul',{},ms.map(t=>el('li',{},t)))]:[]));};
+  const go=el('button',{type:'button',class:'btn',style:'width:100%;margin-top:8px',onclick:()=>{
+    if(miss().length){st.err=true;sync();return;}
+    document.getElementById('sheet').close();impRun(ta.value,{name:m?m.name:st.name.trim(),kind:m?m.kind:(st.kind==='solve'?'solve':'read')});}},'取り込む');
+  ta.addEventListener('input',sync);
   const seg=(pairs,cur,fn,label)=>el('div',{class:'seg',role:'group','aria-label':label,style:'grid-template-columns:1fr 1fr;margin:8px 0'},pairs.map(([k,l])=>el('button',{type:'button','aria-pressed':String(cur===k),onclick:()=>{fn(k);draw();}},l)));
   const draw=()=>{const tgt=m||{name:st.name.trim(),kind:st.kind,toc:[]}, w=m?what:(st.kind==='solve'?st.what:'toc');
     const UL=xs=>el('ul',{class:'small',style:'margin:0;padding-left:1.2em'},xs.map(x=>el('li',{},x)));
     openSheet([m?m.name+(w==='q'?'に問題を追加':'に目次を追加'):'教材を追加',' ',el('button',{type:'button',class:'help','aria-label':'AIで取り込む','aria-expanded':String(helpOn),onclick:()=>{helpOn=!helpOn;draw();}},'?')],
-      helpOn?el('div',{class:'card',style:'margin:4px 0 8px'},el('h3',{style:'margin:0 0 6px'},'AIで取り込む'),AI_HELP.map(([t,...xs])=>el('details',{class:'helpt'},el('summary',{},t),UL(xs)))):null,
-      m?null:el('label',{class:'field',for:'na-name'},'教材の名前',el('input',{type:'text',id:'na-name',value:st.name,placeholder:'本の名前',oninput:e=>{st.name=e.target.value;}})),
+      helpOn?el('div',{class:'card',style:'margin:4px 0 8px'},el('h3',{style:'margin:0 0 6px'},'AIで取り込む'),AI_HELP.map(([t,...xs])=>el('details',{class:'helpt rd'},el('summary',{},t),el('div',{class:'rdb'},UL(xs))))):null,
+      m?null:el('label',{class:'field',for:'na-name'},'教材の名前',el('input',{type:'text',id:'na-name',value:st.name,placeholder:'本の名前',oninput:e=>{st.name=e.target.value;sync();}})),
       m?null:seg([['read','読む（テキスト）'],['solve','解く（問題集）']],st.kind,k=>{st.kind=k;},'教材の種類'),
       !m&&st.kind==='solve'?seg([['toc','目次を取り込む'],['q','問題を取り込む']],st.what,k=>{st.what=k;},'取り込むもの'):null,
       el('button',{type:'button',class:'btn',style:'width:100%;margin-top:4px',onclick:()=>{if(!m&&!st.name.trim()){toast('教材の名前を手入力してください');return;}
@@ -5911,7 +5980,7 @@ function matImportSheet(m,what){
       el('div',{class:'ailinks',style:'margin:8px 0'},[['ChatGPT','https://chatgpt.com/'],['Claude','https://claude.ai/new'],['Gemini','https://gemini.google.com/app'],['Copilot','https://copilot.microsoft.com/']].map(([n,u])=>el('a',{href:u,target:'_blank',rel:'noopener noreferrer',class:'ailink'},n))),
       ta,
       el('button',{type:'button',class:'btn sub',style:'width:100%;margin-top:8px',onclick:async()=>{try{const t=await navigator.clipboard.readText();if(!t){toast('クリップボードが空です');return;}ta.value=t;sync();toast('貼り付けました（'+t.length+'文字）');}catch(_){toast('ここからは貼り付けられませんでした。欄を長押しして「ペースト」を選んでください');}}},'クリップボードから貼り付ける'),
-      go);};
+      errBox,go);sync();};
   draw();}
 function viewMaterials(){
   const P=plan2(), mats=P.materials||[];
@@ -5935,11 +6004,6 @@ function viewMaterials(){
         if(q.type==='tf') patch.answer=av==='1'; else if(q.type==='mc5') patch.correct=av;
         else {const arr=av.split('/').map(s=>s.trim());patch.blanks=(q.blanks||[]).map((b,i)=>({k:b.k,answer:arr[i]!=null?arr[i]:b.answer}));}
         confirm(x,patch);}},'本と同じなので確認済みにする'));};
-  // the 取り込む button lights up (and works) only once something is pasted
-  const impBtn=el('button',{type:'button',class:'btn sub sm',disabled:true,onclick:()=>impRun(paste.value)},'貼り付けた中身を取り込む');
-  const impSync=()=>{const has=!!paste.value.trim();impBtn.disabled=!has;impBtn.className='btn sm'+(has?'':' sub');};
-  const paste=el('textarea',{id:'imp-paste',rows:5,placeholder:'AIが作ったJSON（{ から } まで）か、CSVの中身を貼り付け',oninput:()=>impSync()});
-  const pick=e=>{const f=e.target.files&&e.target.files[0];if(!f) return;const r=new FileReader();r.onload=()=>impRun(r.result);r.onerror=()=>toast('ファイルを読めませんでした');r.readAsText(f);e.target.value='';};
   const R=IMPRES;IMPRES=null;
   const qn=b=>docs.filter(([,d])=>d.book===b).reduce((a,[,d])=>a+d.items.length,0);
   // 教材のカード（2026-11-23）：名前だけ並べ、押すと開く。読む＝青・解く＝緑・一時中断＝灰色
@@ -5957,14 +6021,6 @@ function viewMaterials(){
       solve?[el('div',{class:'grid2'},B('目次を追加',()=>matImportSheet(m,'toc')),B('問題を追加',()=>matImportSheet(m,'q'))),el('div',{class:'grid1'},editBtn)]
         :el('div',{class:'grid2'},B('目次を追加',()=>matImportSheet(m,'toc')),editBtn),
       el('div',{class:'grid2 mklow'},pauseBtn,twoStepBtn('この教材を消す',()=>{setPlan2(x=>{x.materials=x.materials.filter(y=>y.id!==m.id);});render();})));};
-  const fold=(key,title,card)=>{if(!card) return null;const kids=[...card.childNodes], head=kids[0]&&kids[0].classList&&kids[0].classList.contains('between')?kids.shift():null, help=head?head.querySelector('button.help'):null;
-    return el('div',{class:'card'},el('details',{class:'set',id:key,open:matFold(key)||null,ontoggle:e=>matFold(key,e.currentTarget.open)},el('summary',{},title),help?el('div',{style:'display:flex;justify-content:flex-end'},help):null,...kids));};
-  const fileCard=el('div',{},el('div',{class:'between'},el('h2',{},'ファイル・CSVで取り込む'),el('button',{type:'button',class:'help','aria-label':'取り込みの形の説明',onclick:formHelp},'?')),
-    el('label',{class:'btn sub sm',for:'imp-file',style:'cursor:pointer'},'ファイルを選ぶ（JSON・CSV）',el('input',{type:'file',id:'imp-file',accept:'.json,.csv,.txt,application/json,text/csv,text/plain',style:'display:none',onchange:pick})),
-    el('label',{class:'field',for:'imp-paste'},'または貼り付け',paste),
-    impBtn,
-    el('p',{class:'xs muted'},'テンプレートを保存'),
-    el('div',{class:'grid2'},el('button',{type:'button',class:'btn sub sm',onclick:()=>saveFile('mangxue-toc-template.csv','\uFEFF'+tocTemplate(),'text/csv')},'目次用'),el('button',{type:'button',class:'btn sub sm',onclick:()=>saveFile('mangxue-questions-template.csv','\uFEFF'+qTemplate(),'text/csv')},'問題用')));
   return [
     el('h1',{},'教材設定'),
     el('p',{class:'small muted'},'教材（本）の目次と、問題集の問題を取り込みます。目次を取り込むと、その量から学習の計画を組めるようになります。問題を取り込むと、アプリで演習できるようになります。'),
@@ -5974,9 +6030,9 @@ function viewMaterials(){
         :[el('p',{class:'small'},el('b',{},'取り込めませんでした。何も変えていません。')),el('ul',{class:'small'},R.errs.slice(0,12).map(t=>el('li',{},t))),R.errs.length>12?el('p',{class:'xs'},'ほか'+(R.errs.length-12)+'件'):null]):null,
     mats.map(matCard),
     el('button',{type:'button',class:'btn'+(mats.length?' sub':''),style:'width:100%;margin:4px 0 12px',onclick:()=>matImportSheet(null,'toc')},'＋ 教材を追加'),
-    fold('mf-unit','単元（'+(P.subjects||[]).length+'／'+UNIT_MAX+'個）',unitsCard(P)),
-    fold('mf-star','星（問題の重要度・難しさ）',starCard(P)),
-    fold('mf-file','ファイル・CSVで取り込む',fileCard),
+    el('div',{class:'card'},setRow('単元（'+(P.subjects||[]).length+'／'+UNIT_MAX+'個）',unitsSheet,'mf-unit')),
+    el('div',{class:'card'},setRow('星（問題の重要度・難しさ）',starSheet,'mf-star')),
+    el('button',{type:'button',class:'btn sub',id:'mf-file',style:'width:100%',onclick:fileSheet},'ファイル・CSVで取り込む'),
     checksList.length?el('h2',{},'要確認：本と見比べてください（'+checksList.length+'件）'):null,
     checksList.slice(0,10).map(checkCard),
     checksList.length>10?el('p',{class:'small muted'},'残り'+(checksList.length-10)+'件は、上を確認すると順に出てきます。'):null,
