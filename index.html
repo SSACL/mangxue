@@ -4189,6 +4189,7 @@ function setupCreate(x){for(const w of x.works||[]){const k=wkKind(w), d=w.dl||{
   let ds=(w.steps||[]).find(sd=>sd.id==='data');
   if(d.nyuko!=='no'&&!ds){ds={id:'data',name:'入稿データ作り',perPage:false,hours:0};w.steps.push(ds);}
   if(ds){if(d.nyuko==='no') ds.off=true; else delete ds.off;}}}
+function stepLocked(w,sd){return sd.id==='data'&&WK_BOOK.includes(wkKind(w))&&(w.dl||{}).nyuko!=='no';}
 function wizCreate(){
   const P=WIZ.P, ws=P.works||[], C=(P.setup||{}).create||{};
   const upW=(id,fn)=>wizS((S,x)=>{const w=x.works.find(y=>y.id===id);if(w) fn(w,S);});
@@ -4212,7 +4213,8 @@ function wizCreate(){
         sd.name,()=>upW(w.id,x=>upDown(x.steps,sd.id,-1)),()=>upW(w.id,x=>upDown(x.steps,sd.id,1)),si===0,si===st.length-1)),
         el('button',{type:'button',class:'btn sub sm',onclick:()=>upW(w.id,x=>{let n='新しい工程',kk=2;while(x.steps.some(y=>y.name===n)) n='新しい工程'+(kk++);x.steps.push({id:newId('st'),name:n,perPage:true,hours:0});})},'＋ 工程を追加'),
         // 操作が主体：ボタンで下から開く画面。外すものがなくなったら閉じる（2026-11-25）
-        on.length?el('button',{type:'button',class:'btn sub sm',onclick:()=>openLive('工程を外す',()=>{const w2=((WIZ&&WIZ.P.works)||[]).find(y=>y.id===w.id), on2=w2?(w2.steps||[]).filter(x=>!x.off):[];
+        // 「入稿する」のあいだは「入稿データ作り」を外せない（すぐ戻る）ので、外すボタンに表示しない（2026-11-25）
+        on.some(sd=>!stepLocked(w,sd))?el('button',{type:'button',class:'btn sub sm',onclick:()=>openLive('工程を外す',()=>{const w2=((WIZ&&WIZ.P.works)||[]).find(y=>y.id===w.id), on2=w2?(w2.steps||[]).filter(x=>!x.off&&!stepLocked(w2,x)):[];
           return on2.length?el('div',{class:'chips'},on2.map(sd=>el('button',{type:'button',class:'chip sm',onclick:()=>upW(w.id,x=>{x.steps=x.steps.filter(y=>y.id!==sd.id);})},sd.name+' ×'))):[];})},'工程を外す'):null]),
       qb(q('4-4'),'いまどの工程ですか？',[pselect('wc-'+w.id,(w.cur||{}).step||'',[['','まだ始めていない'],...on.map(sd=>[sd.id,sd.name])],v=>upW(w.id,x=>{if(v) x.cur=Object.assign({},x.cur,{step:v}); else delete x.cur;})),
         (w.cur||{}).step?pfield('wcp-'+w.id,'その工程で済んだ'+unit+'の数',pnum('wcp-'+w.id,(w.cur||{}).pages||0,v=>upW(w.id,x=>{x.cur=Object.assign({},x.cur,{pages:Math.max(0,Math.round(v))});}),1,0)):null]),
