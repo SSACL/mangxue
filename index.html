@@ -864,6 +864,9 @@ function helpBtn(label,fn){return el('button',{type:'button',class:'help','aria-
 function cardBody(card){const k=[...card.childNodes];if(k[0]&&k[0].classList&&k[0].classList.contains('between')) k.shift();return k;}
 /* 3 全体にかかる設定：名前（といまの値）と「›」の行。押すと下から開く画面 */
 function setRow(label,onclick,id){return el('button',{type:'button',class:'setrow',id:id||null,onclick},label);}
+/* 欄を開いた状態を覚える集合に、開いた順を付ける。描き直しで同じ並びの欄がいくつも開いて表示されるとき（新しく追加した欄を開くときなど）は、あとから開いたものを残す */
+const KEYT={};let KEYN=0;
+function trackOpen(S,nm){const a=S.add.bind(S), d=S.delete.bind(S);S.add=k=>{if(!S.has(k)) KEYT[nm+'|'+k]=++KEYN;return a(k);};S.delete=k=>{delete KEYT[nm+'|'+k];return d(k);};return S;}
 /* たたむ欄は、同じ並びで開くのは1つだけ（2026-11-25）。別の欄を開くと前の欄は閉じ、開いた欄の位置はずらさない。
    「＋」の欄（読むだけ）と「開く」の欄（確認が主体）は別に数える。メニューの「設定と管理」は除く */
 document.addEventListener('toggle',e=>{const d=e.target;if(!(d instanceof HTMLDetailsElement)||!d.open||d.classList.contains('menuset')||!d.parentElement) return;
@@ -872,8 +875,11 @@ document.addEventListener('toggle',e=>{const d=e.target;if(!(d instanceof HTMLDe
   // 並べ替えのボタンなどと1行になっているときは、その行を1つの欄として数える
   const row=x=>{const q=x.parentElement;return q&&q!==box&&q.querySelectorAll(':scope>details').length===1&&!q.matches('.card,.dpart')?q:x;}, dr=row(d);
   const others=[...box.querySelectorAll('details[open]')].filter(x=>x!==d&&!x.classList.contains('menuset')&&x.classList.contains('rd')===rd&&up(x)===pd&&!x.contains(d)&&(!wide||row(x).parentElement===dr.parentElement));
-  if(!others.length) return;const sc=d.closest('#sheet,.wizbody,#menu'), y0=d.getBoundingClientRect().top;
-  others.forEach(x=>{x.open=false;});const dy=d.getBoundingClientRect().top-y0;if(dy){if(sc) sc.scrollTop+=dy; else window.scrollBy(0,dy);}
+  if(!others.length) return;
+  // 残すのは、いま開いたもの（覚えている集合にまだないもの）か、集合にあとから入ったもの
+  const t=x=>{const k=x.dataset.k;return k==null?(x===d?Infinity:0):(k in KEYT?KEYT[k]:Infinity);}, win=others.reduce((w,x)=>t(x)>t(w)?x:w,d);
+  const sc=d.closest('#sheet,.wizbody,#menu'), y0=d.getBoundingClientRect().top;
+  [d,...others].forEach(x=>{if(x!==win) x.open=false;});if(win!==d) return;const dy=d.getBoundingClientRect().top-y0;if(dy){if(sc) sc.scrollTop+=dy; else window.scrollBy(0,dy);}
 },true);
 function toast(msg){const t=TOAST_EL;toastKeep(true);t.textContent=msg;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.hidden=true;},3200);}
 
@@ -2585,9 +2591,9 @@ function bringWhen(ds){
   const m=r?g.leave-r.before:N.home!=null&&g.legs.some(x=>cmRide(x.l.kind))?g.leave-N.home:g.leave-10;
   return '家を出る前（'+hmOf(m)+'）の通知でお知らせします';
 }
-const BROPEN=new Set();
+const BROPEN=trackOpen(new Set(),'B');
 function bringFold(ds,id){const b=bringOf(ds), key=id+ds;
-  return el('details',{class:'more bringfold',open:BROPEN.has(key),ontoggle:e=>{if(e.target.open) BROPEN.add(key); else BROPEN.delete(key);}},
+  return el('details',{class:'more bringfold','data-k':'B|'+key,open:BROPEN.has(key),ontoggle:e=>{if(e.target.open) BROPEN.add(key); else BROPEN.delete(key);}},
     el('summary',{},'持ち物のお知らせ',b?el('span',{class:'muted'},'：'+b.t+(b.at?'（'+b.at+'）':'')):null),bringEditor(ds,id));}
 function bringEditor(ds,id){const b=dayRec(ds).bring||{};
   return el('div',{class:'bring'},
@@ -2938,7 +2944,7 @@ function gcalCard(want){
 }
 
 /* ---------- 通勤経路の設定 ---------- */
-const CMOPEN=new Set(), CMP={ds:''}, CM_MAX=14;
+const CMOPEN=trackOpen(new Set(),'C'), CMP={ds:''}, CM_MAX=14;
 /* what a trip is planned from: 行き can also start from the time to leave (for a round trip on a day off, say) */
 function CM_MODES(dir){return dir==='go'?[['at','着きたい時刻'],['leave','出る時刻'],['train','乗る電車']]:[['at','出る時刻'],['arrive','着きたい時刻'],['train','乗る電車']];}
 function cmAtLabel(dir,mode){return dir==='go'&&mode!=='leave'||dir==='back'&&mode==='arrive'?'着きたい時刻':'出る時刻';}
@@ -2973,8 +2979,8 @@ function privacyHelp(){return el('button',{type:'button',class:'help','aria-labe
 function viewCommute(){CMDV=true;try{return viewCommuteBody();}finally{CMDV=false;}}
 function viewCommuteBody(){
   const C=commute(), P=plan2(), routes=C.routes||[], dirty=!!CDRAFT;
-  const det=(key,summary,...kids)=>el('details',{class:'set',open:CMOPEN.has(key),ontoggle:e=>{if(e.target.open) CMOPEN.add(key); else CMOPEN.delete(key);}},el('summary',{},summary),...kids);
-  const more=(key,label,...kids)=>el('details',{class:'more',open:CMOPEN.has(key),ontoggle:e=>{if(e.target.open) CMOPEN.add(key); else CMOPEN.delete(key);}},el('summary',{},label),...kids);
+  const det=(key,summary,...kids)=>el('details',{class:'set','data-k':'C|'+key,open:CMOPEN.has(key),ontoggle:e=>{if(e.target.open) CMOPEN.add(key); else CMOPEN.delete(key);}},el('summary',{},summary),...kids);
+  const more=(key,label,...kids)=>el('details',{class:'more','data-k':'C|'+key,open:CMOPEN.has(key),ontoggle:e=>{if(e.target.open) CMOPEN.add(key); else CMOPEN.delete(key);}},el('summary',{},label),...kids);
   const upR=(id,fn)=>cmLive(x=>{fn(x.routes.find(r=>r.id===id));});
   const num=(id,val,on,ph)=>el('input',{type:'number',id,class:'num',min:0,step:1,inputmode:'numeric',value:val==null?'':val,placeholder:ph||'',onchange:e=>{const v=e.target.value===''?null:Math.max(0,parseInt(e.target.value,10)||0);on(v);}});
   const txt=(id,val,on,ph)=>el('input',{type:'text',id,value:val||'',placeholder:ph||'',onchange:e=>on(e.target.value.trim())});
@@ -3098,7 +3104,7 @@ function viewCommuteBody(){
       hasStay?stayBoxes(r,cmOffOf(b,cmStayIds(r))??[],'bs-'+key,nx=>cmLive(x=>{x.byType=x.byType||{};const o=x.byType[d.id]=Object.assign({},x.byType[d.id]);o[dir]=Object.assign({},o[dir],{noStay:nx});delete o[dir].stay;})):null);};
   const brief=d=>{const b=(C.byType||{})[d.id]||{}, one=(dir,nm)=>{const x=b[dir]||{};if(!routes.some(r=>r.id===x.route)) return null;return nm+' '+(x.mode==='train'?(x.train||'').replace(/^0(\d):/,'$1:')+'の電車':(x.at||'').replace(/^0(\d):/,'$1:')+(dir==='go'&&x.mode!=='leave'||dir==='back'&&x.mode==='arrive'?'着':'発'));};
     const t=[one('go','行き'),one('back','帰り')].filter(Boolean);return t.length?t.join('・'):'通勤なし';};
-  const byT=d=>el('details',{class:'set bytblock',id:'cmbt-'+d.id,open:CMOPEN.has('bt:'+d.id),ontoggle:e=>{if(e.target.open) CMOPEN.add('bt:'+d.id); else CMOPEN.delete('bt:'+d.id);}},
+  const byT=d=>el('details',{class:'set bytblock',id:'cmbt-'+d.id,'data-k':'C|bt:'+d.id,open:CMOPEN.has('bt:'+d.id),ontoggle:e=>{if(e.target.open) CMOPEN.add('bt:'+d.id); else CMOPEN.delete('bt:'+d.id);}},
     el('summary',{},el('b',{class:'dtl'},dtLetter(d.id,P)),el('span',{style:'flex:1 0 auto'},d.name),el('span',{class:'xs muted num',style:'flex:0 1 auto;text-align:right'},brief(d))),
     byDir(d,'go'),byDir(d,'back'),
     el('button',{type:'button',class:'btn sub sm',style:'margin-bottom:12px',onclick:()=>goPlanType(d.id)},'この時間割のコマと目標を設定する'));
@@ -3218,7 +3224,7 @@ function cmDayPanel(ds){
 }
 
 /* routine settings */
-const OPEN=new Set();
+const OPEN=trackOpen(new Set(),'O');
 function nameTaken(list,name,selfId){const n=name.trim();return list.some(x=>x.id!==selfId&&String(x.name).trim()===n);}
 function freshName(list,base){let n=base,i=2;while(list.some(x=>x.name===n)) n=base+(i++);return n;}
 // move an entry up or down among the entries shown in that list (the sleep routine is kept out of the routine list)
@@ -3228,7 +3234,7 @@ function viewRoutines(){
   const arrows=(node,key,id,idx,len,shown,label)=>el('div',{class:'ordrow'},node,el('div',{class:'ord'},
     el('button',{type:'button',class:'ordb','aria-label':label+'を上へ',disabled:idx===0,onclick:()=>moveIn(key,id,-1,shown)},'▲'),
     el('button',{type:'button',class:'ordb','aria-label':label+'を下へ',disabled:idx===len-1,onclick:()=>moveIn(key,id,1,shown)},'▼')));
-  const det=(key,summary,...kids)=>el('details',{class:'set',open:OPEN.has(key),ontoggle:e=>{if(e.target.open) OPEN.add(key); else OPEN.delete(key);}},el('summary',{},summary),...kids);
+  const det=(key,summary,...kids)=>el('details',{class:'set','data-k':'O|'+key,open:OPEN.has(key),ontoggle:e=>{if(e.target.open) OPEN.add(key); else OPEN.delete(key);}},el('summary',{},summary),...kids);
   const txt=(id,label,val,onset)=>el('label',{class:'field',for:id},label,el('input',{type:'text',id,value:val||'',onchange:e=>onset(e.target.value.trim())}));
   const twoStep=(label,act,danger)=>{let armed=false;return el('button',{type:'button',class:'btn sub sm',style:danger===false?'':'color:var(--bad)',onclick:e=>{if(!armed){armed=true;e.target.textContent='もう一度押すと実行します';setTimeout(()=>{armed=false;if(e.target.isConnected) e.target.textContent=label;},4000);return;}act();}},label);};
   const daysLabel=ds=>ds.length===7?'毎日':(ds.join()===WEEKDAYS.join()?'平日':ds.map(i=>DN[i]).join(''));
@@ -3366,8 +3372,8 @@ function viewTracks(){
 }
 
 /* ---------- the plan screens: 全体 / 節目 / 時間, and the wizard that builds the plan ---------- */
-const POPEN=new Set();
-function pdet(key,summary,...kids){return el('details',{class:'set',open:POPEN.has(key),ontoggle:e=>{if(e.target.open) POPEN.add(key); else POPEN.delete(key);}},el('summary',{},summary),...kids);}
+const POPEN=trackOpen(new Set(),'P');
+function pdet(key,summary,...kids){return el('details',{class:'set','data-k':'P|'+key,open:POPEN.has(key),ontoggle:e=>{if(e.target.open) POPEN.add(key); else POPEN.delete(key);}},el('summary',{},summary),...kids);}
 function pfield(id,label,input){return el('label',{class:'field',for:id},label,input);}
 function ptext(id,val,onset,ph){return el('input',{type:'text',id,value:val==null?'':val,placeholder:ph||'',onchange:e=>onset(e.target.value.trim())});}
 function pnum(id,val,onset,step,min){return el('input',{type:'number',id,value:val==null?'':val,step:step||'any',min:min==null?0:min,inputmode:'decimal',class:'num',onchange:e=>{const v=parseFloat(e.target.value);onset(isNaN(v)?0:v);}});}
@@ -3420,7 +3426,7 @@ function matKind(m,k){if(m.kind===k) return;const rs=(m.toc||[]).map(e=>tocRange
 // 区切り in 直す: opened only on demand (a book can have 100+ 節)
 function cutUI(m,P){
   if(!(m.toc||[]).length) return null;const id=m.id, key='cut:'+id, open=POPEN.has(key), c=m.cut;
-  return el('details',{class:'set',open,ontoggle:e=>{if(e.target.open===POPEN.has(key)) return;e.target.open?POPEN.add(key):POPEN.delete(key);matRedraw();}},
+  return el('details',{class:'set','data-k':'P|'+key,open,ontoggle:e=>{if(e.target.open===POPEN.has(key)) return;e.target.open?POPEN.add(key):POPEN.delete(key);matRedraw();}},
     el('summary',{},el('span',{style:'flex:1;min-width:0'},'区切り'),el('span',{class:'xs muted num'},c?(c.by==='ch'?'章':'節')+'ごと・1つ '+(c.unit||studySlotMin(P))+'分':'初めの区切り')),
     open?cutBody(m,P):null);}
 function cutBody(m,P){
@@ -5931,7 +5937,7 @@ function unitsCard(P){
         if(subs.some(s=>s.name===nm||s.short===nm)){toast('同じ名前の単元があります');return;}
         setPlan2(x=>{x.subjects=(x.subjects||[]).concat([{id:newId('s'),name:nm,short:nm}]);});if(WIZ) wizPull();UNITADD='';unitTouched();toast('「'+nm+'」を追加しました');render();}},'＋ 単元を追加')):null);
 }
-const MATCARD=new Set();
+const MATCARD=trackOpen(new Set(),'M');
 function unitsSheet(){openLive(()=>['単元（'+(plan2().subjects||[]).length+'／'+UNIT_MAX+'個）',' ',helpBtn('単元と取り込む順番',unitHelp)],()=>cardBody(unitsCard(plan2())));}
 function starSheet(){openLive(['星（問題の重要度・難しさ）',' ',helpBtn('星の説明',starHelp)],()=>cardBody(starCard(plan2())));}
 // 操作が主体：ファイル・CSVで取り込む。貼り付けた文は、説明を開いて戻っても残る。取り込むときは画面を閉じる
@@ -6014,7 +6020,7 @@ function viewMaterials(){
     const B=(t,fn,o)=>el('button',Object.assign({type:'button',class:'btn sub',onclick:fn},o||{}),t);
     const editBtn=B(edit?'閉じる':'編集する',()=>{if(MATOPEN.has(m.id)) MATOPEN.delete(m.id); else{MATOPEN.add(m.id);if((m.toc||[]).some(e=>e.check)) MATCHK.add(m.id);}render();},{'aria-expanded':String(edit)});
     const pauseBtn=el('button',{type:'button',class:'btn sub sm',style:'color:var(--muted)',onclick:()=>{setPlan2(x=>{const y=x.materials.find(z=>z.id===m.id);if(y){if(y.off) delete y.off; else y.off=true;}});toast(m.off?'「'+m.name+'」を再開しました':'「'+m.name+'」を一時中断しました');render();}},m.off?'再開する':'一時中断する');
-    return el('details',{class:'card mk '+(m.off?'off':solve?'solve':'read'),open:MATCARD.has(m.id)||null,ontoggle:e=>{if(e.currentTarget.open) MATCARD.add(m.id); else MATCARD.delete(m.id);}},
+    return el('details',{class:'card mk '+(m.off?'off':solve?'solve':'read'),'data-k':'M|'+m.id,open:MATCARD.has(m.id)||null,ontoggle:e=>{if(e.currentTarget.open) MATCARD.add(m.id); else MATCARD.delete(m.id);}},
       el('summary',{},el('span',{style:'min-width:0'},(solve?'✏️ ':'📖 ')+m.name),el('span',{class:'kind'},m.off?'一時中断中':solve?'解く':'読む')),
       el('p',{class:'small muted',style:'margin-top:10px'},'目次 '+(m.toc||[]).length+'項目'+(us.length?'（単元：'+us.join('・')+'）':'')+(solve?'　問題 '+n+'問':'')),
       c?el('p',{class:'small',style:'color:var(--warn-ink)'},'要確認 '+c+'行'):null,
