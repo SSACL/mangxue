@@ -5965,25 +5965,31 @@ const AI_HELP=[['進め方','「プロンプトをコピー」を押し、AIの�
   ['取り込み直すとき','目次は追加されます。同じ単元・章・節の行は置き換わります。','同じ単元・番号の問題は、上書きするか、続きの番号を付けるかを選べます。'],
   ['分冊・段階のある本','分冊の本は、1つの教材にまとめるか分けるかを、AIが尋ねます。','同じ単元の中で問題番号が1から始まり直す問題集（Basic・Step-Up など）は、段階ごとに別の教材にします。']];
 function matImportSheet(m,what){
-  const st={name:'',kind:'read',what:what||'toc',err:false};let helpOn=false;
+  const st={name:'',kind:'read',what:what||'toc',err:false,pick:''};let helpOn=false;
+  // 「教材を追加」で問題を取り込むときは、目次を取り込んだ問題集の中から選ぶ。プロンプトと取り込み先には、押したときに選んでいる教材を使う（2026-11-25）
+  const qNew=()=>!m&&st.kind==='solve'&&st.what==='q', qMats=()=>(plan2().materials||[]).filter(x=>x.kind==='solve'&&(x.toc||[]).length), picked=()=>qMats().find(x=>x.id===st.pick)||null;
   const ta=el('textarea',{rows:4,placeholder:'AIの返事をここに貼り付け',style:'width:100%'});
   // 足りないもの（2026-11-25）：押したときに、この画面の中に赤い字で表示する（知らせは下から開く画面の裏に隠れるため）
-  const miss=()=>[!m&&!st.name.trim()?'教材の名前を手入力してください。':null,!ta.value.trim()?'AIの返事を貼り付けてください。':null].filter(Boolean);
+  const miss=()=>[qNew()?(picked()?null:qMats().length?'教材の名前を選んでください。':'目次を取り込んだ問題集がありません。先に目次を取り込んでください。'):!m&&!st.name.trim()?'教材の名前を手入力してください。':null,!ta.value.trim()?'AIの返事を貼り付けてください。':null].filter(Boolean);
   const errBox=el('div',{role:'alert',class:'imperr',hidden:true});
   const sync=()=>{const ms=st.err?miss():[];errBox.hidden=!ms.length;errBox.replaceChildren(...(ms.length?[el('p',{},'取り込めません。次を確かめてください。'),el('ul',{},ms.map(t=>el('li',{},t)))]:[]));};
   const go=el('button',{type:'button',class:'btn',style:'width:100%;margin-top:8px',onclick:()=>{
     if(miss().length){st.err=true;sync();return;}
-    document.getElementById('sheet').close();impRun(ta.value,{name:m?m.name:st.name.trim(),kind:m?m.kind:(st.kind==='solve'?'solve':'read')});}},'取り込む');
+    const q=qNew()?picked():null;document.getElementById('sheet').close();impRun(ta.value,{name:m?m.name:q?q.name:st.name.trim(),kind:m?m.kind:q?'solve':(st.kind==='solve'?'solve':'read')});}},'取り込む');
   ta.addEventListener('input',sync);
   const seg=(pairs,cur,fn,label)=>el('div',{class:'seg',role:'group','aria-label':label,style:'grid-template-columns:1fr 1fr;margin:8px 0'},pairs.map(([k,l])=>el('button',{type:'button','aria-pressed':String(cur===k),onclick:()=>{fn(k);draw();}},l)));
   const draw=()=>{const tgt=m||{name:st.name.trim(),kind:st.kind,toc:[]}, w=m?what:(st.kind==='solve'?st.what:'toc');
     const UL=xs=>el('ul',{class:'small',style:'margin:0;padding-left:1.2em'},xs.map(x=>el('li',{},x)));
     openSheet([m?m.name+(w==='q'?'に問題を追加':'に目次を追加'):'教材を追加',' ',el('button',{type:'button',class:'help','aria-label':'AIで取り込む','aria-expanded':String(helpOn),onclick:()=>{helpOn=!helpOn;draw();}},'?')],
       helpOn?el('div',{class:'card',style:'margin:4px 0 8px'},el('h3',{style:'margin:0 0 6px'},'AIで取り込む'),AI_HELP.map(([t,...xs])=>el('details',{class:'helpt rd'},el('summary',{},t),el('div',{class:'rdb'},UL(xs))))):null,
-      m?null:el('label',{class:'field',for:'na-name'},'教材の名前',el('input',{type:'text',id:'na-name',value:st.name,placeholder:'本の名前',oninput:e=>{st.name=e.target.value;sync();}})),
+      m?null:qNew()?(qMats().length?el('label',{class:'field',for:'na-pick'},'教材の名前',el('select',{id:'na-pick',onchange:e=>{st.pick=e.target.value;sync();}},
+          [el('option',{value:''},'選んでください'),...qMats().map(x=>{const o=el('option',{value:x.id},x.name);if(x.id===st.pick) o.selected=true;return o;})]))
+        :el('p',{class:'small'},'目次を取り込んだ問題集がありません。先に目次を取り込んでください。'))
+      :el('label',{class:'field',for:'na-name'},'教材の名前',el('input',{type:'text',id:'na-name',value:st.name,placeholder:'本の名前',oninput:e=>{st.name=e.target.value;sync();}})),
       m?null:seg([['read','読む（テキスト）'],['solve','解く（問題集）']],st.kind,k=>{st.kind=k;},'教材の種類'),
       !m&&st.kind==='solve'?seg([['toc','目次を取り込む'],['q','問題を取り込む']],st.what,k=>{st.what=k;},'取り込むもの'):null,
-      el('button',{type:'button',class:'btn',style:'width:100%;margin-top:4px',onclick:()=>{if(!m&&!st.name.trim()){toast('教材の名前を手入力してください');return;}
+      el('button',{type:'button',class:'btn',style:'width:100%;margin-top:4px',onclick:()=>{if(qNew()){const q=picked();if(!q){toast(qMats().length?'教材の名前を選んでください':'先に目次を取り込んでください');return;}copyText(qPrompt(q),'問題用のプロンプト');return;}
+        if(!m&&!st.name.trim()){toast('教材の名前を手入力してください');return;}
         copyText(w==='q'?qPrompt(tgt):tocPrompt(tgt),w==='q'?'問題用のプロンプト':'目次用のプロンプト');}},'プロンプトをコピー'),
       el('div',{class:'ailinks',style:'margin:8px 0'},[['ChatGPT','https://chatgpt.com/'],['Claude','https://claude.ai/new'],['Gemini','https://gemini.google.com/app'],['Copilot','https://copilot.microsoft.com/']].map(([n,u])=>el('a',{href:u,target:'_blank',rel:'noopener noreferrer',class:'ailink'},n))),
       ta,
